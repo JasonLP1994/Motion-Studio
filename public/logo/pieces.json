@@ -1,0 +1,45 @@
+{
+ "source": "inputs/phillips-english-logo.jpg",
+ "size": [
+  1254,
+  1254
+ ],
+ "background": "#0F161E",
+ "pieces": {
+  "p": {
+   "x": 300,
+   "y": 272,
+   "w": 337,
+   "h": 395,
+   "colour": "#FEFEFE"
+  },
+  "e": {
+   "x": 637,
+   "y": 272,
+   "w": 317,
+   "h": 395,
+   "colour": "#82BCC7"
+  },
+  "bar": {
+   "x": 486,
+   "y": 698,
+   "w": 281,
+   "h": 24,
+   "colour": "#82BCC7"
+  },
+  "phillips": {
+   "x": 294,
+   "y": 754,
+   "w": 674,
+   "h": 128,
+   "colour": "#FEFEFE"
+  },
+  "english": {
+   "x": 329,
+   "y": 891,
+   "w": 598,
+   "h": 114,
+   "colour": "#FEFEFE"
+  }
+ }
+}

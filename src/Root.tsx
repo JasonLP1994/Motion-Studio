@@ -11,6 +11,8 @@ import { Calib } from "./playful/Calib";
 import { Playful } from "./playful/Playful";
 import { playfulConfig as pc } from "./playful/config";
 import { introConfig as ic } from "./intro/config";
+import { LogoSting } from "./sting/LogoSting";
+import { stingConfig as sc } from "./sting/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -23,6 +25,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="Intro" component={Intro} durationInFrames={ic.output.fps * ic.output.durationInSeconds} fps={ic.output.fps} width={ic.output.width} height={ic.output.height} />
       <Composition id="Calib" component={Calib} durationInFrames={1} fps={30} width={1080} height={1080} />
       <Composition id="Playful" component={Playful} durationInFrames={pc.output.durationInFrames} fps={pc.output.fps} width={pc.output.width} height={pc.output.height} />
+      <Composition id="LogoSting" component={LogoSting} durationInFrames={sc.output.durationInFrames} fps={sc.output.fps} width={sc.output.width} height={sc.output.height} />
     </>
   );
 };
