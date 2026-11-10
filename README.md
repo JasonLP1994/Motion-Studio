@@ -1,54 +1,23 @@
-# Remotion video
+# Motion-Studio
+Motion design for my videos
 
-<p align="center">
-  <a href="https://github.com/remotion-dev/logo">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/remotion-dev/logo/raw/main/animated-logo-banner-dark.apng">
-      <img alt="Animated Remotion Logo" src="https://github.com/remotion-dev/logo/raw/main/animated-logo-banner-light.gif">
-    </picture>
-  </a>
-</p>
+A Remotion workspace set up for making motion graphics by chatting with Claude.
 
-Welcome to your Remotion project!
+## What's inside
+- `CLAUDE.md`: the working rules Claude follows in every chat here.
+- `templates/`: 13 styles: the 10 from Mia's Motion Graphics Kit, plus 3 learned ones (`duppy-hype`, `epic-scale`, `material-loop`). Each has a guide, a fill-in prompt, code, a preview and a poster.
+- `mia-motion-graphics/`: the kit's skill (`SKILL.md`), media tools and terms.
+- `.claude/skills/`: Remotion skills, plus the motion-graphics pack (motion B-roll, object separation, three explainer styles, sound effects).
+- `notes/craft.md`: motion craft rules (eases, beat grids, titles, transitions, captions, sound, review), learned from HyperFrames' references in `notes/craft/hyperframes/`.
+- `src/`: the code: the Phillips English intro (`src/intro/`), the Duppy-style edit (`src/duppy/`) and the style demos (`src/styles/`).
+- `scripts/`: cut-and-timing tools for talking-head edits. `transcribe.mjs`: local Whisper transcription with word timings.
 
-## Commands
+## Folders for your files (not stored in this repo)
+`inputs/` (clips, images), `references/` (styles you like), `audio/`, `renders/` (finished videos). Videos stay out of Git to keep the repo small.
 
-**Install Dependencies**
-
-```console
-npm i --loglevel=error
+## Getting started
 ```
-
-**Start Preview**
-
-```console
+npm ci
 npm run dev
 ```
-
-**Render video**
-
-```console
-npx remotion render
-```
-
-**Upgrade Remotion**
-
-```console
-npx remotion upgrade
-```
-
-## Docs
-
-Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
-
-## Help
-
-We provide help on our [Discord server](https://discord.gg/6VzzNDwUwV).
-
-## Issues
-
-Found an issue with Remotion? [File an issue here](https://github.com/remotion-dev/remotion/issues/new).
-
-## License
-
-Note that for some entities a company license is needed. [Read the terms here](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md).
+Whisper (for transcription) is rebuilt by the cloud environment's setup script, or by asking Claude.
