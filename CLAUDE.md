@@ -3,6 +3,14 @@
 The user is a beginner. Before each step, say in one short sentence what you're doing and why.
 Ask before installing anything outside this folder.
 
+## Finished-video delivery — STRICT: local/Claude download, never GitHub
+- **GitHub is only for source code, skills, instructions and reusable design templates, not finished videos or user footage.** Do not upload, commit, push, attach to a GitHub issue/PR, create a GitHub Release/Action artifact for, or otherwise store final MP4/MOV/video files in the repository.
+- Work entirely in the current local project or Claude's working environment. Put final, versioned MP4 exports in `renders/` (or another ignored local folder), and return the **actual finished file directly to the user via Claude's download/file mechanism** when available. When using Claude Code on the user's Mac, give the explicit local file path since it is already on their machine; when using a remote/cloud session, provide a direct downloadable attachment or the UI's download route, **not a GitHub link**.
+- Do not say "finished" until the file exists, playback has been reviewed, and the output is verified. If direct file attachment/download is unavailable in the environment, say so and give the local result path and a safe manual retrieval method.
+- Source media, extracted audio, transcripts, renders, caption outputs, proxies, and ZIP deliverables are **local artifacts**. Keep them ignored, and never override the media exclusions in `.gitignore`. Preserve originals and keep versions (`v1`, `v2`) for revisions.
+- A few existing small `templates/*/preview.mp4` assets and intro/sample audio files pre-date this rule and remain part of the current style-kit history; **do not add any new video previews to GitHub**. Never delete existing preview assets without user approval.
+- No automatic upload to other services or paid storage. Sending or scheduling content outside this local handoff requires the user's explicit approval.
+
 ## Folders
 - `inputs/`: the user's images, layers and clips (originals: never move or edit)
 - `references/`: style images and videos the user likes
