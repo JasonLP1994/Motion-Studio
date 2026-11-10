@@ -31,7 +31,12 @@ Suggest these alongside the kit's 10 templates. Each has a guide, prompt.txt, wo
 - `.claude/skills/caption-animation/SKILL.md`: word-timed active captions and exports. Use local Whisper, existing `th-captions` resources and original edited dialogue; do not install a separate transcription service.
 - `.claude/skills/motion-art-direction/SKILL.md`: define a distinct visual treatment per video from the user's approved references, not a global brand-wide animation preset. **User art direction always wins over named personality defaults.**
 - `.claude/skills/shot-composition/SKILL.md`: frame subjects, camera movement, negative space and format-specific safe zones; re-compose for vertical rather than squashing a wide recording.
-- All four imported skills are MIT-licensed; see `.claude/skills/IMPORTED-SKILLS.md` and each skill's local LICENSE. These are **documentation/reference skills**; nothing was installed or executed just by adding them.
+- `.claude/skills/beat-sync-editing/SKILL.md`: cuts, transitions, retiming and speed ramps on the music's beat (use with the measured beat grid).
+- `.claude/skills/logo-animation/SKILL.md`: logo reveals, stings, splash and end cards (always the real logo file).
+- `.claude/skills/color-motion/SKILL.md`: palettes, perceptual colour blends, grading and colour management (LUT grading = ffmpeg pass after render).
+- `.claude/skills/kinetic-typography/SKILL.md`: letter/word/line staggers, split text, variable fonts, text on a path, lyric cards.
+- `.claude/skills/remotion-transitions/SKILL.md`: six custom Remotion transitions (TransitionPresentation) driven by presentationProgress.
+- All imported skills are MIT-licensed; see `.claude/skills/IMPORTED-SKILLS.md` and each skill's local LICENSE. These are **documentation/reference skills**; nothing was installed or executed just by adding them.
 - **Routing:** a normal lesson edit → the user's chosen template or art direction (read `mia-motion-graphics/SKILL.md` and `notes/craft.md`); existing long-form to Shorts → longform-to-shorts, short-form-video, caption-animation, shot-composition as needed; art-direction or style request → motion-art-direction. Use only relevant skills, never stack every style into one video.
 
 ## Extra skills (from the user's motion-graphics pack, MIT, in .claude/skills/)

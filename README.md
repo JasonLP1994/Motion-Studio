@@ -12,6 +12,7 @@ A Remotion workspace set up for making motion graphics by chatting with Claude.
 - `src/`: the code: the Phillips English intro (`src/intro/`), the Duppy-style edit (`src/duppy/`) and the style demos (`src/styles/`).
 - `scripts/`: cut-and-timing tools for talking-head edits. `transcribe.mjs`: local Whisper transcription with word timings.
 - **New video specialist skills:** `.claude/skills/longform-to-shorts/` (four Shorts from one existing video); `short-form-video/` (vertical storytelling); `caption-animation/` (word-synchronised captions); `motion-art-direction/` (per-video creative treatment); and `shot-composition/` (framing / aspect ratios).
+- **Motion craft skills (added from the research report):** `beat-sync-editing/` (cutting to the beat), `logo-animation/` (logo reveals and stings), `color-motion/` (palettes, colour blends, grading), `kinetic-typography/` (moving type) and `remotion-transitions/` (six custom Remotion transitions). Provenance and licences: `.claude/skills/IMPORTED-SKILLS.md`.
 - Imported skills are adapted MIT-licensed source references; provenance and retained licences: [`.claude/skills/IMPORTED-SKILLS.md`](.claude/skills/IMPORTED-SKILLS.md). No new dependencies or paid platforms were added.
 
 

@@ -10,10 +10,19 @@ These skill documents were added to Motion Studio for Claude Code use. They **ex
 | `.claude/skills/caption-animation/` | [iart-ai/tiktok-video-skills](https://github.com/iart-ai/tiktok-video-skills) | `skills/caption-animation/` |
 | `.claude/skills/motion-art-direction/` | [iart-ai/motion-design-skills](https://github.com/iart-ai/motion-design-skills) | `skills/motion-art-direction/` |
 | `.claude/skills/shot-composition/` | [iart-ai/motion-design-skills](https://github.com/iart-ai/motion-design-skills) | `skills/shot-composition/` |
+| `.claude/skills/beat-sync-editing/` | [iart-ai/motion-design-skills](https://github.com/iart-ai/motion-design-skills) | `skills/beat-sync-editing/` |
+| `.claude/skills/logo-animation/` | [iart-ai/motion-design-skills](https://github.com/iart-ai/motion-design-skills) | `skills/logo-animation/` |
+| `.claude/skills/color-motion/` | [iart-ai/motion-design-skills](https://github.com/iart-ai/motion-design-skills) | `skills/color-motion/` |
+| `.claude/skills/kinetic-typography/` | [iart-ai/kinetic-typography-skills](https://github.com/iart-ai/kinetic-typography-skills) | `skills/kinetic-typography/` |
+| `.claude/skills/remotion-transitions/` | [ashad001/remotion-transitions](https://github.com/ashad001/remotion-transitions) | repo root (`SKILL.md`, `references/`, `CHANGELOG.md`) |
 
 Source branches: `main`. Inspected source revisions:
 - `iart-ai/tiktok-video-skills` — `2a775336b5a638cbf8a61dbd785f9a1b649be016`
 - `iart-ai/motion-design-skills` — `3c129f769d90a1328c209c386492333c9ac62312`
+- `iart-ai/kinetic-typography-skills` — `fccc94bd325d824235ee9e715e65abde57b6513a`
+- `ashad001/remotion-transitions` — `2bf15881f1f9d74e4b76979cd0846aefffc9962c` (v1.0.0, MIT, © 2026 Ashad)
+
+Added 2026-11-10 from the "Motion skills for Motion Studio" research report (`reports/`): beat-sync-editing, logo-animation, color-motion, kinetic-typography, remotion-transitions. Only the skill folders were copied (Markdown + LICENSE). The upstream repo-root helper scripts were **not** imported: `seek-shot.sh` runs `npx playwright` (which downloads its own Chromium, against workspace rules), and `contact-sheet.sh` / `probe-mp4.sh` already exist in `scripts/`. Tracking parameters were removed from iart.ai footer links; each SKILL.md has a Motion Studio integration note at the top.
 
 Both repos publish under **MIT**. The original copyright/permission text is retained in each imported skill's `LICENSE`. Each skill includes a clearly marked **Motion Studio integration** note near its heading. The Short-form skill also has unverified "algorithm guarantee" statistics removed: editorial decisions should use actual channel analytics rather than unsupported platform thresholds.
 
