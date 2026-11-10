@@ -83,6 +83,11 @@ For actual lessons, replace the demo cues with transcript-verified lines and rea
 7. Inspect frames through the full edit, check spelling/meaning/phonetics and word sync. Score **accuracy, readability, timing, layout and polish** out of 10; fix any score under 8. Record P0/P1/P2 defects and fixes.
 8. Deliver non-overwritten versioned MP4, an editable composition and a timing/edit manifest. If user wants separately compositable overlays, output alpha ProRes 4444 as documented in `CLAUDE.md`.
 
+## File handoff (not GitHub)
+- Render outputs into `renders/` locally. Provide the finished MP4 as a **direct Claude download** where supported, or give the file's precise local path on the user's computer. Do not upload/commit a rendered video or intermediate media to GitHub.
+- GitHub contains this skill, code and reusable template definitions; completed lessons and source footage belong on the user's machine/Claude workspace. Never commit them, even if explicitly asked to maintain a project history.
+- Preserve versions and verify the actual media file before announcing completion. See `CLAUDE.md` for the binding local-only delivery rule.
+
 ## Quality gate specific to English teaching
 - **Accuracy:** Are the correction, grammatical rule, stress and register right in British English? If not confident, do not publish the graphic.
 - **Verbatim vs example:** Transcript quotations are exact; invented illustrative examples must be visibly distinct from quotes and not attributed to students or clients.
