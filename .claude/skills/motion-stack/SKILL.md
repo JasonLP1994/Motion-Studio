@@ -10,7 +10,7 @@ The studio's look comes from **skill stacking**: several techniques layered on o
 Always follow `CLAUDE.md`, `notes/checks.md` (read before every render) and `notes/craft.md`. The user's direction for THIS video wins over everything below.
 
 ## 0. Skill picker (show on every upload, user rule)
-As soon as a video is uploaded or pointed to, before analysing it, show ONE `AskUserQuestion` card with these four questions (the user can tap through; "Other" is always available for free text). Skip only what the user already specified in their message.
+When a video is uploaded or pointed to, first take a **quick look** (a frame contact sheet and the transcript, step 1's eyes and ears), then show ONE `AskUserQuestion` card with these four questions. **Mark the options most relevant to this video's content and style with "(Recommended)"** in their labels and put them first in each list (in `Mode`, `Auto stack (Recommended)` stays first). Give each recommendation a short reason in its description (e.g. "you list three steps at 0:28"). The user can confirm, change, or type in "Other". Skip only what the user already specified in their message.
 
 1. **"How should I choose the skills for this video?"** (single choice, header `Mode`)
    - `Auto stack (Recommended)`: I read the video and choose the whole stack myself (sections 1-4).
@@ -22,6 +22,14 @@ As soon as a video is uploaded or pointed to, before analysing it, show ONE `Ask
    - `Images, emojis, icons` (from `inputs/`, emoji font/Twemoji, icon sets), `Motion b-roll cutaways` (`motion-broll`), `3D / C4D moment` (`threejs-*`, `particle-system`, `C4DMoGraph`), `Shader / particle moment` (`shader-art-coding`, `shader-glsl`, `particle-system`).
 4. **"Polish?"** (multi-select, header `Polish`)
    - `Beat-synced cuts` (`beat-sync-editing`), `Custom transitions` (`remotion-transitions`), `Logo sting intro/outro` (`logo-animation`, `src/sting/`), `Sound effects` (`sound-effects`, -14 LUFS).
+
+### Adding skills at any time ("add this skill too")
+The user can add a skill or effect at any point: in the first message, in the picker's "Other" box, after the plan, after the stills, or after a render ("add kinetic type too", "throw in a 3D moment", "use the glitch transition"). Then:
+1. Name the skill(s) it maps to and **where** it will go in this video (time ranges, which layer), in one or two lines.
+2. Fit it into the existing stack under the same art direction: adjust or replace overlapping layers rather than piling two systems on one job (e.g. swap caption styles, don't double them).
+3. Keep everything already approved; only re-plan the affected seconds. Show new stills for the changed moments only.
+4. Re-render as a new version (never overwrite), re-run the checks, and say what changed.
+If the requested skill isn't installed, say so and offer the closest installed option or to add it (research report: `reports/`).
 
 Rules: ticked items are commitments (include them unless they would break a rule in `notes/checks.md`, and then say why). Unticked items in `Auto` modes may still be added if the content calls for them. Format, length and feeling are asked in the usual `CLAUDE.md` brief only if still unknown (keep it to one more card at most). Record the picks at the top of the job's plan.
 
