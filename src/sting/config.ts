@@ -29,7 +29,8 @@ export const stingConfig = {
   // Sound logo (bundled CC0 kit). frame = picture moment; peakMs = file's peak, so it lands 1 frame after.
   masterVolume: 1.0,
   sounds: [
-    { frame: 22, file: "sfx/kit_whoosh.ogg", volume: 0.8, peakMs: 83 },
-    { frame: 30, file: "sfx/kit_impact.ogg", volume: 1.0, peakMs: 57 },
+    // Measured on the v1 render: peaks arrived about 1 frame earlier than calculated, so frames are +1.
+    { frame: 23, file: "sfx/kit_whoosh.ogg", volume: 0.8, peakMs: 83 },
+    { frame: 31, file: "sfx/kit_impact.ogg", volume: 1.0, peakMs: 57 },
   ],
 };
