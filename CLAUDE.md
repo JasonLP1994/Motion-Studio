@@ -20,6 +20,15 @@ Suggest these alongside the kit's 10 templates. Each has a guide, prompt.txt, wo
 ## Phillips English teaching skill (use for actual English lesson videos)
 - `.claude/skills/phillips-english-teaching-graphics/SKILL.md`: first read for Phillips English video lessons. It **only decides which teaching moments need visuals and the transcript timing**; it does NOT lock the art direction. Every video can be Daily Duppy-inspired (`duppy-hype`), cinematic, minimalist, experimental, or a wholly new style. **Explicit user art direction and current references always outrank the teaching skill's default look.** Its `src/teaching/TeachingGraphics.tsx` component is an optional adjustable card overlay, not mandatory; prefer the selected style/template if a different look is requested. Keep Mia/Remotion accuracy and review rules; do not invent audio, captions or corrections. `PhillipsEnglishTeachingDemo` is only an illustrative preview, NOT an edited user video.
 
+## Specialist video-production skills (Claude Code; choose per task)
+- `.claude/skills/longform-to-shorts/SKILL.md`: when asked to repurpose long-form **Phillips English YouTube footage**, select up to four genuine self-contained teaching segments, use transcript-mapped edit decisions, reframe to 9:16, add relevant graphics and render versioned Shorts. Never invent quotes; never schedule posts without approval.
+- `.claude/skills/short-form-video/SKILL.md`: hook and retention-oriented vertical editing. Use only where the user wants Shorts/Reels/TikToks; it is not a mandate to cut every few seconds.
+- `.claude/skills/caption-animation/SKILL.md`: word-timed active captions and exports. Use local Whisper, existing `th-captions` resources and original edited dialogue; do not install a separate transcription service.
+- `.claude/skills/motion-art-direction/SKILL.md`: define a distinct visual treatment per video from the user's approved references, not a global brand-wide animation preset. **User art direction always wins over named personality defaults.**
+- `.claude/skills/shot-composition/SKILL.md`: frame subjects, camera movement, negative space and format-specific safe zones; re-compose for vertical rather than squashing a wide recording.
+- All four imported skills are MIT-licensed; see `.claude/skills/IMPORTED-SKILLS.md` and each skill's local LICENSE. These are **documentation/reference skills**; nothing was installed or executed just by adding them.
+- **Routing:** a normal lesson edit → teaching graphics + user's chosen template; existing long-form to Shorts → longform-to-shorts, short-form-video, caption-animation, shot-composition as needed; art-direction or style request → motion-art-direction. Use only relevant skills, never stack every style into one video.
+
 ## Extra skills (from the user's motion-graphics pack, MIT, in .claude/skills/)
 - `motion-broll`: one-shape motion B-roll cut into a talking-head video, timed to words.
 - `object-separation`: cut a person, product or hand out of a video with SAM 2. This is the matte the kit's text-behind-a-person templates need on non-Mac machines.
