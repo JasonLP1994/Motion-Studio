@@ -33,3 +33,10 @@ Record **one** Phillips English long-form YouTube lesson, then ask Claude Code:
 
 The source video stays intact; the skill uses local word-timed transcription and the existing Remotion workspace. Its four-Shorts goal is a planning default, not a reason to invent filler. Art direction remains completely flexible, including Daily Duppy-inspired edits, cinematic looks, experimental motion and clean educational explainers.
 
+
+## Download the finished video directly from Claude — do not use GitHub for exports
+
+**GitHub is the Motion Studio code-and-skills library, not video storage.** Input clips, speech, transcripts, rendered MP4s, Shorts, caption files and ZIP deliverables must stay in ignored local working folders. Claude Code renders into `renders/` and hands back the finished file directly: use the Claude file download in a cloud session, or open the local rendered MP4 on your computer when using Claude Code locally. **Never publish the finished videos to GitHub or link GitHub as the delivery method.**
+
+The `.gitignore` excludes common media formats and render/export directories. Some *pre-existing* small style-template preview MP4s and sample audio are already tracked in the repository; these are demo assets, not your completed lesson videos, and were not removed. New preview videos should also remain local.
+
