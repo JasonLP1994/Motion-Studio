@@ -9,6 +9,22 @@ The studio's look comes from **skill stacking**: several techniques layered on o
 
 Always follow `CLAUDE.md`, `notes/checks.md` (read before every render) and `notes/craft.md`. The user's direction for THIS video wins over everything below.
 
+## 0. Skill picker (show on every upload, user rule)
+As soon as a video is uploaded or pointed to, before analysing it, show ONE `AskUserQuestion` card with these four questions (the user can tap through; "Other" is always available for free text). Skip only what the user already specified in their message.
+
+1. **"How should I choose the skills for this video?"** (single choice, header `Mode`)
+   - `Auto stack (Recommended)`: I read the video and choose the whole stack myself (sections 1-4).
+   - `Auto + my picks`: I choose, but always include whatever you tick below.
+   - `Only my picks`: use just what you tick below (plus framing and the quality checks).
+2. **"Words on screen?"** (multi-select, header `Words`)
+   - `Kinetic captions` (`kinetic-typography` / `caption-animation`), `Duppy slam words` (`duppy-hype` grammar), `Clean subtitles` (`caption-animation`, calm), `No on-screen text`.
+3. **"Visuals and wow moments?"** (multi-select, header `Visuals`)
+   - `Images, emojis, icons` (from `inputs/`, emoji font/Twemoji, icon sets), `Motion b-roll cutaways` (`motion-broll`), `3D / C4D moment` (`threejs-*`, `particle-system`, `C4DMoGraph`), `Shader / particle moment` (`shader-art-coding`, `shader-glsl`, `particle-system`).
+4. **"Polish?"** (multi-select, header `Polish`)
+   - `Beat-synced cuts` (`beat-sync-editing`), `Custom transitions` (`remotion-transitions`), `Logo sting intro/outro` (`logo-animation`, `src/sting/`), `Sound effects` (`sound-effects`, -14 LUFS).
+
+Rules: ticked items are commitments (include them unless they would break a rule in `notes/checks.md`, and then say why). Unticked items in `Auto` modes may still be added if the content calls for them. Format, length and feeling are asked in the usual `CLAUDE.md` brief only if still unknown (keep it to one more card at most). Record the picks at the top of the job's plan.
+
 ## 1. Read the video (eyes and ears first)
 - Frames (dense around cuts and gestures), transcript with word timings (local Whisper, `scripts/transcribe-chunks.mjs`), music tempo/beat grid if there is music, burned-in text, faces and safe space (`notes/shots.md`).
 - Write down the **content signals** below before choosing anything.
