@@ -7,6 +7,9 @@ import { duppyConfig as d } from "./duppy/config";
 import { EpicScale, epicConfig } from "./styles/EpicScale";
 import { MaterialLoop, materialConfig } from "./styles/MaterialLoop";
 import { Intro } from "./intro/Intro";
+import { Calib } from "./playful/Calib";
+import { Playful } from "./playful/Playful";
+import { playfulConfig as pc } from "./playful/config";
 import { introConfig as ic } from "./intro/config";
 
 export const RemotionRoot: React.FC = () => {
@@ -18,6 +21,8 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="EpicScale" component={EpicScale} durationInFrames={30 * epicConfig.durationInSeconds} fps={30} width={1920} height={1080} />
       <Composition id="MaterialLoop" component={MaterialLoop} durationInFrames={30 * materialConfig.durationInSeconds} fps={30} width={1920} height={1080} />
       <Composition id="Intro" component={Intro} durationInFrames={ic.output.fps * ic.output.durationInSeconds} fps={ic.output.fps} width={ic.output.width} height={ic.output.height} />
+      <Composition id="Calib" component={Calib} durationInFrames={1} fps={30} width={1080} height={1080} />
+      <Composition id="Playful" component={Playful} durationInFrames={pc.output.durationInFrames} fps={pc.output.fps} width={pc.output.width} height={pc.output.height} />
     </>
   );
 };
