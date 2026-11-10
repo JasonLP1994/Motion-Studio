@@ -46,10 +46,13 @@ const startsAtOrAfter = async (t, i) => {
   return true;
 };
 
+// Optional: ONLY=3,17,42 refines just those word indices (others keep their estimate).
+const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(",").map(Number)) : null;
 const fixed = [];
 let prev = 0;
 for (let i = 0; i < tl.words.length; i++) {
   const est = tl.words[i].start;
+  if (ONLY && !ONLY.has(i)) { fixed.push(est); continue; }
   let lo = Math.max(prev + 0.04, est - 0.25), hi = Math.min(tl.duration - 0.05, est + 1.0);
   if (i === 0 || !(await startsAtOrAfter(hi, i)) || (await startsAtOrAfter(lo, i) && i > 0 && lo > est)) {
     fixed.push(est); prev = est; continue;

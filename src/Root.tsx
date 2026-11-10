@@ -12,6 +12,7 @@ import { Playful } from "./playful/Playful";
 import { playfulConfig as pc } from "./playful/config";
 import { introConfig as ic } from "./intro/config";
 import { TeachingDemo } from "./teaching/TeachingDemo";
+import { Lesson, lessonFrames } from "./lesson/Lesson";
 import { teachingDemoOutput as teachingOutput } from "./teaching/config";
 
 export const RemotionRoot: React.FC = () => {
@@ -26,6 +27,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="Calib" component={Calib} durationInFrames={1} fps={30} width={1080} height={1080} />
       <Composition id="PhillipsEnglishTeachingDemo" component={TeachingDemo} durationInFrames={Math.round(teachingOutput.fps * teachingOutput.durationInSeconds)} fps={teachingOutput.fps} width={teachingOutput.width} height={teachingOutput.height} />
       <Composition id="Playful" component={Playful} durationInFrames={pc.output.durationInFrames} fps={pc.output.fps} width={pc.output.width} height={pc.output.height} />
+      <Composition id="TellMeAboutYourselfLesson" component={Lesson} durationInFrames={lessonFrames} fps={30} width={1920} height={1080} />
     </>
   );
 };

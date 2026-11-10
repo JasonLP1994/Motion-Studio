@@ -21,20 +21,40 @@ export type TeachingDesign = {
   fontFamily?: string;
   layout?: "left" | "right" | "full";
   energy?: "calm" | "bold";
+  /** Card width as a share of the frame width (default 0.405; 0.82 for "full"). */
+  cardWidthRatio?: number;
+  /** Card top as a share of the frame height (default 0.18 landscape, 0.145 portrait). */
+  cardTopRatio?: number;
+  /** Gap between a side card and the frame edge, as a share of the width (default 0.055). */
+  cardMarginRatio?: number;
+  /** Frames before a spoken word that a timed item appears (craft rule: 2-4). */
+  leadFrames?: number;
 };
 
 type Shared = {
   startSeconds: number;
   durationSeconds: number;
   side?: "left" | "right" | "full";
+  /** Optional heading override (otherwise the kind's default heading). */
+  title?: string;
 };
+// Timed items: atSeconds is when the item is spoken, relative to the cue's start.
+type TimedText = { text: string; atSeconds?: number };
 
 export type TeachingCue =
   | (Shared & { kind: "correction"; original: string; corrected: string; note?: string })
   | (Shared & { kind: "pronunciation"; word: string; stress: string; ipa?: string; tip?: string })
   | (Shared & { kind: "vocabulary"; basic: string; precise: string; context?: string })
-  | (Shared & { kind: "interview"; question: string; steps: string[] })
-  | (Shared & { kind: "conversation"; lines: { speaker: string; text: string }[]; tip?: string });
+  | (Shared & { kind: "interview"; question: string; steps: string[]; stepTimes?: number[] })
+  | (Shared & { kind: "conversation"; lines: { speaker: string; text: string }[]; tip?: string })
+  // A common mistake (content or approach, not necessarily grammar) and the better approach.
+  | (Shared & { kind: "contrast"; avoidLabel?: string; avoid: string; betterLabel?: string; better: string; betterAtSeconds?: number; note?: string })
+  // An example answer, line by line, each labelled (e.g. by the step it shows).
+  | (Shared & { kind: "example"; lines: (TimedText & { label: string })[]; note?: string })
+  // Short key points that tick in as they are said.
+  | (Shared & { kind: "keypoints"; lead?: string; items: TimedText[] })
+  // A question to the viewer, with an optional call to action.
+  | (Shared & { kind: "prompt"; question: string; action?: string; actionAtSeconds?: number });
 
 const cueTitle: Record<TeachingCue["kind"], string> = {
   correction: "GRAMMAR & ACCURACY",
@@ -42,6 +62,10 @@ const cueTitle: Record<TeachingCue["kind"], string> = {
   vocabulary: "BETTER VOCABULARY",
   interview: "INTERVIEW ENGLISH",
   conversation: "PROFESSIONAL ENGLISH",
+  contrast: "COMMON MISTAKE",
+  example: "EXAMPLE ANSWER",
+  keypoints: "WHY IT WORKS",
+  prompt: "YOUR TURN",
 };
 
 const limit = (v: number, low: number, high: number) => Math.max(low, Math.min(high, v));
@@ -76,14 +100,18 @@ const CueCard: React.FC<{ cue: TeachingCue; lengthFrames: number; design: Teachi
   const portrait = height > width;
   const scale = portrait ? limit(width / 1080, 0.78, 1.08) : limit(width / 1920, 0.5, 1.2);
   const side = cue.side ?? design.layout ?? (portrait ? "full" : "right");
-  const cardWidth = Math.round(width * (side === "full" ? 0.82 : 0.405));
+  const cardWidth = Math.round(width * (side === "full" ? 0.82 : design.cardWidthRatio ?? 0.405));
+  // Frame (relative to this card) at which a spoken item should appear.
+  const lead = design.leadFrames ?? 3;
+  const atWord = (sec: number | undefined, fallback: number) => (sec === undefined ? fallback : Math.max(0, Math.round(sec * fps) - lead));
+  const margin = Math.round(width * (design.cardMarginRatio ?? 0.055));
   const x =
     side === "left"
-      ? Math.round(width * 0.055)
+      ? margin
       : side === "right"
-        ? width - cardWidth - Math.round(width * 0.055)
+        ? width - cardWidth - margin
         : Math.round((width - cardWidth) / 2);
-  const y = Math.round(height * (portrait ? 0.145 : 0.18));
+  const y = Math.round(height * (design.cardTopRatio ?? (portrait ? 0.145 : 0.18)));
   const arrival = spring({
     frame: Math.max(0, frame),
     fps,
@@ -199,9 +227,9 @@ const CueCard: React.FC<{ cue: TeachingCue; lengthFrames: number; design: Teachi
             </div>
           </Reveal>
           {cue.steps.slice(0, 4).map((step, i) => (
-            <Reveal key={i} frame={frame} scale={scale} at={14 + i * 8}>
+            <Reveal key={i} frame={frame} scale={scale} at={atWord(cue.stepTimes?.[i], 14 + i * 8)}>
               <div style={{ ...block, display: "flex", alignItems: "center", gap: fs(14), marginTop: fs(10) }}>
-                <span style={{ ...phrase, fontSize: fs(30), color: colors.accent }}>{String(i + 1).padStart(2, "0")}</span>
+                <span style={{ ...phrase, fontSize: fs(30), color: colors.accent, flexShrink: 0, whiteSpace: "nowrap", overflowWrap: "normal" }}>{String(i + 1).padStart(2, "0")}</span>
                 <span style={{ ...secondary, color: colors.white, fontWeight: 700 }}>{step}</span>
               </div>
             </Reveal>
@@ -223,6 +251,82 @@ const CueCard: React.FC<{ cue: TeachingCue; lengthFrames: number; design: Teachi
           {cue.tip ? (
             <Reveal frame={frame} scale={scale} at={32}>
               <div style={{ ...secondary, marginTop: fs(15) }}>{cue.tip}</div>
+            </Reveal>
+          ) : null}
+        </>
+      );
+      break;
+    case "contrast":
+      content = (
+        <>
+          <Reveal frame={frame} scale={scale} at={6}>
+            <div style={block}>
+              <div style={{ ...label, color: colors.wrong }}>{cue.avoidLabel ?? "AVOID"}</div>
+              <div style={{ ...phrase, color: colors.wrong }}>{cue.avoid}</div>
+            </div>
+          </Reveal>
+          <Reveal frame={frame} scale={scale} at={atWord(cue.betterAtSeconds, 14)}>
+            <div style={block}>
+              <div style={label}>{cue.betterLabel ?? "BETTER"}</div>
+              <div style={{ ...phrase, color: colors.accent }}>{cue.better}</div>
+            </div>
+          </Reveal>
+          {cue.note ? (
+            <Reveal frame={frame} scale={scale} at={atWord(cue.betterAtSeconds, 14) + 8}>
+              <div style={{ ...secondary, marginTop: fs(18) }}>{cue.note}</div>
+            </Reveal>
+          ) : null}
+        </>
+      );
+      break;
+    case "example":
+      content = (
+        <>
+          {cue.lines.slice(0, 4).map((line, i) => (
+            <Reveal key={i} frame={frame} scale={scale} at={atWord(line.atSeconds, 6 + i * 12)}>
+              <div style={{ ...block, borderLeft: fs(4) + "px solid " + colors.accent, marginTop: fs(10) }}>
+                <div style={label}>{line.label}</div>
+                <div style={{ ...secondary, color: colors.white, fontSize: fs(27), fontWeight: 700 }}>{line.text}</div>
+              </div>
+            </Reveal>
+          ))}
+          {cue.note ? (
+            <Reveal frame={frame} scale={scale} at={8}>
+              <div style={{ ...secondary, color: colors.muted, fontSize: fs(18), marginTop: fs(4) }}>{cue.note}</div>
+            </Reveal>
+          ) : null}
+        </>
+      );
+      break;
+    case "keypoints":
+      content = (
+        <>
+          {cue.lead ? (
+            <Reveal frame={frame} scale={scale} at={5}>
+              <div style={{ ...phrase, fontSize: fs(34), marginTop: fs(14), color: colors.white }}>{cue.lead}</div>
+            </Reveal>
+          ) : null}
+          {cue.items.slice(0, 4).map((item, i) => (
+            <Reveal key={i} frame={frame} scale={scale} at={atWord(item.atSeconds, 12 + i * 8)}>
+              <div style={{ ...block, display: "flex", alignItems: "center", gap: fs(16), marginTop: fs(10) }}>
+                <span style={{ width: fs(34), height: fs(34), borderRadius: fs(17), background: colors.accent, color: colors.bg, display: "flex",
+                  alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: fs(22), flexShrink: 0 }}>✓</span>
+                <span style={{ ...phrase, fontSize: fs(34), color: colors.white }}>{item.text}</span>
+              </div>
+            </Reveal>
+          ))}
+        </>
+      );
+      break;
+    case "prompt":
+      content = (
+        <>
+          <Reveal frame={frame} scale={scale} at={5}>
+            <div style={{ ...phrase, fontSize: fs(40), marginTop: fs(16), color: colors.white }}>{cue.question}</div>
+          </Reveal>
+          {cue.action ? (
+            <Reveal frame={frame} scale={scale} at={atWord(cue.actionAtSeconds, 14)}>
+              <div style={{ ...block, ...secondary, color: colors.accent, fontWeight: 700, fontSize: fs(27) }}>{cue.action}</div>
             </Reveal>
           ) : null}
         </>
@@ -256,7 +360,7 @@ const CueCard: React.FC<{ cue: TeachingCue; lengthFrames: number; design: Teachi
           <div style={{ ...label, marginBottom: 0, color: colors.white }}>PHILLIPS ENGLISH</div>
           <div style={{ width: fs(34), height: fs(5), backgroundColor: colors.accent }} />
         </div>
-        <div style={{ ...label, marginTop: fs(26) }}>{cueTitle[cue.kind]}</div>
+        <div style={{ ...label, marginTop: fs(26) }}>{cue.title ?? cueTitle[cue.kind]}</div>
         {content}
       </div>
     </AbsoluteFill>
