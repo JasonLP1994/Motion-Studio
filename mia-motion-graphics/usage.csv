@@ -1,0 +1,2 @@
+version,task,elapsed_minutes,generation_credits,provider_input_tokens,provider_output_tokens,provider_cost,currency,evidence
+1,duppy-style edit (practice) v1-v2,,,,,,,elapsed time not tracked; local rendering and transcription only; no paid generation

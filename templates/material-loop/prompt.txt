@@ -1,0 +1,9 @@
+Read mia-motion-graphics/SKILL.md and templates/material-loop/material-loop.md in this project, and use templates/material-loop/MaterialLoop.tsx as the working example.
+Make a material loop: [WHAT IT'S FOR, e.g. an ident for my brand / a loop behind one word].
+The word: [WORD, OR NONE].
+Material: [CLAY / CHROME / GLASS / TEMPLATE CERAMIC].
+Form rule: [RING / GRID / SPIRAL / AROUND MY PRODUCT (file in inputs/)].
+Colours: [FIELD AND MATERIAL COLOURS, OR "template orange and cream"].
+Rhythm: [BPM, OR MUSIC FILE TO MATCH].
+Output: [ASPECT RATIO], [LOOP LENGTH], [FPS OR 30].
+Make it loop seamlessly. Show me three stills before the full render, then check frames from the whole video and the loop point.

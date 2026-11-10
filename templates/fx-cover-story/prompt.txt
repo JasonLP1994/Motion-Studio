@@ -1,0 +1,10 @@
+Read mia-motion-graphics/SKILL.md and templates/fx-cover-story/fx-cover-story.md in this project.
+Use the image, video or other files I supply: [FILES; NONE FOR A CODE-ONLY GRAPHIC].
+Create the Cover story effect: A huge off-white serif masthead (like Playfair Display) across the middle of the frame, behind the person's head, with a small issue line above it, a yellow sans cover line plus a white italic serif line at the left, and a small barcode at the right. Follow the Specs section for colours, sizes and timing.
+Masthead: [TITLE]. Cover lines: [COPY]. Subject/background layers: [FILES OR NOT AVAILABLE].
+Output: [ASPECT RATIO OR DIMENSIONS], [DURATION], [FPS OR SUGGEST ONE].
+Audio: [FILE / KEEP SOURCE AUDIO / SILENT]. Where this effect goes: [WHOLE CLIP OR TIME RANGE].
+Use a supplied style reference if present; otherwise propose the design in code. If I want new images, I can make them on OpenArt. Never generate paid media without asking me.
+Ask only for missing decisions, then give a three-line plan. Analyse actual visuals and any speech before assigning timing. Show design frames before the full animation.
+Keep text, colour and timing editable, preserve original files, and check the exported result.
+If you can't find these files in this folder, search the project for them, or download the kit again from https://miameow.ai/motion-graphics-kit/ and unzip it here.

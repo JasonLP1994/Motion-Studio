@@ -1,0 +1,8 @@
+Read mia-motion-graphics/SKILL.md and templates/epic-scale/epic-scale.md in this project, and use templates/epic-scale/EpicScale.tsx as the working example.
+Make an epic-scale scene: [THE COLOSSAL THING, e.g. a giant robot kneeling behind a city / a huge version of my product in a desert].
+The scale reference: [TINY HUMAN / TINY CAR / OTHER].
+Palette: [COLOURS, OR "template dusk with cyan neon"].
+Text: [TITLE, OR NONE].
+Output: [ASPECT RATIO], [DURATION], [FPS OR 30].
+Sound: [MUSIC FILE / SILENT].
+Build it in code with no image files unless I give you some. Show me three stills (start, middle, end of the push-in) before the full render, then check frames from the whole video.

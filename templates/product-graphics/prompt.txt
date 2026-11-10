@@ -1,0 +1,9 @@
+Read mia-motion-graphics/SKILL.md and templates/product-graphics/product-graphics.md in this project.
+Use my product clip or image: [FILE]. Optional style still I like: [FILE OR NONE].
+Create the Product graphics effect in this look: [FASHION EDITORIAL / HEADS-UP DISPLAY / HAND-DRAWN DOODLE / MATCH MY STILL]. Follow the shared motion rules and that look's Specs section.
+Product name and title: [TITLE]. Features to point at: [FEATURE → LABEL]. Optional verified data: [VALUES OR NONE].
+Output: [ASPECT RATIO OR DIMENSIONS], [DURATION], [FPS OR SUGGEST ONE]. Audio: [FILE / KEEP SOURCE AUDIO / SILENT].
+If I want new images or video, I can make them on OpenArt. Never generate paid media without asking me.
+Ask me only what's missing, then give me a short shot plan. Look at the real frames before timing anything. Show me three design frames before the full render.
+Keep text, colour and timing editable, preserve original files, and check the exported result.
+If you can't find these files in this folder, search the project for them, or download the kit again from https://miameow.ai/motion-graphics-kit/ and unzip it here.

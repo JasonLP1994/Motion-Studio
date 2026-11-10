@@ -5,3 +5,15 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+whisper.cpp/
+
+# Motion studio: keep the repo small. Videos and big builds stay out.
+inputs/*
+references/*
+renders/*
+audio/*
+notes/frames/*
+notes/stills/
+public/footage/
+!*/.gitkeep
+!notes/frames/.gitkeep

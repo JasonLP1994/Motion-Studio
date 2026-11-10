@@ -1,0 +1,9 @@
+Read mia-motion-graphics/SKILL.md (especially Captions and big words, and Subject mask) and templates/th-captions/th-captions.md in this project, and use templates/th-captions/TalkingHeadCaptions.tsx as the working example.
+Use my talking-head clip: [FILE]. Output: [9:16 FOR SHORTS / 16:9 FOR YOUTUBE / 4:5 FOR FEED], [TIME RANGE OR WHOLE CLIP].
+Create the Talking head captions effect: short caption groups in the empty space above or beside me that pop in word by word as I say them, with one or two big words per passage, one letter tucked slightly behind my hair. For 9:16 from a horizontal take, keep both my shoulders and use the space above my head. Follow the Specs section for colours, sizes and timing.
+Brand colours: [COLOURS OR USE THE TEMPLATE'S]. Words I want big: [WORDS OR LET CLAUDE SUGGEST].
+Give yourself eyes and ears first: pull frames, transcribe with word timestamps, and look where my head and hands are. On a Mac, cut me out with mia-motion-graphics/scripts/person_matte.swift. If you can't make a matte, keep every word beside me instead of behind me.
+Write the caption plan first (every cue with its time, role and a reason for each big word) and show it to me with three still frames before the full render.
+Audio: [KEEP MY VOICE / ADD MUSIC FROM audio/]. Never generate paid media without asking me.
+Keep text, colour and timing editable, preserve original files, and check the exported result.
+If you can't find these files in this folder, search the project for them, or download the kit again from https://miameow.ai/motion-graphics-kit/ and unzip it here.

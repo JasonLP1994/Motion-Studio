@@ -1,0 +1,9 @@
+Read mia-motion-graphics/SKILL.md and templates/duppy-hype/duppy-hype.md in this project, and reuse templates/duppy-hype/Duppy.tsx, config.example.ts, build-timeline.mjs and refine-timing.mjs.
+Make a Duppy hype edit over this clip: [VIDEO FILE IN inputs/].
+Keep this part: [START–END, OR "you choose the strongest section"].
+Slam words (punchlines, numbers, names): [WORDS, OR "you choose, about one per point"].
+List or steps to show as blocks: [STEPS, OR NONE].
+Colours: [ACCENT AND DANGER COLOURS, OR "template yellow and red"].
+Output: [16:9 / 9:16], [FPS OR 30].
+Sound: [VOICE ONLY / ADD HITS UNDER THE VOICE].
+Use my exact words in captions. Show me the plan and three stills before the full render, refine the word timing before the final render, and check frames from the whole video.

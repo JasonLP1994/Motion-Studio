@@ -1,0 +1,494 @@
+{
+ "canvas": [
+  1080,
+  1920
+ ],
+ "fps": 30,
+ "frame": {
+  "note": "source 1920x1080 cropped to x 442-1302 (keeps both shoulders), scaled 1.256, bottom-aligned",
+  "crop": [
+   442,
+   0,
+   860,
+   1080
+  ],
+  "box": [
+   0,
+   564,
+   1080,
+   1356
+  ]
+ },
+ "background": {
+  "note": "blurred crop of the empty wall, scaled to fill the canvas",
+  "crop": [
+   0,
+   0,
+   440,
+   1080
+  ]
+ },
+ "flow": {
+  "g1": "top-to-bottom",
+  "g2": "top-to-bottom",
+  "g3": "top-to-bottom",
+  "g4": "top-to-bottom",
+  "g5": "top-to-bottom",
+  "g6": "top-to-bottom"
+ },
+ "cues": [
+  {
+   "id": "c1",
+   "group": "g1",
+   "order": 1,
+   "start": 0.07,
+   "end": 1.82,
+   "text": "This is why it's great for",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 752,
+   "align": "center",
+   "size": 58,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "This",
+     "t": 0.07
+    },
+    {
+     "w": "is",
+     "t": 0.21
+    },
+    {
+     "w": "why",
+     "t": 0.37
+    },
+    {
+     "w": "it's",
+     "t": 0.57
+    },
+    {
+     "w": "great",
+     "t": 0.79
+    },
+    {
+     "w": "for",
+     "t": 0.97
+    }
+   ],
+   "w": 940
+  },
+  {
+   "id": "c2",
+   "group": "g1",
+   "order": 2,
+   "start": 1.17,
+   "end": 1.82,
+   "text": "ads.",
+   "role": "hero",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 752,
+   "align": "center",
+   "size": 200,
+   "color": "#FF4D94",
+   "words": [
+    {
+     "w": "ads.",
+     "t": 1.17
+    }
+   ],
+   "w": 940,
+   "score": 6,
+   "why": "+3 the line is about this, +2 payoff, +1 short = 6",
+   "overlap": "bottom 15 to 20% of the word tucked behind the top of her head, never the face",
+   "dx": -285
+  },
+  {
+   "id": "c3",
+   "group": "g2",
+   "order": 3,
+   "start": 1.95,
+   "end": 3.69,
+   "text": "You want to test",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 58,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "You",
+     "t": 1.95
+    },
+    {
+     "w": "want",
+     "t": 1.95
+    },
+    {
+     "w": "to",
+     "t": 1.95
+    },
+    {
+     "w": "test",
+     "t": 2.15
+    }
+   ],
+   "w": 940,
+   "notBefore": 1.95
+  },
+  {
+   "id": "c4",
+   "group": "g2",
+   "order": 4,
+   "start": 2.35,
+   "end": 3.69,
+   "text": "two headlines?",
+   "role": "anchor",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 96,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "two",
+     "t": 2.35
+    },
+    {
+     "w": "headlines?",
+     "t": 2.63
+    }
+   ],
+   "w": 940,
+   "notBefore": 1.95
+  },
+  {
+   "id": "c5",
+   "group": "g3",
+   "order": 5,
+   "start": 3.83,
+   "end": 6.21,
+   "text": "Ask Claude to change",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 58,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "Ask",
+     "t": 3.83
+    },
+    {
+     "w": "Claude",
+     "t": 4.15
+    },
+    {
+     "w": "to",
+     "t": 4.35
+    },
+    {
+     "w": "change",
+     "t": 4.53
+    }
+   ],
+   "w": 940
+  },
+  {
+   "id": "c6",
+   "group": "g3",
+   "order": 6,
+   "start": 4.77,
+   "end": 6.21,
+   "text": "one line",
+   "role": "anchor",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 104,
+   "color": "#FF4D94",
+   "words": [
+    {
+     "w": "one",
+     "t": 4.77
+    },
+    {
+     "w": "line",
+     "t": 5.05
+    }
+   ],
+   "w": 940
+  },
+  {
+   "id": "c7",
+   "group": "g3",
+   "order": 7,
+   "start": 5.35,
+   "end": 6.21,
+   "text": "and render again.",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 58,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "and",
+     "t": 5.35
+    },
+    {
+     "w": "render",
+     "t": 5.57
+    },
+    {
+     "w": "again.",
+     "t": 5.85
+    }
+   ],
+   "w": 940
+  },
+  {
+   "id": "c8",
+   "group": "g4",
+   "order": 8,
+   "start": 6.35,
+   "end": 8.47,
+   "text": "You don't pay for a",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 58,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "You",
+     "t": 6.35
+    },
+    {
+     "w": "don't",
+     "t": 6.43
+    },
+    {
+     "w": "pay",
+     "t": 6.61
+    },
+    {
+     "w": "for",
+     "t": 6.75
+    },
+    {
+     "w": "a",
+     "t": 6.95
+    }
+   ],
+   "w": 940
+  },
+  {
+   "id": "c9",
+   "group": "g4",
+   "order": 9,
+   "start": 7.07,
+   "end": 8.47,
+   "text": "second video generation",
+   "role": "anchor",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 88,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "second",
+     "t": 7.07
+    },
+    {
+     "w": "video",
+     "t": 7.35
+    },
+    {
+     "w": "generation",
+     "t": 7.65
+    }
+   ],
+   "w": 940
+  },
+  {
+   "id": "c10",
+   "group": "g5",
+   "order": 10,
+   "start": 8.61,
+   "end": 11.27,
+   "text": "The product looks exactly the",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 752,
+   "align": "center",
+   "size": 58,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "The",
+     "t": 8.61
+    },
+    {
+     "w": "product",
+     "t": 8.73
+    },
+    {
+     "w": "looks",
+     "t": 8.93
+    },
+    {
+     "w": "exactly",
+     "t": 9.27
+    },
+    {
+     "w": "the",
+     "t": 9.69
+    }
+   ],
+   "w": 940
+  },
+  {
+   "id": "c11",
+   "group": "g5",
+   "order": 11,
+   "start": 9.99,
+   "end": 11.27,
+   "text": "same",
+   "role": "hero",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 752,
+   "align": "center",
+   "size": 190,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "same",
+     "t": 9.99
+    }
+   ],
+   "w": 940,
+   "score": 6,
+   "why": "+3 the claim needs it, +2 stressed proof, +1 short = 6",
+   "overlap": "bottom 15 to 20% of the word tucked behind the top of her head, never the face",
+   "dx": -262
+  },
+  {
+   "id": "c12",
+   "group": "g6",
+   "order": 12,
+   "start": 11.4,
+   "end": 14.05,
+   "text": "So you're only testing",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 58,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "So",
+     "t": 11.4
+    },
+    {
+     "w": "you're",
+     "t": 11.4
+    },
+    {
+     "w": "only",
+     "t": 11.4
+    },
+    {
+     "w": "testing",
+     "t": 11.65
+    }
+   ],
+   "w": 940,
+   "notBefore": 11.4
+  },
+  {
+   "id": "c13",
+   "group": "g6",
+   "order": 13,
+   "start": 12.01,
+   "end": 14.05,
+   "text": "the words",
+   "role": "anchor",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 104,
+   "color": "#FF4D94",
+   "words": [
+    {
+     "w": "the",
+     "t": 12.01
+    },
+    {
+     "w": "words",
+     "t": 12.23
+    }
+   ],
+   "w": 940,
+   "notBefore": 11.4
+  },
+  {
+   "id": "c14",
+   "group": "g6",
+   "order": 14,
+   "start": 12.51,
+   "end": 14.05,
+   "text": "and the motion graphics styles.",
+   "role": "support",
+   "zone": "above-head",
+   "x": 540,
+   "bottom": 640,
+   "align": "center",
+   "size": 54,
+   "color": "#FFF4E8",
+   "words": [
+    {
+     "w": "and",
+     "t": 12.51
+    },
+    {
+     "w": "the",
+     "t": 12.81
+    },
+    {
+     "w": "motion",
+     "t": 12.93
+    },
+    {
+     "w": "graphics",
+     "t": 13.15
+    },
+    {
+     "w": "styles.",
+     "t": 13.47
+    }
+   ],
+   "w": 940,
+   "notBefore": 11.4
+  }
+ ]
+}

@@ -1,0 +1,9 @@
+Read mia-motion-graphics/SKILL.md and templates/code-doodle/code-doodle.md in this project, and use templates/code-doodle/Doodle.tsx as the working example.
+Draw this scene entirely in code, no image files and no image model: [WHAT TO DRAW, e.g. a cat chef flipping an omelet in a cosy kitchen].
+Main character and its one action: [CHARACTER → ACTION, e.g. blinks, then waves].
+Colours: [PALETTE OR "use the template's pastels"].
+Output: [ASPECT RATIO OR DIMENSIONS], [DURATION], [FPS OR SUGGEST ONE].
+Audio: [VOICE FILE TO TIME IT TO / SILENT].
+Keep it simple and hand-drawn. Ask only for missing decisions, then give a three-line plan. Show me three still frames (outline, coloured, final pose) before the full animation.
+Keep colours and timing editable, and check the exported result.
+If you can't find these files in this folder, search the project for them, or download the kit again from https://miameow.ai/motion-graphics-kit/ and unzip it here.

@@ -1,0 +1,569 @@
+{
+ "duration": 36.078,
+ "segments": [
+  {
+   "from": 0.55,
+   "to": 3.245,
+   "outStart": 0
+  },
+  {
+   "from": 3.834,
+   "to": 5.814,
+   "outStart": 2.695
+  },
+  {
+   "from": 6.048,
+   "to": 7.748,
+   "outStart": 4.674
+  },
+  {
+   "from": 8.343,
+   "to": 8.971,
+   "outStart": 6.374
+  },
+  {
+   "from": 9.424,
+   "to": 15.668,
+   "outStart": 7.003
+  },
+  {
+   "from": 16.375,
+   "to": 18.062,
+   "outStart": 13.247
+  },
+  {
+   "from": 18.831,
+   "to": 22.322,
+   "outStart": 14.934
+  },
+  {
+   "from": 22.709,
+   "to": 25.492,
+   "outStart": 18.425
+  },
+  {
+   "from": 25.86,
+   "to": 27.861,
+   "outStart": 21.208
+  },
+  {
+   "from": 28.185,
+   "to": 29.914,
+   "outStart": 23.208
+  },
+  {
+   "from": 30.479,
+   "to": 33.454,
+   "outStart": 24.937
+  },
+  {
+   "from": 33.869,
+   "to": 37.357,
+   "outStart": 27.912
+  },
+  {
+   "from": 37.814,
+   "to": 39.029,
+   "outStart": 31.399
+  },
+  {
+   "from": 40.386,
+   "to": 43.85,
+   "outStart": 32.615
+  }
+ ],
+ "words": [
+  {
+   "text": "So",
+   "seg": 0,
+   "start": 0.12,
+   "end": 0.14
+  },
+  {
+   "text": "imagine",
+   "seg": 0,
+   "start": 0.14,
+   "end": 0.63
+  },
+  {
+   "text": "you're",
+   "seg": 0,
+   "start": 0.63,
+   "end": 1.05
+  },
+  {
+   "text": "sitting",
+   "seg": 0,
+   "start": 1.05,
+   "end": 1.54
+  },
+  {
+   "text": "in",
+   "seg": 0,
+   "start": 1.54,
+   "end": 1.68
+  },
+  {
+   "text": "a",
+   "seg": 0,
+   "start": 1.68,
+   "end": 1.75
+  },
+  {
+   "text": "job",
+   "seg": 0,
+   "start": 1.75,
+   "end": 1.96
+  },
+  {
+   "text": "interview",
+   "seg": 0,
+   "start": 1.96,
+   "end": 2.55
+  },
+  {
+   "text": "and",
+   "seg": 1,
+   "start": 2.725,
+   "end": 2.945
+  },
+  {
+   "text": "the",
+   "seg": 1,
+   "start": 3.055,
+   "end": 3.195
+  },
+  {
+   "text": "interviewer",
+   "seg": 1,
+   "start": 3.195,
+   "end": 4.105
+  },
+  {
+   "text": "asks",
+   "seg": 1,
+   "start": 4.105,
+   "end": 4.435
+  },
+  {
+   "text": "you",
+   "seg": 1,
+   "start": 4.435,
+   "end": 4.665
+  },
+  {
+   "text": "Tell",
+   "seg": 2,
+   "start": 4.794,
+   "end": 4.954
+  },
+  {
+   "text": "me",
+   "seg": 2,
+   "start": 4.954,
+   "end": 5.094
+  },
+  {
+   "text": "about",
+   "seg": 2,
+   "start": 5.094,
+   "end": 5.434
+  },
+  {
+   "text": "yourself",
+   "seg": 2,
+   "start": 5.434,
+   "end": 6.014
+  },
+  {
+   "text": "Hmm",
+   "seg": 3,
+   "start": 6.584,
+   "end": 6.944
+  },
+  {
+   "text": "Now",
+   "seg": 4,
+   "start": 7.013,
+   "end": 7.283
+  },
+  {
+   "text": "here's",
+   "seg": 4,
+   "start": 7.493,
+   "end": 7.833
+  },
+  {
+   "text": "a",
+   "seg": 4,
+   "start": 7.833,
+   "end": 7.923
+  },
+  {
+   "text": "mistake",
+   "seg": 4,
+   "start": 7.923,
+   "end": 8.573
+  },
+  {
+   "text": "I",
+   "seg": 4,
+   "start": 8.573,
+   "end": 8.653
+  },
+  {
+   "text": "hear",
+   "seg": 4,
+   "start": 8.713,
+   "end": 8.933
+  },
+  {
+   "text": "quite",
+   "seg": 4,
+   "start": 9.043,
+   "end": 9.473
+  },
+  {
+   "text": "often",
+   "seg": 4,
+   "start": 9.473,
+   "end": 9.883
+  },
+  {
+   "text": "People",
+   "seg": 4,
+   "start": 10.373,
+   "end": 10.623
+  },
+  {
+   "text": "start",
+   "seg": 4,
+   "start": 10.633,
+   "end": 10.943
+  },
+  {
+   "text": "telling",
+   "seg": 4,
+   "start": 10.943,
+   "end": 11.383
+  },
+  {
+   "text": "their",
+   "seg": 4,
+   "start": 11.383,
+   "end": 11.703
+  },
+  {
+   "text": "entire",
+   "seg": 4,
+   "start": 11.703,
+   "end": 12.103
+  },
+  {
+   "text": "life",
+   "seg": 4,
+   "start": 12.103,
+   "end": 12.473
+  },
+  {
+   "text": "story",
+   "seg": 4,
+   "start": 12.473,
+   "end": 13.003
+  },
+  {
+   "text": "But",
+   "seg": 5,
+   "start": 13.347,
+   "end": 13.487
+  },
+  {
+   "text": "here's",
+   "seg": 5,
+   "start": 13.487,
+   "end": 13.967
+  },
+  {
+   "text": "the",
+   "seg": 5,
+   "start": 13.967,
+   "end": 14.207
+  },
+  {
+   "text": "thing",
+   "seg": 5,
+   "start": 14.207,
+   "end": 14.617
+  },
+  {
+   "text": "The",
+   "seg": 6,
+   "start": 15.054,
+   "end": 15.154
+  },
+  {
+   "text": "interviewer",
+   "seg": 6,
+   "start": 15.154,
+   "end": 15.964
+  },
+  {
+   "text": "doesn't",
+   "seg": 6,
+   "start": 15.964,
+   "end": 16.474
+  },
+  {
+   "text": "need",
+   "seg": 6,
+   "start": 16.474,
+   "end": 16.764
+  },
+  {
+   "text": "to",
+   "seg": 6,
+   "start": 16.764,
+   "end": 16.934
+  },
+  {
+   "text": "know",
+   "seg": 6,
+   "start": 17.094,
+   "end": 17.184
+  },
+  {
+   "text": "everything",
+   "seg": 6,
+   "start": 17.184,
+   "end": 17.804
+  },
+  {
+   "text": "about",
+   "seg": 6,
+   "start": 17.824,
+   "end": 18.064
+  },
+  {
+   "text": "you",
+   "seg": 6,
+   "start": 18.144,
+   "end": 18.354
+  },
+  {
+   "text": "They",
+   "seg": 7,
+   "start": 18.545,
+   "end": 18.635
+  },
+  {
+   "text": "want",
+   "seg": 7,
+   "start": 18.635,
+   "end": 18.825
+  },
+  {
+   "text": "to",
+   "seg": 7,
+   "start": 18.835,
+   "end": 18.945
+  },
+  {
+   "text": "understand",
+   "seg": 7,
+   "start": 18.945,
+   "end": 19.485
+  },
+  {
+   "text": "your",
+   "seg": 7,
+   "start": 19.485,
+   "end": 19.685
+  },
+  {
+   "text": "professional",
+   "seg": 7,
+   "start": 19.685,
+   "end": 20.345
+  },
+  {
+   "text": "background",
+   "seg": 7,
+   "start": 20.345,
+   "end": 20.885
+  },
+  {
+   "text": "So",
+   "seg": 8,
+   "start": 21.328,
+   "end": 21.358
+  },
+  {
+   "text": "here's",
+   "seg": 8,
+   "start": 21.508,
+   "end": 21.928
+  },
+  {
+   "text": "a",
+   "seg": 8,
+   "start": 21.968,
+   "end": 22.038
+  },
+  {
+   "text": "simple",
+   "seg": 8,
+   "start": 22.038,
+   "end": 22.508
+  },
+  {
+   "text": "trick",
+   "seg": 8,
+   "start": 22.508,
+   "end": 22.898
+  },
+  {
+   "text": "use",
+   "seg": 9,
+   "start": 23.328,
+   "end": 23.448
+  },
+  {
+   "text": "these",
+   "seg": 9,
+   "start": 23.448,
+   "end": 23.848
+  },
+  {
+   "text": "three",
+   "seg": 9,
+   "start": 23.848,
+   "end": 24.248
+  },
+  {
+   "text": "steps",
+   "seg": 9,
+   "start": 24.248,
+   "end": 24.538
+  },
+  {
+   "text": "First",
+   "seg": 10,
+   "start": 25.187,
+   "end": 25.327
+  },
+  {
+   "text": "explain",
+   "seg": 10,
+   "start": 25.477,
+   "end": 26.027
+  },
+  {
+   "text": "what",
+   "seg": 10,
+   "start": 26.027,
+   "end": 26.337
+  },
+  {
+   "text": "you're",
+   "seg": 10,
+   "start": 26.337,
+   "end": 26.797
+  },
+  {
+   "text": "currently",
+   "seg": 10,
+   "start": 26.797,
+   "end": 27.457
+  },
+  {
+   "text": "doing",
+   "seg": 10,
+   "start": 27.507,
+   "end": 27.887
+  },
+  {
+   "text": "second",
+   "seg": 11,
+   "start": 28.032,
+   "end": 28.402
+  },
+  {
+   "text": "mention",
+   "seg": 11,
+   "start": 28.762,
+   "end": 29.232
+  },
+  {
+   "text": "your",
+   "seg": 11,
+   "start": 29.232,
+   "end": 29.442
+  },
+  {
+   "text": "relevant",
+   "seg": 11,
+   "start": 29.612,
+   "end": 30.222
+  },
+  {
+   "text": "experience",
+   "seg": 11,
+   "start": 30.292,
+   "end": 31.082
+  },
+  {
+   "text": "I'm",
+   "seg": 12,
+   "start": 31.509,
+   "end": 32.139
+  },
+  {
+   "text": "third",
+   "seg": 12,
+   "start": 32.139,
+   "end": 32.459
+  },
+  {
+   "text": "explain",
+   "seg": 13,
+   "start": 32.735,
+   "end": 33.105
+  },
+  {
+   "text": "why",
+   "seg": 13,
+   "start": 33.215,
+   "end": 33.465
+  },
+  {
+   "text": "you're",
+   "seg": 13,
+   "start": 33.465,
+   "end": 33.945
+  },
+  {
+   "text": "interested",
+   "seg": 13,
+   "start": 34.025,
+   "end": 34.825
+  },
+  {
+   "text": "in",
+   "seg": 13,
+   "start": 34.825,
+   "end": 34.935
+  },
+  {
+   "text": "the",
+   "seg": 13,
+   "start": 34.995,
+   "end": 35.245
+  },
+  {
+   "text": "position",
+   "seg": 13,
+   "start": 35.245,
+   "end": 35.945
+  }
+ ]
+}
