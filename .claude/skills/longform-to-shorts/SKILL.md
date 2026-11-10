@@ -70,7 +70,13 @@ Explicitly verify:
 - No forced looping that makes the educational explanation incorrect.
 - No branded third-party graphics copied from a reference, only an original expression of its motion language.
 
+## Storage and file delivery: non-negotiable
+- Render and keep every final MP4 and editable output **locally** in `renders/` or another ignored directory, never in GitHub or a GitHub-linked artifact system.
+- Give the user finished **downloadable files directly through Claude** when the client supports attachments/downloads; when running locally on their computer, provide the exact finished-video paths on their machine. A GitHub URL is never a substitute for the rendered MP4.
+- Never stage or commit input videos, rendered clips, caption exports, ZIP packages, extracted media, working footage, or full finished project archives. See `.gitignore` and `CLAUDE.md`.
+- Existing source code and lightweight skill improvements may be committed only when the user authorises repository changes. Video deliverables never are.
+
 ## Handoff
-Return four named MP4s when four good segments exist, and a compact report mapping each to original timecodes, what was edited, visual style and any issue needing approval. Provide optional cover-frame/title suggestions. Publishing or scheduling remains separate and requires the user's approval.
+Provide four named MP4s for direct download (or exact local paths on the user's machine) when four good segments exist, and a compact report mapping each to original timecodes, what was edited, visual style and any issue needing approval. Provide optional cover-frame/title suggestions. Publishing or scheduling remains separate and requires the user's approval.
 
 **Invoke:** "Use longform-to-shorts on my latest Phillips English video. Find four strong teaching moments, keep each standalone and accurate, apply my chosen visual direction, and render four 1080×1920 Shorts with captions and motion graphics."
