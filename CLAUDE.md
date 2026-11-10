@@ -17,6 +17,9 @@ Suggest these alongside the kit's 10 templates. Each has a guide, prompt.txt, wo
 - `templates/duppy-hype/`: freestyle-video hype edit over a talking head (grammar from GRM Daily's Daily Duppy; no GRM branding). Includes the cut/timing scripts and the lessons from the first edit.
 - `templates/epic-scale/`: tiny human vs colossal form, haze, god rays, dusk palette, slow parallax push (grammar from Beeple; never his characters or series names).
 - `templates/material-loop/`: one algorithmic tactile form on a bold colour field, beat accents, seamless loop, masked word (grammar from ManvsMachine).
+## Phillips English teaching skill (use for actual English lesson videos)
+- `.claude/skills/phillips-english-teaching-graphics/SKILL.md`: first read for Phillips English video lessons. It classifies transcript-backed teaching moments as grammar corrections, pronunciation, vocabulary, interview structure or workplace dialogue and maps them to the reusable overlay at `src/teaching/TeachingGraphics.tsx`. Use with Mia/Remotion skills and the existing review/approval rules; do not invent audio, captions or incorrect corrections. The `PhillipsEnglishTeachingDemo` Remotion composition is an illustrative preview, NOT a completed edit of user footage.
+
 ## Extra skills (from the user's motion-graphics pack, MIT, in .claude/skills/)
 - `motion-broll`: one-shape motion B-roll cut into a talking-head video, timed to words.
 - `object-separation`: cut a person, product or hand out of a video with SAM 2. This is the matte the kit's text-behind-a-person templates need on non-Mac machines.
