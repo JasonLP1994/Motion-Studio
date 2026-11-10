@@ -12,3 +12,6 @@ The instructions in `SKILL.md` are the workflow. `CLAUDE.md`, Mia's Motion Graph
 **Review sample:** `npm run dev` and open the `PhillipsEnglishTeachingDemo` composition. The sample is explicitly illustrative; replace sample text and times with a real transcript for production.
 
 **No extra packages:** Uses the repository's existing React, Remotion and Inter font dependencies.
+
+## Art direction is always flexible
+This skill analyses *what to illustrate* and when to show it; **you choose the look every time**. A Daily Duppy-inspired video should use `templates/duppy-hype/` and may use hard typography, punch-in cuts, bold colour and energetic pacing. Cinematic, experimental, playful and minimalist looks are equally valid. The sample card design is optional and accepts `design` overrides for palette/font/energy/layout; it is **not a global style requirement**. The skill never modifies the existing styles or templates.
