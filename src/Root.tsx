@@ -12,6 +12,8 @@ import { Playful } from "./playful/Playful";
 import { playfulConfig as pc } from "./playful/config";
 import { introConfig as ic } from "./intro/config";
 import { LogoSting } from "./sting/LogoSting";
+import { MoGraph } from "./c4d/MoGraph";
+import { c4dConfig as cc } from "./c4d/config";
 import { stingConfig as sc } from "./sting/config";
 
 export const RemotionRoot: React.FC = () => {
@@ -26,6 +28,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="Calib" component={Calib} durationInFrames={1} fps={30} width={1080} height={1080} />
       <Composition id="Playful" component={Playful} durationInFrames={pc.output.durationInFrames} fps={pc.output.fps} width={pc.output.width} height={pc.output.height} />
       <Composition id="LogoSting" component={LogoSting} durationInFrames={sc.output.durationInFrames} fps={sc.output.fps} width={sc.output.width} height={sc.output.height} />
+      <Composition id="C4DMoGraph" component={MoGraph} durationInFrames={cc.output.fps * cc.output.durationInSeconds} fps={cc.output.fps} width={cc.output.width} height={cc.output.height} />
     </>
   );
 };
