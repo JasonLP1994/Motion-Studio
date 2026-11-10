@@ -12,6 +12,9 @@ A Remotion workspace set up for making motion graphics by chatting with Claude.
 - `notes/craft.md`: motion craft rules (eases, beat grids, titles, transitions, captions, sound, review), learned from HyperFrames' references in `notes/craft/hyperframes/`.
 - `src/`: the code: the Phillips English intro (`src/intro/`), the Duppy-style edit (`src/duppy/`) and the style demos (`src/styles/`).
 - `scripts/`: cut-and-timing tools for talking-head edits. `transcribe.mjs`: local Whisper transcription with word timings.
+- **New video specialist skills:** `.claude/skills/longform-to-shorts/` (four Shorts from one existing video); `short-form-video/` (vertical storytelling); `caption-animation/` (word-synchronised captions); `motion-art-direction/` (per-video creative treatment); and `shot-composition/` (framing / aspect ratios).
+- Imported skills are adapted MIT-licensed source references; provenance and retained licences: [`.claude/skills/IMPORTED-SKILLS.md`](.claude/skills/IMPORTED-SKILLS.md). No new dependencies or paid platforms were added.
+
 
 ## Folders for your files (not stored in this repo)
 `inputs/` (clips, images), `references/` (styles you like), `audio/`, `renders/` (finished videos). Videos stay out of Git to keep the repo small.
@@ -22,3 +25,11 @@ npm ci
 npm run dev
 ```
 Whisper (for transcription) is rebuilt by the cloud environment's setup script, or by asking Claude.
+
+## From long-form to four Shorts
+
+Record **one** Phillips English long-form YouTube lesson, then ask Claude Code:
+> Use the longform-to-shorts skill on the video in inputs/. Find four genuine standalone teaching moments, keep my exact spoken explanations, choose motion graphics that support the point, and render four 9:16 Shorts. Keep my chosen art direction (which can differ from video to video). Do not overwrite anything.
+
+The source video stays intact; the skill uses local word-timed transcription and the existing Remotion workspace. Its four-Shorts goal is a planning default, not a reason to invent filler. Art direction remains completely flexible, including Daily Duppy-inspired edits, cinematic looks, experimental motion and clean educational explainers.
+
