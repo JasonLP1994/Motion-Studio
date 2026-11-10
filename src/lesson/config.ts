@@ -22,8 +22,8 @@ export const lessonConfig = {
   video: { src: "footage/interview.mov", srcWidth: 1620, srcHeight: 1080, offsetY: -60 },
   trim: { start: 0.4, end: 79.8 }, // speech 0.56-79.6; after 79.8 the presenter stops the recording
   loudness: { targetLufs: -14, truePeak: -1.5 }, // applied after render (source is about -35 LUFS)
-  design: { layout: "left", cardWidthRatio: 0.34, cardTopRatio: 0.085, cardMarginRatio: 0.0, leadFrames: 3,
-    palette: { panel: "rgba(10, 18, 26, 0.985)" } } as TeachingDesign, // cards cover the wall sign fully; nearly opaque so it doesn't ghost through
+  design: { layout: "left", cardWidthRatio: 0.34, cardTopRatio: 0.085, cardMarginRatio: 0.0, cardMinHeightRatio: 0.4, // 0.4 = reaches y 524, below the wall sign (ends ~y 505) leadFrames: 3,
+    palette: { panel: "rgb(10, 18, 26)" } } as TeachingDesign, // cards cover the wall sign fully; nearly opaque so it doesn't ghost through
   anchors: A,
 
   cues: [

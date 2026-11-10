@@ -27,6 +27,8 @@ export type TeachingDesign = {
   cardTopRatio?: number;
   /** Gap between a side card and the frame edge, as a share of the width (default 0.055). */
   cardMarginRatio?: number;
+  /** Minimum card height as a share of the frame height (e.g. to fully cover a sign behind short cards). */
+  cardMinHeightRatio?: number;
   /** Frames before a spoken word that a timed item appears (craft rule: 2-4). */
   leadFrames?: number;
 };
@@ -343,6 +345,7 @@ const CueCard: React.FC<{ cue: TeachingCue; lengthFrames: number; design: Teachi
           top: y,
           width: cardWidth,
           maxHeight: Math.round(height * (portrait ? 0.56 : 0.69)),
+          minHeight: design.cardMinHeightRatio ? Math.round(height * design.cardMinHeightRatio) : undefined,
           overflow: "hidden",
           boxSizing: "border-box",
           backgroundColor: colors.panel,
