@@ -10,7 +10,7 @@ Given an **already-recorded** long-form video, identify its best self-contained 
 
 Default for Phillips English: aim for **four strong Shorts per long-form recording**, supporting two long videos and eight Shorts per month. If the source contains fewer than four genuine, usable moments, report the shortage rather than inventing material or forcing weak clips. Follow the user's explicit requested count, length and art direction if different.
 
-Read **CLAUDE.md**, **notes/checks.md**, **notes/craft.md**, **.claude/skills/phillips-english-teaching-graphics/SKILL.md**, and, as needed:
+Read **CLAUDE.md**, **notes/checks.md**, **notes/craft.md**, and, as needed:
 - **.claude/skills/short-form-video/SKILL.md** — hook, educational payoff, vertical pacing
 - **.claude/skills/caption-animation/SKILL.md** — transcript-verified captions; avoid double-captioning
 - **.claude/skills/shot-composition/SKILL.md** — reframe shot-by-shot
@@ -51,7 +51,7 @@ If the user previously chose a specific look for this video, **reuse it**; do no
 ## Build
 1. Create an explicit source-to-output edit decision list (EDL) per Short. Work frame-accurately with the source FPS and selected output FPS. Recompute transcript time offsets after cuts.
 2. Target 1080×1920 by default. **Reframe per shot**: show a mobile crop test that preserves the face, hands, microphones and meaningful graphics; use clean layout extension / intelligent restacking when a simple central crop loses meaning. Never squash the video.
-3. Build visual teaching cues using `phillips-english-teaching-graphics`, but render them in the **chosen art direction**. For a Daily Duppy-inspired Short, prefer the `duppy-hype` style and its expressive lyric captions rather than generic rounded cards.
+3. Build visual teaching cues from the transcript (only where they clarify the lesson), rendered in the **chosen art direction**. For a Daily Duppy-inspired Short, prefer the `duppy-hype` style and its expressive lyric captions rather than generic rounded cards.
 4. Make captions word-accurate using source transcript mapped through the EDL, and do not place a second caption track on top of existing readable text. Check platform safe areas.
 5. Keep the voice clear; preserve original audio and use sound effects or background music only when they improve the edit and the user has the rights. Follow workspace loudness and peak checks.
 6. Deliver original-source master untouched; output each Short to `renders/` as a new version (`<topic>-short-01-v1.mp4`, etc.), plus editing project files and the EDL. Don't overwrite prior renders.
