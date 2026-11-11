@@ -70,6 +70,9 @@ const makeMarble = (colour: string, veins: boolean, u: Uniforms) => {
   const m = new THREE.MeshPhysicalMaterial({ color: colour, roughness: 0.33, clearcoat: 0.3, clearcoatRoughness: 0.45, side: THREE.DoubleSide });
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, u);
+    // scene 3: a wind-swept dissolve turns the rubble to dust, left to right
+    shader.vertexShader = "uniform float uDust;\nvarying vec3 vDw;\n" + shader.vertexShader.replace("#include <project_vertex>", "#include <project_vertex>\nvDw = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    shader.fragmentShader = "uniform float uDust;\nvarying vec3 vDw;\n" + shader.fragmentShader.replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (uDust > 0.0) { float hd = fract(sin(dot(floor(vDw * 420.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453); if (vDw.x * 0.4 + 0.5 + (hd - 0.5) * 0.35 < uDust * 1.5 - 0.25) discard; }");
     const decl = `\nuniform float uFlow, uTopY, uCap, uStreaks, uThick, uCrackW, uCrackFront, uCrackI;\nuniform vec3 uPaint, uVein, uCrack;\n${NOISE}`;
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", `#include <common>\nattribute vec3 aOrig;\nattribute float aCrack;\nvarying vec3 vOrig;\nvarying float vCrack;${decl}`)
@@ -87,7 +90,7 @@ const makeMarble = (colour: string, veins: boolean, u: Uniforms) => {
       .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uCrack * cg * uCrackI;")
       .replace("#include <dithering_fragment>", "#include <dithering_fragment>\nif (any(isnan(gl_FragColor.rgb)) || any(isinf(gl_FragColor.rgb))) gl_FragColor.rgb = vec3(0.0);\ngl_FragColor.rgb = min(gl_FragColor.rgb, vec3(3.0)); // guard: bad normals on crack seams made glowing blobs");
   };
-  m.customProgramCacheKey = () => `marble4-${veins}`;
+  m.customProgramCacheKey = () => `marble5-${veins}`;
   return m;
 };
 
@@ -119,7 +122,7 @@ const makeFloor = (u: Uniforms) => {
       .replace("#include <common>", "#include <common>\nvarying vec3 vW;")
       .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\nvarying vec3 vW;\nuniform float uPool, uHalfW, uHalfD, uFloorA, uFadeA, uFadeB, uCarve, uStream, uFill, uRomeW, uRomeA;\nuniform vec2 uRomeC;\nuniform float uStreamX[4];\nuniform sampler2D uRome;\nuniform vec3 uPaint, uFogC;\nfloat romeAt(vec2 xz){ vec2 q = (xz - uRomeC) / vec2(uRomeW, uRomeW * uRomeA) + 0.5; if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) return 0.0; return texture2D(uRome, vec2(q.x, 1.0 - q.y)).r; }\nuniform vec4 uSplats[${MAX_SPLATS}];\n${NOISE}`)
+      .replace("#include <common>", `#include <common>\nvarying vec3 vW;\nuniform float uPool, uHalfW, uHalfD, uFloorA, uFadeA, uFadeB, uCarve, uStream, uFill, uRomeW, uRomeA;\nuniform vec2 uRomeC;\nuniform float uStreamX[4];\nuniform float uDrain;\nuniform sampler2D uRome;\nuniform vec3 uPaint, uFogC;\nfloat romeAt(vec2 xz){ vec2 q = (xz - uRomeC) / vec2(uRomeW, uRomeW * uRomeA) + 0.5; if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) return 0.0; return texture2D(uRome, vec2(q.x, 1.0 - q.y)).r; }\nuniform vec4 uSplats[${MAX_SPLATS}];\n${NOISE}`)
       .replace("#include <color_fragment>", `#include <color_fragment>
         vec2 q = abs(vW.xz) - vec2(uHalfW, uHalfD);
         float dBox = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
@@ -140,12 +143,12 @@ const makeFloor = (u: Uniforms) => {
         for (int k = 0; k < 4; k++) {
           float fk = float(k);
           float xc = uRomeC.x + uStreamX[k] + 0.022 * sin(vW.z * 13.0 + fk * 2.1);
-          float z0 = uRomeC.y - 0.45;
+          float z0 = mix(uRomeC.y - 0.45, zTop - 0.01, uDrain);   // the tail follows the last of the liquid in
           float z1 = mix(z0, zTop, clamp(uStream * 1.2 - fk * 0.06, 0.0, 1.0));
           float w = 0.024 + 0.008 * sin(vW.z * 29.0 + fk * 3.0) + 0.01 * smoothstep(z1 - 0.05, z1, vW.z); // bulging tip
           st = max(st, (1.0 - smoothstep(w * 0.55, w, abs(vW.x - xc))) * step(z0, vW.z) * (1.0 - smoothstep(z1 - 0.006, z1, vW.z)));
         }
-        st *= uCarve;
+        st *= uCarve * (1.0 - smoothstep(0.75, 0.98, uDrain));        // the last of each rivulet soaks into the letter
         float qy = clamp((vW.z - (uRomeC.y - hW * 0.5)) / hW, 0.0, 1.0);    // 0 = top of the word, 1 = bottom
         float front = uFill * 1.3 - 0.15 + (fbm(vec3(vW.xz * 7.0, 3.0)) - 0.5) * 0.18;
         float filled = Lm * (1.0 - smoothstep(front - 0.02, front, qy));
@@ -162,7 +165,7 @@ const makeFloor = (u: Uniforms) => {
       .replace("#include <lights_fragment_end>", "#include <lights_fragment_end>\nreflectedLight.directSpecular = vec3(0.0); // never show the lights in the pool")
       .replace("#include <fog_fragment>", "#include <fog_fragment>\nfloat far0 = smoothstep(uFadeA, uFadeB, length(vW.xz));\ngl_FragColor = vec4(mix(gl_FragColor.rgb, uFogC, far0), mix(gl_FragColor.a, 1.0, far0));");
   };
-  m.customProgramCacheKey = () => "paint-floor6";
+  m.customProgramCacheKey = () => "paint-floor7";
   return m;
 };
 
@@ -411,9 +414,9 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   const u = useMemo<Uniforms>(() => ({
     uFlow: { value: 0 }, uTopY: { value: topY }, uCap: { value: PA.capDepth }, uStreaks: { value: PA.streaks }, uThick: { value: PA.thickness },
     uPaint: { value: new THREE.Color(C.colors.paint) }, uVein: { value: new THREE.Color(C.colors.vein) }, uCrack: { value: new THREE.Color(C.colors.crack) },
-    uCrackW: { value: -1 }, uCrackFront: { value: 99 }, uCrackI: { value: 0 },
+    uCrackW: { value: -1 }, uCrackFront: { value: 99 }, uCrackI: { value: 0 }, uDust: { value: 0 },
   }), [topY]);
-  const floorU = useMemo<Uniforms>(() => ({ uPool: { value: 0 }, uHalfW: { value: P.w / 2 }, uHalfD: { value: P.d / 2 }, uFloorA: { value: C.post.reflector.floorOpacity }, uFadeA: { value: C.cove.floorFadeStart }, uFadeB: { value: C.cove.floorFadeEnd }, uFogC: { value: new THREE.Color(C.colors.fog) }, uCarve: { value: 0 }, uStream: { value: 0 }, uFill: { value: 0 }, uStreamX: { value: RM.streams }, uRome: { value: romeTex }, uRomeC: { value: new THREE.Vector2(...RM.centre) }, uRomeW: { value: RM.width }, uRomeA: { value: 0.3125 }, uPaint: { value: new THREE.Color(C.colors.paint) }, uSplats: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) } }), []);
+  const floorU = useMemo<Uniforms>(() => ({ uPool: { value: 0 }, uHalfW: { value: P.w / 2 }, uHalfD: { value: P.d / 2 }, uFloorA: { value: C.post.reflector.floorOpacity }, uFadeA: { value: C.cove.floorFadeStart }, uFadeB: { value: C.cove.floorFadeEnd }, uFogC: { value: new THREE.Color(C.colors.fog) }, uCarve: { value: 0 }, uDrain: { value: 0 }, uStream: { value: 0 }, uFill: { value: 0 }, uStreamX: { value: RM.streams }, uRome: { value: romeTex }, uRomeC: { value: new THREE.Vector2(...RM.centre) }, uRomeW: { value: RM.width }, uRomeA: { value: 0.3125 }, uPaint: { value: new THREE.Color(C.colors.paint) }, uSplats: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) } }), []);
   const marble = useMemo(() => makeMarble(C.colors.marble, true, u), [u]);
   const inner = useMemo(() => { const m = makeMarble(C.colors.marble, true, u); m.polygonOffset = true; m.polygonOffsetFactor = 2; m.polygonOffsetUnits = 2; return m; }, [u]);
   const mats = useMemo(() => [marble, inner], [marble, inner]);
@@ -434,7 +437,9 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   // --- paint ---
   u.uFlow.value = PA.speed * Math.pow(Math.max(0, t - T.paintStart), PA.slowdown);
   const pool = PA.poolMax * (1 - Math.exp(-Math.max(0, t - PA.floorReach) / (PA.poolGrow / 3)));
-  floorU.uPool.value = pool;
+  const drainK = smooth(C.scene3.drain[0], C.scene3.drain[1], t); // the pool drains into ROME
+  floorU.uPool.value = pool * (1 - 0.95 * drainK);
+  floorU.uDrain.value = drainK;
   floorU.uCarve.value = t >= RM.carveFrom ? 1 : 0; // the carving only exists in scene 2 (switches on during the dip to black)
   floorU.uStream.value = smooth(RM.streamT[0], RM.streamT[1], t);
   floorU.uFill.value = smooth(RM.fillT[0], RM.fillT[1], t);
@@ -463,10 +468,14 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
     const st = pieceStates[i];
     if (!st.landed) { splats[k].set(0, 0, 0, 0); return; }
     const r = (F.splatRadius[0] + (F.splatRadius[1] - F.splatRadius[0]) * R(`sp${i}`)) * Math.min(1, p.radius * 6);
-    splats[k].set(st.land.x, st.land.z, r * easeOut((s - st.landS) / 0.25), i + 1);
+    splats[k].set(st.land.x, st.land.z, r * easeOut((s - st.landS) / 0.25) * (1 - smooth(C.scene3.drain[0], C.scene3.drain[1], t)), i + 1);
   });
 
   // --- chips (instanced) ---
+  const S3 = C.scene3;
+  const dustK = clamp((t - S3.dust[0]) / (S3.dust[1] - S3.dust[0]));
+  u.uDust.value = dustK;
+  const sweptAt = (x: number, jitter: number) => clamp((x * 0.4 + 0.75 + (jitter - 0.5) * 0.35) / 1.5); // dust progress when the wind reaches x
   const chips = useMemo(() => {
     const m = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 0.4 }), C.particles.chips);
     m.castShadow = true;
@@ -480,7 +489,7 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
     const f = flight(`ch${i}`, start, headCentre, sz, s, 1.15);
     dummy.position.copy(f.pos);
     dummy.rotation.set(f.tau * 9 * R(`cr1${i}`), f.tau * 9 * R(`cr2${i}`), 0);
-    dummy.scale.setScalar(s > T.boom ? sz : 0);
+    dummy.scale.setScalar(s > T.boom && dustK <= sweptAt(f.pos.x, R(`cj${i}`)) ? sz : 0);
     dummy.updateMatrix(); chips.setMatrixAt(i, dummy.matrix);
   }
   chips.instanceMatrix.needsUpdate = true;
@@ -547,6 +556,33 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   }
   dpos.needsUpdate = true; dcol.needsUpdate = true;
 
+  // --- ash: each piece breaks into dust as the wind passes, and the dust blows away ---
+  const ash = useMemo(() => {
+    const n = S3.ashCount, g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
+    g.setAttribute("color", new THREE.Float32BufferAttribute(new Float32Array(n * 4), 4));
+    const m = new THREE.PointsMaterial({ size: S3.ashSize, map: sprite, transparent: true, depthWrite: false, vertexColors: true, sizeAttenuation: true });
+    const pts = new THREE.Points(g, m); pts.frustumCulled = false; return pts;
+  }, [sprite]);
+  {
+    const ap = ash.geometry.getAttribute("position") as THREE.BufferAttribute, ac = ash.geometry.getAttribute("color") as THREE.BufferAttribute;
+    for (let i = 0; i < S3.ashCount; i++) {
+      const j = Math.floor(R(`aj${i}`) * pieces.length), pr = pieces[j].radius * 0.75;
+      const p0 = pieceStates[j].pos.clone().add(new THREE.Vector3((R(`ax${i}`) - 0.5) * 2 * pr, R(`ay${i}`) * pr * 0.8, (R(`az${i}`) - 0.5) * 2 * pr));
+      const tRel = S3.dust[0] + sweptAt(p0.x, R(`aw${i}`)) * (S3.dust[1] - S3.dust[0]);
+      const dt = t - tRel;
+      if (dt < 0 || t < T.boom) { ap.setXYZ(i, 0, -50, 0); ac.setXYZW(i, 0, 0, 0, 0); continue; }
+      const sp = 0.5 + R(`as${i}`);
+      const wx = S3.wind[0] * sp * (dt + 0.35 * dt * dt), wz = S3.wind[1] * sp * dt;
+      const swirl = 0.04 * Math.sin(dt * 2.3 + i) * dt;
+      ap.setXYZ(i, p0.x + wx, p0.y + S3.lift * sp * dt + swirl, p0.z + wz + 0.04 * Math.cos(dt * 1.9 + i) * dt);
+      const pink = R(`ac${i}`) < 0.75;
+      const a = 0.95 * Math.exp(-dt * 0.7) * smooth(0, 0.12, dt);
+      ac.setXYZW(i, pink ? 0.95 : 0.55, pink ? 0.8 : 0.05, pink ? 0.76 : 0.08, a);
+    }
+    ap.needsUpdate = true; ac.needsUpdate = true;
+  }
+
   // --- camera: three shots, each a slow eased drift, plus tremor/shake; dips to black at the cuts ---
   const shots = C.camera.shots;
   const shot = shots.find((sh) => t >= sh.t0 && t < sh.t1) ?? shots[shots.length - 1];
@@ -558,6 +594,7 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   cp.add(new THREE.Vector3(Math.sin(t * 23) * shake, Math.sin(t * 29 + 1) * shake, Math.sin(t * 19 + 2) * shake * 0.5));
   camera.position.copy(cp);
   (camera as THREE.PerspectiveCamera).fov = shot.fov; (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+  camera.up.set(0, shot.topDown ? 0 : 1, shot.topDown ? -1 : 0); // bird's-eye shots keep the word upright
   camera.lookAt(cl);
   const dip = C.camera.dip;
   let fade = smooth(0, 0.6, t); // first frames rise from black
@@ -592,6 +629,7 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
       <primitive object={splash} />
       <primitive object={drops} />
       <primitive object={dust} />
+      <primitive object={ash} />
       <Post focus={focus} aperture={shot.aperture ?? C.post.dof.aperture} bloom={bloom} seed={frame * 0.137} fade={fade} time={t} cam={[cp.x * 0.25 + cp.z * 0.1, cp.y * 0.2]} />
     </>
   );
