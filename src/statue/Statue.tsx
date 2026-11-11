@@ -4,8 +4,8 @@
 // mirror-polished floor. GTAO + depth of field + bloom + film grade.
 // Deterministic: everything is computed from frame / fps. The single useFrame below only takes over
 // rendering (composer.render()) once per Remotion frame; it animates nothing.
-import React, { useMemo } from "react";
-import { AbsoluteFill, random, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import React, { useEffect, useMemo, useState } from "react";
+import { AbsoluteFill, continueRender, delayRender, random, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { ThreeCanvas } from "@remotion/three";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -91,6 +91,24 @@ const makeMarble = (colour: string, veins: boolean, u: Uniforms) => {
   return m;
 };
 
+// ROME letter mask: white letters on black, drawn with the Cinzel font once it has loaded.
+const RM = C.rome;
+const romeCanvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+const romeTex = romeCanvas ? new THREE.CanvasTexture(romeCanvas) : new THREE.Texture();
+let romeAspect = 0.3; // height / width of the word, set when drawn
+const drawRome = () => {
+  if (!romeCanvas) return;
+  const W = 2048, H = 640; romeCanvas.width = W; romeCanvas.height = H;
+  const g = romeCanvas.getContext("2d")!;
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+  g.font = `${RM.weight} 440px CinzelLocal`; g.textAlign = "center"; g.textBaseline = "middle";
+  const m = g.measureText(RM.text); const scale = Math.min(1, (W * 0.92) / m.width);
+  g.save(); g.translate(W / 2, H / 2 + 20); g.scale(scale, 1);
+  g.fillStyle = "#fff"; g.letterSpacing = "30px"; g.fillText(RM.text, 0, 0); g.restore();
+  romeAspect = H / W;
+  romeTex.anisotropy = 8; romeTex.needsUpdate = true;
+};
+
 // Floor overlay above a mirror: dark polished stone (lets reflections through) + paint pool + splats.
 const MAX_SPLATS = 24;
 const makeFloor = (u: Uniforms) => {
@@ -101,7 +119,7 @@ const makeFloor = (u: Uniforms) => {
       .replace("#include <common>", "#include <common>\nvarying vec3 vW;")
       .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\nvarying vec3 vW;\nuniform float uPool, uHalfW, uHalfD, uFloorA, uFadeA, uFadeB;\nuniform vec3 uPaint, uFogC;\nuniform vec4 uSplats[${MAX_SPLATS}];\n${NOISE}`)
+      .replace("#include <common>", `#include <common>\nvarying vec3 vW;\nuniform float uPool, uHalfW, uHalfD, uFloorA, uFadeA, uFadeB, uCarve, uStream, uFill, uRomeW, uRomeA;\nuniform vec2 uRomeC;\nuniform float uStreamX[4];\nuniform sampler2D uRome;\nuniform vec3 uPaint, uFogC;\nfloat romeAt(vec2 xz){ vec2 q = (xz - uRomeC) / vec2(uRomeW, uRomeW * uRomeA) + 0.5; if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) return 0.0; return texture2D(uRome, vec2(q.x, 1.0 - q.y)).r; }\nuniform vec4 uSplats[${MAX_SPLATS}];\n${NOISE}`)
       .replace("#include <color_fragment>", `#include <color_fragment>
         vec2 q = abs(vW.xz) - vec2(uHalfW, uHalfD);
         float dBox = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
@@ -110,13 +128,41 @@ const makeFloor = (u: Uniforms) => {
         for (int i = 0; i < ${MAX_SPLATS}; i++) { vec4 s = uSplats[i]; if (s.z <= 0.0) continue;
           float d = length(vW.xz - s.xy) + (n3(vec3(vW.xz * 18.0, s.w)) - 0.5) * s.z * 0.5;
           pm = max(pm, 1.0 - smoothstep(s.z - 0.006, s.z + 0.006, d)); }
-        diffuseColor.rgb = mix(diffuseColor.rgb, uPaint, pm);
+        // carved ROME: grooves in the floor; as the paint settles it drains off the flat floor and stays in the letters
+        // carved ROME (scene 2): empty grooves first, then rivulets run from the pool and the liquid fills each letter
+        float Lm = romeAt(vW.xz) * uCarve;
+        float e = 0.004; vec2 gr = uCarve * vec2(romeAt(vW.xz + vec2(e, 0.0)) - romeAt(vW.xz - vec2(e, 0.0)), romeAt(vW.xz + vec2(0.0, e)) - romeAt(vW.xz - vec2(0.0, e)));
+        float wall = clamp(length(gr), 0.0, 1.0);
+        float litWall = clamp(dot(gr, normalize(vec2(-0.6, -0.8))), -1.0, 1.0);
+        float hW = uRomeW * uRomeA;                                         // word box depth
+        float zTop = uRomeC.y - hW * 0.3;                                   // where the rivulets reach the letters
+        float st = 0.0;
+        for (int k = 0; k < 4; k++) {
+          float fk = float(k);
+          float xc = uRomeC.x + uStreamX[k] + 0.022 * sin(vW.z * 13.0 + fk * 2.1);
+          float z0 = uRomeC.y - 0.45;
+          float z1 = mix(z0, zTop, clamp(uStream * 1.2 - fk * 0.06, 0.0, 1.0));
+          float w = 0.024 + 0.008 * sin(vW.z * 29.0 + fk * 3.0) + 0.01 * smoothstep(z1 - 0.05, z1, vW.z); // bulging tip
+          st = max(st, (1.0 - smoothstep(w * 0.55, w, abs(vW.x - xc))) * step(z0, vW.z) * (1.0 - smoothstep(z1 - 0.006, z1, vW.z)));
+        }
+        st *= uCarve;
+        float qy = clamp((vW.z - (uRomeC.y - hW * 0.5)) / hW, 0.0, 1.0);    // 0 = top of the word, 1 = bottom
+        float front = uFill * 1.3 - 0.15 + (fbm(vec3(vW.xz * 7.0, 3.0)) - 0.5) * 0.18;
+        float filled = Lm * (1.0 - smoothstep(front - 0.02, front, qy));
+        float men = Lm * (smoothstep(front - 0.06, front - 0.02, qy) - smoothstep(front - 0.02, front, qy)); // glossy leading edge
+        pm = max(pm * (1.0 - Lm), max(st, filled));
+        vec3 floorC = diffuseColor.rgb * (1.0 - 0.6 * Lm);                 // empty groove: deeper, darker
+        diffuseColor.rgb = mix(floorC, uPaint * (1.0 + 0.7 * filled), pm);
+        diffuseColor.rgb *= 1.0 - 0.85 * wall;                             // shadowed carved edges
+        diffuseColor.rgb += uPaint * max(litWall, 0.0) * 1.4;              // lit lip of the cut
+        diffuseColor.rgb += uPaint * men * 1.6;
         diffuseColor.a = mix(uFloorA, 1.0, pm);`)
       .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.04, pm);")
       // infinite floor: with distance the floor turns into exactly the cove's horizon colour (opaque, unlit)
+      .replace("#include <lights_fragment_end>", "#include <lights_fragment_end>\nreflectedLight.directSpecular = vec3(0.0); // never show the lights in the pool")
       .replace("#include <fog_fragment>", "#include <fog_fragment>\nfloat far0 = smoothstep(uFadeA, uFadeB, length(vW.xz));\ngl_FragColor = vec4(mix(gl_FragColor.rgb, uFogC, far0), mix(gl_FragColor.a, 1.0, far0));");
   };
-  m.customProgramCacheKey = () => "paint-floor3";
+  m.customProgramCacheKey = () => "paint-floor6";
   return m;
 };
 
@@ -289,7 +335,7 @@ const flight = (key: string, start: THREE.Vector3, from: THREE.Vector3, restY: n
 };
 
 // ---------- post ----------
-const Post: React.FC<{ focus: number; bloom: number; seed: number; fade: number; time: number; cam: [number, number] }> = ({ focus, bloom, seed, fade, time, cam }) => {
+const Post: React.FC<{ focus: number; aperture: number; bloom: number; seed: number; fade: number; time: number; cam: [number, number] }> = ({ focus, aperture, bloom, seed, fade, time, cam }) => {
   const { gl, scene, camera, size } = useThree();
   const passes = useMemo(() => {
     const c = new EffectComposer(gl); c.setPixelRatio(1); c.setSize(size.width, size.height);
@@ -304,6 +350,7 @@ const Post: React.FC<{ focus: number; bloom: number; seed: number; fade: number;
     return { c, bokeh, bl, grade };
   }, [gl, scene, camera, size.width, size.height]);
   (passes.bokeh.uniforms as Record<string, { value: number }>).focus.value = focus;
+  (passes.bokeh.uniforms as Record<string, { value: number }>).aperture.value = aperture;
   passes.bl.strength = bloom;
   passes.grade.uniforms.uSeed.value = seed;
   passes.grade.uniforms.uFade.value = fade;
@@ -366,7 +413,7 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
     uPaint: { value: new THREE.Color(C.colors.paint) }, uVein: { value: new THREE.Color(C.colors.vein) }, uCrack: { value: new THREE.Color(C.colors.crack) },
     uCrackW: { value: -1 }, uCrackFront: { value: 99 }, uCrackI: { value: 0 },
   }), [topY]);
-  const floorU = useMemo<Uniforms>(() => ({ uPool: { value: 0 }, uHalfW: { value: P.w / 2 }, uHalfD: { value: P.d / 2 }, uFloorA: { value: C.post.reflector.floorOpacity }, uFadeA: { value: C.cove.floorFadeStart }, uFadeB: { value: C.cove.floorFadeEnd }, uFogC: { value: new THREE.Color(C.colors.fog) }, uPaint: { value: new THREE.Color(C.colors.paint) }, uSplats: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) } }), []);
+  const floorU = useMemo<Uniforms>(() => ({ uPool: { value: 0 }, uHalfW: { value: P.w / 2 }, uHalfD: { value: P.d / 2 }, uFloorA: { value: C.post.reflector.floorOpacity }, uFadeA: { value: C.cove.floorFadeStart }, uFadeB: { value: C.cove.floorFadeEnd }, uFogC: { value: new THREE.Color(C.colors.fog) }, uCarve: { value: 0 }, uStream: { value: 0 }, uFill: { value: 0 }, uStreamX: { value: RM.streams }, uRome: { value: romeTex }, uRomeC: { value: new THREE.Vector2(...RM.centre) }, uRomeW: { value: RM.width }, uRomeA: { value: 0.3125 }, uPaint: { value: new THREE.Color(C.colors.paint) }, uSplats: { value: Array.from({ length: MAX_SPLATS }, () => new THREE.Vector4()) } }), []);
   const marble = useMemo(() => makeMarble(C.colors.marble, true, u), [u]);
   const inner = useMemo(() => { const m = makeMarble(C.colors.marble, true, u); m.polygonOffset = true; m.polygonOffsetFactor = 2; m.polygonOffsetUnits = 2; return m; }, [u]);
   const mats = useMemo(() => [marble, inner], [marble, inner]);
@@ -388,6 +435,10 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   u.uFlow.value = PA.speed * Math.pow(Math.max(0, t - T.paintStart), PA.slowdown);
   const pool = PA.poolMax * (1 - Math.exp(-Math.max(0, t - PA.floorReach) / (PA.poolGrow / 3)));
   floorU.uPool.value = pool;
+  floorU.uCarve.value = t >= RM.carveFrom ? 1 : 0; // the carving only exists in scene 2 (switches on during the dip to black)
+  floorU.uStream.value = smooth(RM.streamT[0], RM.streamT[1], t);
+  floorU.uFill.value = smooth(RM.fillT[0], RM.fillT[1], t);
+  floorU.uRomeA.value = romeAspect;
 
   // --- cracks: spread down from the crown, glow, flash at the boom, fade as pieces fly ---
   const crackK = smooth(T.crackStart, T.boom, t);
@@ -510,9 +561,9 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   camera.lookAt(cl);
   const dip = C.camera.dip;
   let fade = smooth(0, 0.6, t); // first frames rise from black
-  for (const sh of shots.slice(1)) { const d = Math.abs(t - sh.t0); if (d < dip) fade = Math.min(fade, d / dip); }
+  for (const sh of shots.slice(1)) { const dd = sh.dip ?? dip, d = Math.abs(t - sh.t0); if (d < dd) fade = Math.min(fade, d / dd); }
   fade = Math.min(fade, 1 - smooth(C.output.durationInSeconds - 0.5, C.output.durationInSeconds, t));
-  const focus = cp.distanceTo(t < T.boom + 1.5 ? (shot === shots[0] ? new THREE.Vector3(0.05, 0.6, 0.3) : headCentre) : new THREE.Vector3(0, 0.15, 0));
+  const focus = cp.distanceTo(shot.focus ? new THREE.Vector3(...shot.focus) : t < T.boom + 1.5 ? (shot === shots[0] ? new THREE.Vector3(0.05, 0.6, 0.3) : headCentre) : new THREE.Vector3(0, 0.15, 0));
   const bloom = C.post.bloom.strength + (bt > 0 ? C.post.bloom.boomFlash * Math.exp(-bt * 6) : 0);
 
   return (
@@ -541,13 +592,19 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
       <primitive object={splash} />
       <primitive object={drops} />
       <primitive object={dust} />
-      <Post focus={focus} bloom={bloom} seed={frame * 0.137} fade={fade} time={t} cam={[cp.x * 0.25 + cp.z * 0.1, cp.y * 0.2]} />
+      <Post focus={focus} aperture={shot.aperture ?? C.post.dof.aperture} bloom={bloom} seed={frame * 0.137} fade={fade} time={t} cam={[cp.x * 0.25 + cp.z * 0.1, cp.y * 0.2]} />
     </>
   );
 };
 
 export const PaintedStatue: React.FC = () => {
   const frame = useCurrentFrame();
+  const [fontHandle] = useState(() => delayRender("Loading the Cinzel font for ROME"));
+  useEffect(() => {
+    new FontFace("CinzelLocal", `url(${staticFile(RM.font)})`, { weight: String(RM.weight) }).load()
+      .then((f) => { document.fonts.add(f); drawRome(); continueRender(fontHandle); })
+      .catch((err) => { console.error(err); drawRome(); continueRender(fontHandle); });
+  }, [fontHandle]);
   const { width, height, fps } = useVideoConfig();
   return (
     <AbsoluteFill style={{ background: C.colors.background }}>

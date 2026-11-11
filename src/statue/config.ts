@@ -4,7 +4,7 @@
 // scripts/decimate-stl.mjs into public/models/bearded-man.stl. Times in seconds (frame / fps).
 
 export const statueConfig = {
-  output: { width: 1920, height: 1080, fps: 30, durationInSeconds: 10 },
+  output: { width: 1920, height: 1080, fps: 30, durationInSeconds: 15 }, // scene 1 (0-10s) + scene 2 (10-15s),
   model: "models/bearded-man-200k.stl", // higher detail for macro shots
 
   statue: { height: 1.0, rotX: 0, rotY: Math.PI / 2 + 0.3, rotZ: Math.PI, plinth: { show: false, w: 0.52, h: 0, d: 0.46, bevel: 0.02 } }, // no plinth: the head stands on the floor (w/d = base footprint for the pool)
@@ -43,7 +43,7 @@ export const statueConfig = {
     streaks: 8.0,
     thickness: 0.014, // painted surfaces are raised (thick, viscous liquid)
     floorReach: 3.6,
-    poolMax: 0.8,
+    poolMax: 0.85, // the pool stops just short of the carved ROME; rivulets carry the paint into it
     poolGrow: 4.5,
     drops: 22, // falling paint drops
   },
@@ -66,7 +66,7 @@ export const statueConfig = {
   crackGlow: 0.12, // max emissive in the cracks (subtle: liquid seeping in, not lava)
   desaturate: 0.65,
   redTint: 0.7, // grade: blend toward a red monochrome ramp (maroon shadows, pink highlights)
-  cove: { radius: 18, fogDensity: 0.16, floorFadeStart: 1.1, floorFadeEnd: 3.4, hazeDir: [0.0, 0.8, -1.0] as [number, number, number], hazeSize: 0.3 }, // grade: everything except red loses this much colour
+  cove: { radius: 18, fogDensity: 0.16, floorFadeStart: 2.0, floorFadeEnd: 4.6, hazeDir: [0.0, 0.8, -1.0] as [number, number, number], hazeSize: 0.3 }, // grade: everything except red loses this much colour
   particles: { chips: 70, dust: 160, motes: 260, splashPerPiece: 10, splashPieces: 16 },
 
   light: {
@@ -94,13 +94,27 @@ export const statueConfig = {
   },
 
   // Three shots joined by short dips to black (Daredevil-intro editing): each drifts from pos0/look0 to pos1/look1.
+  // Scene 2: ROME carved into the floor under the pool, revealed as the paint settles into the grooves
+  rome: {
+    text: "ROME",
+    font: "fonts/Cinzel.ttf", // Cinzel (OFL), Trajan-style Roman capitals
+    weight: 700,
+    centre: [0, 1.32] as [number, number], // world x, z of the inscription
+    width: 1.15, // world units across the word
+    carveFrom: 10.0, // the carving appears at the cut (hidden by the dip to black)
+    streamT: [10.5, 11.9] as [number, number], // rivulets run from the pool to the letters
+    fillT: [11.7, 14.4] as [number, number], // liquid fills the grooves, top to bottom
+    streams: [-0.37, -0.12, 0.14, 0.38], // rivulet x offsets, one per letter (R O M E)
+  },
+
   camera: {
     dip: 0.22, // seconds of fade either side of a cut
     shots: [
       { t0: 0.0, t1: 3.4, fov: 24, pos0: [0.32, 0.68, 1.02], look0: [0.03, 0.62, 0.2], pos1: [0.16, 0.6, 0.94], look1: [0.0, 0.56, 0.2] }, // macro: liquid over the brow and eye
       { t0: 3.4, t1: 6.4, fov: 27, pos0: [1.25, 0.46, 0.95], look0: [0, 0.5, 0], pos1: [1.0, 0.4, 1.45], look1: [0, 0.46, 0] }, // profile orbit: coated, cracks appear
       { t0: 6.4, t1: 10.0, fov: 32, pos0: [-0.7, 0.42, 2.3], look0: [0, 0.42, 0], pos1: [-1.6, 1.25, 4.4], look1: [0, 0.12, 0] }, // wide: slow-motion break into the pool
-    ] as { t0: number; t1: number; fov: number; pos0: [number, number, number]; look0: [number, number, number]; pos1: [number, number, number]; look1: [number, number, number] }[],
+      { t0: 10.0, t1: 15.0, fov: 34, dip: 0.5, focus: [0, 0, 1.32], aperture: 0.02, pos0: [0.12, 2.3, 2.75], look0: [0, 0, 1.33], pos1: [0.0, 1.18, 2.05], look1: [0, 0, 1.18] }, // scene 2: descend onto the pool, ROME appears
+    ] as { t0: number; t1: number; fov: number; dip?: number; focus?: [number, number, number]; aperture?: number; pos0: [number, number, number]; look0: [number, number, number]; pos1: [number, number, number]; look1: [number, number, number] }[],
     boomShake: 0.003,
   },
 };
