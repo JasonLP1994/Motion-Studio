@@ -5,7 +5,7 @@
 
 export const statueConfig = {
   output: { width: 1920, height: 1080, fps: 30, durationInSeconds: 20 }, // scene 1 (0-10s), scene 2 (10-15s), scene 3 (15-20s)
-  model: "models/bearded-man-200k.stl", // higher detail for macro shots
+  model: "models/bearded-man-400k.stl", // max detail for macro shots
 
   statue: { height: 1.0, rotX: 0, rotY: Math.PI / 2 + 0.3, rotZ: Math.PI, plinth: { show: false, w: 0.52, h: 0, d: 0.46, bevel: 0.02 } }, // no plinth: the head stands on the floor (w/d = base footprint for the pool)
 
@@ -90,7 +90,7 @@ export const statueConfig = {
     topGlow: 0.0,
     smoke: { amount: 0.6, scale: 1.4, speed: 0.06, color: "#B03A44" }, // see-through smoke drifting near the lens (two parallax layers) // soft pink light bloom at the top of frame (screen-space haze)
     vignette: 0.42,
-    reflector: { size: 1024, tint: "#7A7A80", floorOpacity: 0.9 },
+    reflector: { size: 2048, tint: "#7A7A80", floorOpacity: 0.9 },
   },
 
   // Three shots joined by short dips to black (Daredevil-intro editing): each drifts from pos0/look0 to pos1/look1.

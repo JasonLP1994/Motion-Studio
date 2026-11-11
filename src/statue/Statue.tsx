@@ -67,7 +67,8 @@ type Uniforms = Record<string, { value: unknown }>;
 
 // Marble + thick paint (raised in the vertex shader) + glowing cracks (emissive).
 const makeMarble = (colour: string, veins: boolean, u: Uniforms) => {
-  const m = new THREE.MeshPhysicalMaterial({ color: colour, roughness: 0.33, clearcoat: 0.3, clearcoatRoughness: 0.45, side: THREE.DoubleSide });
+  const m = new THREE.MeshPhysicalMaterial({ color: colour, roughness: 0.33, clearcoat: 0.3, clearcoatRoughness: 0.45, side: THREE.DoubleSide,
+    sheen: 0.5, sheenRoughness: 0.55, sheenColor: new THREE.Color("#FFD6CC") }); // sheen: soft light at grazing edges, a cheap stand-in for light inside marble
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, u);
     // scene 3: a wind-swept dissolve turns the rubble to dust, left to right
@@ -86,11 +87,12 @@ const makeMarble = (colour: string, veins: boolean, u: Uniforms) => {
         float cg = (1.0 - smoothstep(0.0, max(uCrackW, 1e-4), vCrack)) * step(uCrackFront, vOrig.y) * step(0.0, uCrackW);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05), cg * 0.85);`)
       .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.24, pm);")
+      .replace("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\nvec3 dp = vOrig.y > -5.0 ? vOrig : vDw;\nvec3 pore = vec3(n3(dp * 210.0), n3(dp * 210.0 + 7.1), n3(dp * 210.0 + 13.7)) - 0.5;\nvec3 chis = vec3(n3(dp * vec3(38.0, 90.0, 38.0)), n3(dp * vec3(38.0, 90.0, 38.0) + 3.3), n3(dp * vec3(38.0, 90.0, 38.0) + 5.9)) - 0.5;\nvec3 rip = vec3(n3(dp * 26.0 + 2.0), 0.0, n3(dp * 26.0 + 9.0)) - vec3(0.5, 0.0, 0.5);\nnormal = normalize(normal + (pore * 0.16 + chis * 0.1) * (1.0 - pm) + rip * 0.08 * pm); // marble pores + chisel, gentle ripple in the paint")
       .replace("#include <lights_physical_fragment>", "#include <lights_physical_fragment>\nmaterial.clearcoat = mix(material.clearcoat, 1.0, pm);\nmaterial.clearcoatRoughness = mix(material.clearcoatRoughness, 0.05, pm); // wet glossy layer on the paint only")
       .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uCrack * cg * uCrackI;")
       .replace("#include <dithering_fragment>", "#include <dithering_fragment>\nif (any(isnan(gl_FragColor.rgb)) || any(isinf(gl_FragColor.rgb))) gl_FragColor.rgb = vec3(0.0);\ngl_FragColor.rgb = min(gl_FragColor.rgb, vec3(3.0)); // guard: bad normals on crack seams made glowing blobs");
   };
-  m.customProgramCacheKey = () => `marble5-${veins}`;
+  m.customProgramCacheKey = () => `marble6-${veins}`;
   return m;
 };
 
@@ -273,7 +275,16 @@ const useStatue = () => {
       }
       const th = F.thickness, Vn = p.length / 3, triN = ix.length / 3, outerCount = ix.length;
       const NO = [0, -10, 0];
-      for (let v = 0; v < Vn; v++) { p.push(p[v * 3] - n[v * 3] * th, p[v * 3 + 1] - n[v * 3 + 1] * th, p[v * 3 + 2] - n[v * 3 + 2] * th); n.push(-n[v * 3], -n[v * 3 + 1], -n[v * 3 + 2]); o.push(...NO); cr.push(1); }
+      // inner shell: a shrunken copy towards the piece centre (never folds over itself like a normal offset does)
+      const cg = new THREE.Vector3(); for (let v = 0; v < Vn; v++) cg.add(new THREE.Vector3(p[v * 3], p[v * 3 + 1], p[v * 3 + 2])); cg.divideScalar(Math.max(1, Vn));
+      let rad = 0; for (let v = 0; v < Vn; v++) rad = Math.max(rad, Math.hypot(p[v * 3] - cg.x, p[v * 3 + 1] - cg.y, p[v * 3 + 2] - cg.z));
+      const k = centre ? Math.max(0.35, 1 - (th * 2.2) / Math.max(rad, 1e-4)) : 1; // the stump keeps the normal offset (it is not a closed chunk)
+      for (let v = 0; v < Vn; v++) {
+        const x = p[v * 3], y = p[v * 3 + 1], z = p[v * 3 + 2];
+        if (centre) p.push(cg.x + (x - cg.x) * k, cg.y + (y - cg.y) * k, cg.z + (z - cg.z) * k);
+        else p.push(x - n[v * 3] * th, y - n[v * 3 + 1] * th, z - n[v * 3 + 2] * th);
+        n.push(-n[v * 3], -n[v * 3 + 1], -n[v * 3 + 2]); o.push(...NO); cr.push(1);
+      }
       for (let t = 0; t < triN; t++) ix.push(ix[t * 3] + Vn, ix[t * 3 + 2] + Vn, ix[t * 3 + 1] + Vn);
       const ec = new Map<string, number>();
       for (let t = 0; t < triN; t++) for (let e = 0; e < 3; e++) { const a = ix[t * 3 + e], b = ix[t * 3 + (e + 1) % 3]; const key = a < b ? `${a}_${b}` : `${b}_${a}`; ec.set(key, (ec.get(key) ?? 0) + 1); }
@@ -282,7 +293,11 @@ const useStatue = () => {
         if (ec.get(key) !== 1) continue;
         const A = new THREE.Vector3(p[a * 3], p[a * 3 + 1], p[a * 3 + 2]), B = new THREE.Vector3(p[b * 3], p[b * 3 + 1], p[b * 3 + 2]);
         const Ai = new THREE.Vector3(p[(a + Vn) * 3], p[(a + Vn) * 3 + 1], p[(a + Vn) * 3 + 2]), Bi = new THREE.Vector3(p[(b + Vn) * 3], p[(b + Vn) * 3 + 1], p[(b + Vn) * 3 + 2]);
-        const wn = new THREE.Vector3().subVectors(Ai, A).cross(new THREE.Vector3().subVectors(B, A)).normalize();
+        // fracture face normal: outward from the piece centre, perpendicular to the surface (smooth, no stripes)
+        const sn = new THREE.Vector3(n[a * 3] + n[b * 3], n[a * 3 + 1] + n[b * 3 + 1], n[a * 3 + 2] + n[b * 3 + 2]).normalize();
+        const out = A.clone().add(B).multiplyScalar(0.5).sub(cg); out.addScaledVector(sn, -out.dot(sn));
+        const flat = new THREE.Vector3().subVectors(Ai, A).cross(new THREE.Vector3().subVectors(B, A)).normalize();
+        const wn = out.lengthSq() > 1e-10 ? out.normalize().lerp(flat, 0.25).normalize() : flat;
         const base = p.length / 3;
         for (const q of [A, B, Bi, Ai]) { p.push(q.x, q.y, q.z); n.push(wn.x, wn.y, wn.z); o.push(...NO); cr.push(0); }
         ix.push(base, base + 3, base + 1, base + 1, base + 3, base + 2);
@@ -341,10 +356,11 @@ const flight = (key: string, start: THREE.Vector3, from: THREE.Vector3, restY: n
 const Post: React.FC<{ focus: number; aperture: number; bloom: number; seed: number; fade: number; time: number; cam: [number, number] }> = ({ focus, aperture, bloom, seed, fade, time, cam }) => {
   const { gl, scene, camera, size } = useThree();
   const passes = useMemo(() => {
-    const c = new EffectComposer(gl); c.setPixelRatio(1); c.setSize(size.width, size.height);
+    const rt = new THREE.WebGLRenderTarget(size.width, size.height, { samples: 4, type: THREE.HalfFloatType }); // 4x MSAA: smooth edges
+    const c = new EffectComposer(gl, rt); c.setPixelRatio(1); c.setSize(size.width, size.height);
     c.addPass(new RenderPass(scene, camera));
     const ao = new GTAOPass(scene, camera, size.width, size.height);
-    ao.updateGtaoMaterial({ radius: C.post.ao.radius, distanceExponent: 1, thickness: C.post.ao.thickness, scale: 1, samples: 16, distanceFallOff: 1 });
+    ao.updateGtaoMaterial({ radius: C.post.ao.radius, distanceExponent: 1, thickness: C.post.ao.thickness, scale: 1, samples: 32, distanceFallOff: 1 });
     ao.blendIntensity = C.post.ao.blend; c.addPass(ao);
     const bokeh = new BokehPass(scene, camera, { focus: 2.5, aperture: C.post.dof.aperture, maxblur: C.post.dof.maxblur }); c.addPass(bokeh);
     const bl = new UnrealBloomPass(new THREE.Vector2(size.width, size.height), C.post.bloom.strength, C.post.bloom.radius, C.post.bloom.threshold); c.addPass(bl);
@@ -450,7 +466,7 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   u.uCrackW.value = t < T.crackStart ? -1 : F.crackWidth * (0.3 + 0.7 * crackK);
   u.uCrackFront.value = topY + 0.02 - crackK * 1.2;
   u.uCrackI.value = (t < T.crackStart ? 0 : C.crackGlow * (0.3 + 0.7 * crackK)) * (t > T.boom ? Math.exp(-(t - T.boom) * 1.2) : 1);
-  inner.visible = t >= T.crackStart;
+  inner.visible = t >= T.boom - 0.05; // piece insides only once it breaks (they poke through slightly while still whole)
 
   // --- pieces ---
   const tremor = t > T.crackStart && t < T.boom ? F.tremor * crackK : 0;
@@ -611,7 +627,7 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
       <Cove on={keyOn} />
       {/* omni lights (C4D-style): placed out of shot, only their light is seen */}
       <pointLight position={L.key.position} intensity={L.key.intensity * keyOn} color={C.colors.key} decay={2} castShadow
-        shadow-mapSize-width={1024} shadow-mapSize-height={1024} shadow-bias={-0.0004} shadow-normalBias={0.02} />
+        shadow-mapSize-width={2048} shadow-mapSize-height={2048} shadow-bias={-0.0004} shadow-normalBias={0.02} />
       {/* invisible softbox for long glossy highlights on the wet paint (area lights render no geometry) */}
       <rectAreaLight position={L.softbox.position} width={L.softbox.size[0]} height={L.softbox.size[1]} intensity={L.softbox.intensity * keyOn}
         color={C.colors.key} onUpdate={(self: THREE.RectAreaLight) => self.lookAt(...L.softbox.target)} />
