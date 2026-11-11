@@ -18,3 +18,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: Infinite background in 3D: the backdrop, the fog and the floor's far colour are ONE flat colour, so the floor melts away with no horizon line (the C4D "infinite floor" trick).
 - DON'T: Show the lights. No visible light shafts, glows, lens blobs or hotspots on the floor; use out-of-shot omni lights (C4D-style) so only their light on the subject is seen.
 - DO: For the Daredevil-titles look: everything bathed in red monochrome (maroon shadows, pink highlights), atmospheric dark tones, soft haze, satin-wet liquid.
+- DO: Add see-through smoke drifting near the lens (two parallax layers) for atmosphere in 3D pieces.

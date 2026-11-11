@@ -117,11 +117,24 @@ const makeFloor = (u: Uniforms) => {
 
 // Final grade: split-tone, vignette, film grain, a touch of chromatic aberration.
 const GradeShader = {
-  uniforms: { tDiffuse: { value: null }, uSeed: { value: 0 }, uGrain: { value: C.post.grain }, uVig: { value: C.post.vignette }, uFade: { value: 1 }, uDesat: { value: C.desaturate }, uTint: { value: C.redTint }, uGlow: { value: C.post.topGlow }, uSh: { value: new THREE.Color(C.colors.background) }, uMid: { value: new THREE.Color(C.colors.haze) }, uHi: { value: new THREE.Color(C.colors.hazeHot) } },
+  uniforms: { tDiffuse: { value: null }, uSeed: { value: 0 }, uGrain: { value: C.post.grain }, uVig: { value: C.post.vignette }, uFade: { value: 1 }, uDesat: { value: C.desaturate }, uTint: { value: C.redTint }, uGlow: { value: C.post.topGlow }, uTime: { value: 0 }, uSmoke: { value: C.post.smoke.amount }, uSmokeScale: { value: C.post.smoke.scale }, uSmokeSpeed: { value: C.post.smoke.speed }, uCam: { value: new THREE.Vector2() }, uSmokeC: { value: new THREE.Color(C.post.smoke.color).convertLinearToSRGB() }, uSh: { value: new THREE.Color(C.colors.background) }, uMid: { value: new THREE.Color(C.colors.haze) }, uHi: { value: new THREE.Color(C.colors.hazeHot) } },
   vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
   fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse; uniform float uSeed, uGrain, uVig, uFade, uDesat, uTint, uGlow; uniform vec3 uSh, uMid, uHi; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uSeed, uGrain, uVig, uFade, uDesat, uTint, uGlow, uTime, uSmoke, uSmokeScale, uSmokeSpeed; uniform vec2 uCam; uniform vec3 uSmokeC; uniform vec3 uSh, uMid, uHi; varying vec2 vUv;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + uSeed) * 43758.5453); }
+    // smoke near the lens: domain-warped value noise, drifting slowly (pure function of time)
+    float h3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+    float vn(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(mix(h3(i), h3(i + vec3(1,0,0)), f.x), mix(h3(i + vec3(0,1,0)), h3(i + vec3(1,1,0)), f.x), f.y),
+                 mix(mix(h3(i + vec3(0,0,1)), h3(i + vec3(1,0,1)), f.x), mix(h3(i + vec3(0,1,1)), h3(i + vec3(1,1,1)), f.x), f.y), f.z); }
+    float fbm3(vec3 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ s += a * vn(p); p = p * 2.03 + 11.7; a *= 0.5; } return s; }
+    float smoke(vec2 uv, float depth){
+      vec3 p = vec3(uv * vec2(1.78, 1.0) * uSmokeScale * depth + uCam * depth, uTime * 0.07);
+      p.x -= uTime * uSmokeSpeed * depth; p.y += uTime * uSmokeSpeed * 0.35;
+      vec3 w = vec3(fbm3(p + vec3(3.1, 0.0, 0.0)), fbm3(p + vec3(0.0, 7.4, 1.3)), 0.0);
+      float n = fbm3(p + w * 1.6);
+      return smoothstep(0.38, 0.8, n);
+    }
     void main(){
       vec2 d = vUv - 0.5; float r2 = dot(d, d);
       vec3 c = vec3(texture2D(tDiffuse, vUv + d * 0.004 * r2).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - d * 0.004 * r2).b);
@@ -134,6 +147,11 @@ const GradeShader = {
       vec2 gd = (vUv - vec2(0.5, 1.08)) * vec2(1.6, 1.0);                 // top light blooming through the haze
       float glow = exp(-dot(gd, gd) * 3.2);
       c += uGlow * (uMid * glow * 0.9 + uHi * pow(glow, 3.0) * 0.45);
+      // two smoke layers (near + far) for parallax; lit from above, see-through
+      float sNear = smoke(vUv, 1.0), sFar = smoke(vUv + 0.37, 1.8);
+      float lit = 0.55 + 0.45 * smoothstep(0.0, 1.0, vUv.y);
+      float sa = clamp(sNear * 0.75 + sFar * 0.45, 0.0, 1.0) * uSmoke;
+      c = mix(c, uSmokeC * lit, sa); // grade runs in display space, so the smoke colour is sRGB
       c *= 1.0 - uVig * smoothstep(0.12, 0.7, r2 * 1.6);
       c += (hash(vUv * 1000.0) - 0.5) * uGrain;
       c *= uFade;
@@ -266,7 +284,7 @@ const flight = (key: string, start: THREE.Vector3, from: THREE.Vector3, restY: n
 };
 
 // ---------- post ----------
-const Post: React.FC<{ focus: number; bloom: number; seed: number; fade: number }> = ({ focus, bloom, seed, fade }) => {
+const Post: React.FC<{ focus: number; bloom: number; seed: number; fade: number; time: number; cam: [number, number] }> = ({ focus, bloom, seed, fade, time, cam }) => {
   const { gl, scene, camera, size } = useThree();
   const passes = useMemo(() => {
     const c = new EffectComposer(gl); c.setPixelRatio(1); c.setSize(size.width, size.height);
@@ -284,6 +302,8 @@ const Post: React.FC<{ focus: number; bloom: number; seed: number; fade: number 
   passes.bl.strength = bloom;
   passes.grade.uniforms.uSeed.value = seed;
   passes.grade.uniforms.uFade.value = fade;
+  passes.grade.uniforms.uTime.value = time;
+  passes.grade.uniforms.uCam.value.set(cam[0], cam[1]);
   useFrame(() => passes.c.render(), 1);
   return null;
 };
@@ -513,7 +533,7 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
       <primitive object={splash} />
       <primitive object={drops} />
       <primitive object={dust} />
-      <Post focus={focus} bloom={bloom} seed={frame * 0.137} fade={fade} />
+      <Post focus={focus} bloom={bloom} seed={frame * 0.137} fade={fade} time={t} cam={[cp.x * 0.25 + cp.z * 0.1, cp.y * 0.2]} />
     </>
   );
 };

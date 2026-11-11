@@ -86,7 +86,8 @@ export const statueConfig = {
     bloom: { strength: 0.22, radius: 0.5, threshold: 0.93, boomFlash: 0.0 },
     dof: { aperture: 0.0016, maxblur: 0.008 },
     grain: 0.045,
-    topGlow: 0.0, // soft pink light bloom at the top of frame (screen-space haze)
+    topGlow: 0.0,
+    smoke: { amount: 0.6, scale: 1.4, speed: 0.06, color: "#B03A44" }, // see-through smoke drifting near the lens (two parallax layers) // soft pink light bloom at the top of frame (screen-space haze)
     vignette: 0.42,
     reflector: { size: 1024, tint: "#7A7A80", floorOpacity: 0.9 },
   },
