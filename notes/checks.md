@@ -19,3 +19,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DON'T: Show the lights. No visible light shafts, glows, lens blobs or hotspots on the floor; use out-of-shot omni lights (C4D-style) so only their light on the subject is seen.
 - DO: For the Daredevil-titles look: everything bathed in red monochrome (maroon shadows, pink highlights), atmospheric dark tones, soft haze, satin-wet liquid.
 - DO: Add see-through smoke drifting near the lens (two parallax layers) for atmosphere in 3D pieces.
+- DO: For wet/glossy reflections use an invisible softbox (rectAreaLight, out of shot) plus a clear-coat layer on the liquid only; never a visible light or a point-light hotspot.

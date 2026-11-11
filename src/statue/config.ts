@@ -70,7 +70,8 @@ export const statueConfig = {
   particles: { chips: 70, dust: 160, motes: 260, splashPerPiece: 10, splashPieces: 16 },
 
   light: {
-    key: { position: [-1.2, 3.4, 1.9] as [number, number, number], intensity: 15 }, // omni key, above-front left, out of shot
+    key: { position: [-1.5, 1.9, 2.4] as [number, number, number], intensity: 13 }, // omni key, above-front left, out of shot
+    softbox: { position: [1.6, 1.9, -0.6] as [number, number, number], target: [0, 0.5, 0] as [number, number, number], size: [1.6, 0.5] as [number, number], intensity: 9 }, // hidden area light: paint reflections
     fill: { position: [1.8, 0.9, 2.2] as [number, number, number], intensity: 1.6 }, // soft omni fill, front right
     rimA: { position: [-2.2, 2.4, -2.6] as [number, number, number], intensity: 30 },
     rimB: { position: [2.4, 2.2, -2.2] as [number, number, number], intensity: 16 },
@@ -83,7 +84,7 @@ export const statueConfig = {
 
   post: {
     ao: { radius: 0.3, thickness: 1.0, blend: 1.0 },
-    bloom: { strength: 0.22, radius: 0.5, threshold: 0.93, boomFlash: 0.0 },
+    bloom: { strength: 0.1, radius: 0.35, threshold: 0.97, boomFlash: 0.0 },
     dof: { aperture: 0.0016, maxblur: 0.008 },
     grain: 0.045,
     topGlow: 0.0,

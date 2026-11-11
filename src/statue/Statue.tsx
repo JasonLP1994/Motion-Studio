@@ -20,7 +20,10 @@ import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { statueConfig as C } from "./config";
+
+RectAreaLightUniformsLib.init(); // enables invisible softbox (area) lights on physical materials
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const easeInOut = (x: number) => ((x = clamp(x)), x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
@@ -80,9 +83,11 @@ const makeMarble = (colour: string, veins: boolean, u: Uniforms) => {
         float cg = (1.0 - smoothstep(0.0, max(uCrackW, 1e-4), vCrack)) * step(uCrackFront, vOrig.y) * step(0.0, uCrackW);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05), cg * 0.85);`)
       .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.24, pm);")
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uCrack * cg * uCrackI;");
+      .replace("#include <lights_physical_fragment>", "#include <lights_physical_fragment>\nmaterial.clearcoat = mix(material.clearcoat, 1.0, pm);\nmaterial.clearcoatRoughness = mix(material.clearcoatRoughness, 0.05, pm); // wet glossy layer on the paint only")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uCrack * cg * uCrackI;")
+      .replace("#include <dithering_fragment>", "#include <dithering_fragment>\nif (any(isnan(gl_FragColor.rgb)) || any(isinf(gl_FragColor.rgb))) gl_FragColor.rgb = vec3(0.0);\ngl_FragColor.rgb = min(gl_FragColor.rgb, vec3(3.0)); // guard: bad normals on crack seams made glowing blobs");
   };
-  m.customProgramCacheKey = () => `marble2-${veins}`;
+  m.customProgramCacheKey = () => `marble4-${veins}`;
   return m;
 };
 
@@ -318,7 +323,7 @@ const Env: React.FC = () => {
       side: THREE.BackSide,
       uniforms: { uBg: { value: new THREE.Color(C.colors.background) }, uHaze: { value: new THREE.Color(C.colors.haze) }, uHot: { value: new THREE.Color(C.colors.hazeHot) } },
       vertexShader: "varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
-      fragmentShader: "uniform vec3 uBg, uHaze, uHot; varying vec3 vD; void main(){ vec3 d = normalize(vD); float top = smoothstep(0.2, 1.0, d.y); gl_FragColor = vec4(uBg + uHaze * top * 1.5 + uHot * pow(top, 4.0) * 2.5, 1.0); }",
+      fragmentShader: "uniform vec3 uBg, uHaze, uHot; varying vec3 vD; void main(){ vec3 d = normalize(vD); float top = smoothstep(0.2, 1.0, d.y); vec3 sb = normalize(vec3(0.8, 0.55, -0.4)); float strip = smoothstep(0.93, 0.985, dot(d, sb)); gl_FragColor = vec4(uBg + uHaze * top * 1.5 + uHot * pow(top, 4.0) * 0.35 + uHot * strip * 6.0, 1.0); }",
     })));
     const pm = new THREE.PMREMGenerator(gl); scene.environment = pm.fromScene(s, 0.02).texture; scene.environmentIntensity = C.light.env * 4;
   }, [gl, scene]);
@@ -519,6 +524,9 @@ const Scene: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
       {/* omni lights (C4D-style): placed out of shot, only their light is seen */}
       <pointLight position={L.key.position} intensity={L.key.intensity * keyOn} color={C.colors.key} decay={2} castShadow
         shadow-mapSize-width={1024} shadow-mapSize-height={1024} shadow-bias={-0.0004} shadow-normalBias={0.02} />
+      {/* invisible softbox for long glossy highlights on the wet paint (area lights render no geometry) */}
+      <rectAreaLight position={L.softbox.position} width={L.softbox.size[0]} height={L.softbox.size[1]} intensity={L.softbox.intensity * keyOn}
+        color={C.colors.key} onUpdate={(self: THREE.RectAreaLight) => self.lookAt(...L.softbox.target)} />
       <pointLight position={L.fill.position} intensity={L.fill.intensity * keyOn} color={C.colors.key} decay={2} />
       <pointLight position={L.rimA.position} intensity={L.rimA.intensity * keyOn} color={C.colors.rimA} decay={2} />
       <pointLight position={L.rimB.position} intensity={L.rimB.intensity * keyOn} color={C.colors.rimB} decay={2} />
