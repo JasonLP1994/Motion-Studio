@@ -23,3 +23,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: Liquid reveals behave like liquid: show the empty form first, then the liquid flows in and fills it (rivulets, a moving fill front, a glossy leading edge); never make paint just fade away.
 - DO: For heavy 3D renders on this CPU machine, pass --timeout=600000 (max-quality frames exceed Remotion's 30s default and the render fails).
 - DON'T: settle for the real-time WebGL look on hero 3D pieces; the user reads it as "PS2 game". DO: aim for render-engine realism (bounce light, true reflections in liquid, motion blur, volumetric dust, white specular highlights not crushed by the red grade).
+- DON'T: use three-gpu-pathtracer (WebGL) on this machine: with no GPU, SwiftShader never finishes compiling its shader (even a 320x180 test sat 10+ min). For path-traced output use a CPU renderer (Blender Cycles) instead.
