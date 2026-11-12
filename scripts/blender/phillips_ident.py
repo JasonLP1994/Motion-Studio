@@ -188,7 +188,7 @@ def screen_material(name, portal=False):
     r = T.v("LENGTH", T.v("SUBTRACT", uv, (0.5, 0.5, 0.0)))
     vig = T.m("SUBTRACT", 1.0, T.m("MULTIPLY", 0.75, T.m("POWER", T.m("MULTIPLY", r, 1.35), 2.2), clamp=True))
     lum = T.m("MULTIPLY", T.m("MULTIPLY", img, mask), T.m("MULTIPLY", vig, boost))
-    col = T.ramp(T.m("MULTIPLY", img, 0.8), [(0.0, C["black"]), (0.45, C["green"]), (0.78, C["green2"]), (1.0, C["cream"])])
+    col = T.ramp(T.m("MULTIPLY", img, 0.8), [(0.0, C["forest"]), (0.45, C["deep"]), (0.75, C["lime"]), (1.0, C["cream"])])
     strength = T.m("MULTIPLY", T.m("MULTIPLY", power, lum), 3.2)
     # cracks spread from the impact point just before the glass goes
     vor = T.n("ShaderNodeTexVoronoi", feature="DISTANCE_TO_EDGE"); vor.inputs["Scale"].default_value = 7.0; T.link(uv, vor.inputs["Vector"])
@@ -248,8 +248,8 @@ def floor_mat(name, circuits):
     m, T = new_mat(name); t = T.time()
     pos = T.n("ShaderNodeNewGeometry").outputs["Position"]
     nz = T.n("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 1.6; nz.inputs["Detail"].default_value = 6; T.link(pos, nz.inputs["Vector"])
-    pud = T.n("ShaderNodeTexNoise"); pud.inputs["Scale"].default_value = 0.45 if circuits else 0.8; pud.inputs["Detail"].default_value = 4; T.link(pos, pud.inputs["Vector"])
-    wet = T.m("MULTIPLY", T.m("SUBTRACT", pud.outputs["Fac"], 0.47 if circuits else 0.6), 14.0, clamp=True)            # 1 = standing water
+    pud = T.n("ShaderNodeTexNoise"); pud.inputs["Scale"].default_value = 0.45 if circuits else 1.2; pud.inputs["Detail"].default_value = 4; T.link(pos, pud.inputs["Vector"])
+    wet = T.m("MULTIPLY", T.m("SUBTRACT", pud.outputs["Fac"], 0.47), 14.0, clamp=True)            # 1 = standing water
     dry = T.m("ADD", 0.18, T.m("MULTIPLY", nz.outputs["Fac"], 0.35))
     rough = T.m("ADD", T.m("MULTIPLY", dry, T.m("SUBTRACT", 1.0, wet)), T.m("MULTIPLY", wet, 0.015))
     b = principled(T, C["black"], rough, spec=0.75)
@@ -285,15 +285,15 @@ def squircle(u, v, n=5.0):
     ex, ey = u / m, v / m; s = (abs(ex) ** n + abs(ey) ** n) ** (1 / n)
     return ex / s * m, ey / s * m
 
-TVZ = 0.24  # the set stands on legs
+TVZ = 0.0  # the set sits on the floor (the moody silhouette the user preferred)
 SW, SH, SCX, SCZ, SY = 0.215, 0.162, -0.065, 0.25 + TVZ, -0.236  # screen half-size, centre, front plane (y)
 def screen_point(u, v):
     x, z = squircle(u, v); r2 = min(1.0, max(abs(u), abs(v)) ** 2)
     return Vector((SCX + x * SW, SY - 0.022 * (1 - r2), SCZ + z * SH))
 
 # cabinet with a recess where the tube is
-cab = box("tv_cabinet", (0.64, 0.46, 0.47), (0, 0, 0.235 + TVZ), M_WALNUT)
-bev = cab.modifiers.new("bevel", "BEVEL"); bev.width = 0.055; bev.segments = 8; bev.limit_method = "ANGLE"
+cab = box("tv_cabinet", (0.64, 0.46, 0.47), (0, 0, 0.235 + TVZ), M_BODY)
+bev = cab.modifiers.new("bevel", "BEVEL"); bev.width = 0.03; bev.segments = 5; bev.limit_method = "ANGLE"
 bm = bmesh.new(); ring = []
 for i in range(64):
     a = 2 * math.pi * i / 64; u, v = math.cos(a), math.sin(a); m_ = max(abs(u), abs(v)); u, v = u / m_ * 1.04, v / m_ * 1.04
@@ -322,38 +322,16 @@ bm = bmesh.new(); bm.loops.layers.uv.new("UVMap"); bmesh.ops.create_grid(bm, x_s
 for v in bm.verts: v.co = Vector((SCX + v.co.x * 0.26, -0.12, SCZ + v.co.y * 0.2))
 bmesh.ops.reverse_faces(bm, faces=bm.faces)
 portal = obj_from_bm("tv_portal", bm, M_PORTAL)
-# cream bezel around the tube: a squircle ring standing proud of the walnut, rounded by a bevel
-bm = bmesh.new(); inner, outer = [], []
-for i in range(96):
-    an = 2 * math.pi * i / 96; u, v = math.cos(an), math.sin(an); m_ = max(abs(u), abs(v))
-    xi, zi = squircle(u / m_ * 1.03, v / m_ * 1.03); xo, zo = squircle(u / m_ * 1.2, v / m_ * 1.26)
-    inner.append(bm.verts.new((SCX + xi * SW, -0.236, SCZ + zi * SH))); outer.append(bm.verts.new((SCX + xo * SW, -0.236, SCZ + zo * SH)))
-for i in range(96): bm.faces.new([inner[i], outer[i], outer[(i + 1) % 96], inner[(i + 1) % 96]])
-ext = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
-for v in [e for e in ext["geom"] if isinstance(e, bmesh.types.BMVert)]: v.co.y -= 0.028
-bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-bez = obj_from_bm("tv_bezel", bm, M_CREAM); bb_ = bez.modifiers.new("bevel", "BEVEL"); bb_.width = 0.008; bb_.segments = 4; bb_.limit_method = "ANGLE"
-for p_ in bez.data.polygons: p_.use_smooth = True
-# control panel: cream plate, two chrome knobs with pointers, a fabric speaker grille
-plate = box("tv_panel", (0.13, 0.012, 0.38), (0.238, -0.236, 0.245 + TVZ), M_CREAM); pb_ = plate.modifiers.new("bevel", "BEVEL"); pb_.width = 0.01; pb_.segments = 3
-for k, z in enumerate((0.36, 0.27)):
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.03, depth=0.03, location=(0.238, -0.256, z + TVZ), rotation=(math.pi / 2, 0, 0), vertices=40)
-    o = bpy.context.object; o.name = f"tv_knob{k}"; o.data.materials.append(M_CHROME); kb = o.modifiers.new("bevel", "BEVEL"); kb.width = 0.006; kb.segments = 3
-    box(f"tv_pointer{k}", (0.004, 0.006, 0.022), (0.238, -0.273, z + TVZ + 0.012), M_CREAM)
-grille = box("tv_grille", (0.1, 0.006, 0.14), (0.238, -0.243, 0.13 + TVZ), M_FABRIC)
-# tapered legs angled outwards, brass feet
-for sx in (-1, 1):
-    for sy in (-1, 1):
-        bpy.ops.mesh.primitive_cone_add(radius1=0.011, radius2=0.018, depth=0.26, vertices=20, location=(sx * 0.25, sy * 0.15, TVZ - 0.12))
-        lg = bpy.context.object; lg.name = f"tv_leg{sx}{sy}"; lg.rotation_euler = (sy * 0.14, -sx * 0.14, 0); lg.data.materials.append(M_WALNUT)
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.012, depth=0.02, vertices=20, location=(sx * 0.268, sy * 0.168, 0.01)); bpy.context.object.data.materials.append(M_BRASS)
-# chrome rabbit-ear antenna on a small dome
-bpy.ops.mesh.primitive_uv_sphere_add(radius=0.045, location=(0.0, 0.05, 0.47 + TVZ), segments=32, ring_count=16); dm = bpy.context.object; dm.scale = (1, 1, 0.5); dm.data.materials.append(M_WALNUT)
-for k, ang in enumerate((-0.48, 0.52)):
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.0035, depth=0.55, location=(0, 0.05, 0.47 + TVZ), vertices=12)
-    o = bpy.context.object; o.name = f"tv_antenna{k}"; o.data.materials.append(M_CHROME)
-    o.rotation_euler = (0.12, ang, 0); o.location = (math.sin(ang) * 0.275, 0.05 + 0.03, 0.47 + TVZ + math.cos(ang) * 0.275)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.007, location=(math.sin(ang) * 0.55, 0.05 + 0.065, 0.47 + TVZ + math.cos(ang) * 0.55)); bpy.context.object.data.materials.append(M_CHROME)
+# knobs, grille, antenna
+for k, z in enumerate((0.33, 0.25)):
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.024, depth=0.03, location=(0.235, -0.235, z), rotation=(math.pi / 2, 0, 0), vertices=32)
+    o = bpy.context.object; o.name = f"tv_knob{k}"; o.data.materials.append(M_METAL)
+for k in range(7):
+    box(f"tv_grille{k}", (0.09, 0.01, 0.006), (0.235, -0.232, 0.08 + k * 0.016), M_DARK)
+for k, ang in enumerate((-0.5, 0.5)):
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.004, depth=0.5, location=(0, 0.05, 0.47), vertices=12)
+    o = bpy.context.object; o.name = f"tv_antenna{k}"; o.data.materials.append(M_METAL)
+    o.rotation_euler = (0, ang, 0); o.location = (math.sin(ang) * 0.25, 0.05, 0.47 + math.cos(ang) * 0.25)
 def cyclorama(name, mat, width=14.0, front=-8.0, back=2.2, radius=1.8, height=7.0, seg=48):
     """infinite floor: floor (z=0) from 'front' to the cove, a quarter-circle cove of 'radius', then a wall up to 'height'"""
     prof = [(front, 0.0), (back - radius, 0.0)]
@@ -369,9 +347,8 @@ def cyclorama(name, mat, width=14.0, front=-8.0, back=2.2, radius=1.8, height=7.
     sub = o.modifiers.new("subd", "SUBSURF"); sub.levels = 1; sub.render_levels = 2; sub.subdivision_type = "SIMPLE"
     return o
 cyclorama("room_cyc", M_FLOOR_ROOM)
-area_light("room_key", (-1.3, -0.6, 2.4), (0, 0, 0.45), (1.2, 0.8), 45, C["cream"])          # soft top-front key: shows the walnut and bezel
-area_light("room_rim", (0.95, 0.85, 1.05), (0, 0, 0.45), (0.5, 1.0), 30, C["green2"])          # green rim from behind-right
-area_light("room_kick", (-1.0, 0.7, 0.6), (0, 0, 0.35), (0.4, 0.8), 18, C["sage2"])           # cool kicker behind-left
+area_light("room_rim", (-0.9, 0.9, 0.9), (0, 0, 0.3), (0.5, 0.5), 14, C["lime"])
+area_light("room_fill", (0.8, -1.6, 1.8), (0, 0, 0.2), (1.5, 1.5), 6, C["sage2"])
 
 # glass shards: a Voronoi split of the screen, each a thin slab that flies at the camera
 def clip(poly, a, b):
@@ -802,7 +779,7 @@ def volume_box(name, lo, hi, density, colour, aniso):
     return o
 volume_box("haze_street", O + Vector((-16, -10, 0.01)), O + Vector((16, TEXT_Y + 1.0, 26)), 0.006, hexc("#C8DCC0"), 0.6)
 volume_box("haze_far", O + Vector((-16, TEXT_Y + 1.02, 0.01)), O + Vector((16, 82, 26)), 0.003, hexc("#C8DCC0"), 0.6)
-volume_box("haze_room", (-2.2, -3.2, 0.005), (2.2, 2.1, 2.4), 0.012, hexc("#E6EEE4"), 0.6)
+volume_box("haze_room", (-2.2, -3.2, 0.005), (2.2, 2.1, 2.4), 0.022, hexc("#E6EEE4"), 0.6)
 def spot(name, loc, target, power, colour, size_deg, blend, radius=0.3):
     ld = bpy.data.lights.new(name, "SPOT"); ld.energy = power; ld.color = colour[:3]; ld.spot_size = math.radians(size_deg); ld.spot_blend = blend; ld.shadow_soft_size = radius
     o = bpy.data.objects.new(name, ld); sc.collection.objects.link(o); o.location = loc
@@ -838,9 +815,9 @@ SC = Vector((SCX, SY, SCZ))
 def cam_at(f):
     """position, look-at, lens (mm), focus distance, f-stop for frame f"""
     if f < CFG["cut"]:
-        a, b = Vector((0.55, -2.3, 0.42 + TVZ * 0.6)), Vector((0.14, -1.25, 0.32 + TVZ))
+        a, b = Vector((0.5, -2.2, 0.38)), Vector((0.12, -1.25, 0.3))
         if f <= 96:
-            p = a.lerp(b, ease_io((f - 1) / 95)); look = Vector((0.0, -0.2, 0.28 + TVZ * 0.6)).lerp(SC, ease_io((f - 1) / 95))
+            p = a.lerp(b, ease_io((f - 1) / 95)); look = Vector((-0.02, -0.2, 0.25)).lerp(SC, ease_io((f - 1) / 95))
         else:
             k = ease_in((f - 96) / (CFG["cut"] - 96)); p = b.lerp(Vector((SCX, -0.16, SCZ)), k); look = SC + Vector((0, 1, 0))
         return p, look, 40.0, max(0.05, (p - SC).length), 2.8
@@ -888,8 +865,8 @@ fade = CT.n("CompositorNodeMixRGB", blend_type="MULTIPLY"); fade.name = "fade"; 
 ct.links.new(expo.outputs[0], fade.inputs[1])
 keys(ct, 'nodes["fade"].inputs[0].default_value', [1.0 if f >= CFG["black"] else max(0.0, 1 - (f - 1) / 6) for f in range(1, N + 1)], 1, "CONSTANT")
 cb = CT.n("CompositorNodeColorBalance", correction_method="LIFT_GAMMA_GAIN")
-cb.lift = (0.99, 1.0, 1.0); cb.gamma = (1.0, 1.0, 1.0); cb.gain = (0.97, 1.0, 0.99)   # pull the yellow out, keep blacks clean
-hs = CT.n("CompositorNodeHueSat"); hs.inputs["Saturation"].default_value = 1.04; hs.inputs["Hue"].default_value = 0.5
+cb.lift = (1.0, 1.0, 1.0); cb.gamma = (1.0, 1.0, 1.0); cb.gain = (1.0, 1.0, 1.0)   # neutral: the original look   # pull the yellow out, keep blacks clean
+hs = CT.n("CompositorNodeHueSat"); hs.inputs["Saturation"].default_value = 1.0; hs.inputs["Hue"].default_value = 0.5
 ct.links.new(fade.outputs[0], cb.inputs[1]); ct.links.new(cb.outputs[0], hs.inputs["Image"])
 comp = CT.n("CompositorNodeComposite"); ct.links.new(hs.outputs[0], comp.inputs["Image"])
 view = CT.n("CompositorNodeViewer"); ct.links.new(hs.outputs[0], view.inputs[0])
@@ -899,7 +876,7 @@ cy = sc.cycles; sc.render.engine = "CYCLES"
 cy.max_bounces = 10; cy.glossy_bounces = 6; cy.transmission_bounces = 6; cy.transparent_max_bounces = 32; cy.diffuse_bounces = 3
 cy.sample_clamp_indirect = 6.0; cy.blur_glossy = 0.6; cy.volume_bounces = 1; cy.volume_step_rate = 1.0; cy.volume_max_steps = 256
 sc.render.resolution_x, sc.render.resolution_y = 1920, 1080
-sc.view_settings.view_transform = "AgX"; sc.view_settings.look = "AgX - Medium High Contrast"; sc.view_settings.exposure = 0.0
+sc.view_settings.view_transform = "AgX"; sc.view_settings.look = "AgX - Punchy"; sc.view_settings.exposure = 0.0
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 import farm_prep
 farm_prep.prepare(sc, OUT, samples=128 if MODE == "farm" else 64, frames=(1, N), name="phillips_digital", fps=FPS, motion_blur=(MODE == "farm"))

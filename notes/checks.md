@@ -30,3 +30,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: use an infinite floor (cyclorama: floor curving up into a back wall, matched to the world colour) when an object sits in a void, so there's no horizon line.
 - DO: architecture/towers need bevelled edges, embossed detail (ledges, bands, fins, recessed seams), varied silhouettes (setbacks, prisms, chamfered or spire tops) and more surface for light. Plain boxes look cheap.
 - DO: building facades as cupboard/drawer fronts: modules pushed out by different depths with dark gaps and the odd lit slot (user: "bring them out like cupboards and drawers"). A window grid drowns the 3D detail.
+- DO: keep the moody look for hero props: a dark silhouetted object in coloured haze, lit by its own glow, with wet reflections. The user preferred that to a product-lit, detailed retro TV ("this tv vibe looked better").
