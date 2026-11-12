@@ -658,8 +658,8 @@ sw.modifiers.new("fly", "NODES").node_group = ng
 # ---------------- the android face rising behind the words ----------------
 # The head is the free-to-use "Portrait of a Man" scan (public/models), turned into black chrome with gold creases,
 # green circuit lanes and code, and glowing eyes. It rises through the floor behind PHILLIPS DIGITAL.
-FACE = {"model": os.path.join(ROOT, "public/models/bearded-man-200k.stl"), "y": TEXT_Y + 8.0, "scale": 12.0,
-        "rise": (165, 205), "z_from": -13.0, "z_to": -1.6, "drift": 0.35, "roll": 0.36, "yaw": 0.1,
+FACE = {"model": os.path.join(ROOT, "public/models/bearded-man-200k.stl"), "y": TEXT_Y + 4.5, "scale": 17.5,
+        "rise": (165, 205), "z_from": -24.0, "z_to": -5.9, "drift": 0.3, "roll": 0.36, "yaw": 0.1,
         "boot": (172, 212), "eyes": [(204, 0.0), (206, 3.0), (207, 0.2), (208, 6.0), (222, 1.0), (223, 6.0)]}
 bpy.ops.wm.stl_import(filepath=FACE["model"]); head = bpy.context.selected_objects[0]; head.name = "android_head"
 head.matrix_world = Matrix.Identity(4); hm = head.data; raw = [v.co.copy() for v in hm.vertices]
@@ -697,7 +697,7 @@ def android_mat():
 hm.materials.append(android_mat())
 eye_series = step_series(FACE["eyes"])
 me_, TE = new_mat("ph_eyes"); es = TE.keyed("eyes", eye_series, "CONSTANT")
-out(TE, add_shader(TE, principled(TE, hexc("#0A1A0C"), 0.05, coat=1.0).outputs[0], emission(TE, TE.ramp(0.35, [(0.0, C["green2"]), (1.0, C["cream"])]), TE.m("MULTIPLY", es, 3.0))))
+out(TE, add_shader(TE, principled(TE, hexc("#0A1A0C"), 0.05, coat=1.0).outputs[0], emission(TE, C["green2"], TE.m("MULTIPLY", es, 4.0))))
 for k, e in enumerate(eyes_at):
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.014, location=e, segments=24, ring_count=12)
     eo = bpy.context.object; eo.name = f"android_eye{k}"; eo.data.materials.append(me_); eo.parent = head
@@ -711,10 +711,22 @@ for f in range(1, N + 1):
 keys(head, "location", [(O.x - nose.x * FACE["scale"], FACE["y"], z) for z in zs], 3)
 for k in range(2): keys(bpy.data.objects[f"eye_light{k}"].data, "energy", [v * 12.0 for v in eye_series], 1, "CONSTANT")
 # the face's lighting (reference: strong green rims from behind, a cool top highlight on the chrome, little front)
-hc = O + Vector((0, FACE["y"], 5.5))
-area_light("face_rim_l", O + Vector((-7.0, FACE["y"] + 4, 6.5)), hc, (1.5, 7.0), 6500, C["green2"])
-area_light("face_rim_r", O + Vector((7.0, FACE["y"] + 4, 6.5)), hc, (1.5, 7.0), 6500, C["green2"])
-area_light("face_top", O + Vector((0, FACE["y"] - 6, 16.0)), hc, (7.0, 3.0), 2400, C["cream"])
+hc = O + Vector((0, FACE["y"], 4.5))
+area_light("face_rim_l", O + Vector((-5.2, FACE["y"] + 2.2, 4.8)), hc, (1.0, 6.0), 4200, C["green2"])
+area_light("face_rim_r", O + Vector((5.2, FACE["y"] + 2.2, 4.8)), hc, (1.0, 6.0), 4200, C["green2"])
+area_light("face_top", O + Vector((0, FACE["y"] - 5, 13.0)), hc, (6.0, 2.5), 1800, C["cream"])
+# a fan of glowing bars radiating behind the head (reference background); the chrome reflects them
+fan_k = [0.0 if f < 200 else min(1.0, (f - 200) / 8) for f in range(1, N + 1)]
+mf, TF = new_mat("ph_fan"); fk = TF.keyed("fan", fan_k)
+fuv = TF.n("ShaderNodeTexCoord").outputs["UV"]; fx_, fy_, _ = TF.sep(fuv)
+soft = TF.m("MULTIPLY", TF.m("SUBTRACT", 1.0, TF.m("POWER", TF.m("ABSOLUTE", TF.m("MULTIPLY", TF.m("SUBTRACT", fx_, 0.5), 2.0)), 2.0)), fy_)
+out(TF, mix_shader(TF, TF.m("MULTIPLY", soft, fk), TF.n("ShaderNodeBsdfTransparent").outputs[0], emission(TF, C["green2"], 3.0))); mf.blend_method = "HASHED"
+for i in range(14):
+    a_ = math.radians(-78 + i * 12 + rnd.uniform(-3, 3)); L_len = rnd.uniform(10, 16)
+    bpy.ops.mesh.primitive_plane_add(size=1, calc_uvs=True); bar = bpy.context.object; bar.name = f"fan_{i:02d}"
+    bar.scale = (rnd.uniform(0.18, 0.4), L_len, 1); bar.rotation_euler = (math.pi / 2, a_, 0)
+    bar.location = O + Vector((math.sin(a_) * (L_len / 2 + 2.5), FACE["y"] + 5.5, 4.5 + math.cos(a_) * (L_len / 2 + 2.5)))
+    bar.data.materials.append(mf); bar.visible_shadow = False
 area_light("face_fill", O + Vector((0, FACE["y"] - 14, 3.0)), hc, (6.0, 2.0), 120, C["green"], reflect=False)
 
 # ---------------- atmosphere: real haze, a real beam, raking lights, floating dust ----------------
@@ -724,7 +736,8 @@ def volume_box(name, lo, hi, density, colour, aniso):
     pv = T.n("ShaderNodeVolumePrincipled"); pv.inputs["Color"].default_value = colour; pv.inputs["Density"].default_value = density; pv.inputs["Anisotropy"].default_value = aniso
     o_ = T.n("ShaderNodeOutputMaterial"); T.link(pv.outputs[0], o_.inputs["Volume"]); o.data.materials.append(m); o.visible_shadow = False
     return o
-volume_box("haze_street", O + Vector((-16, -10, 0.01)), O + Vector((16, 82, 26)), 0.010, hexc("#C8DCC0"), 0.6)
+volume_box("haze_street", O + Vector((-16, -10, 0.01)), O + Vector((16, TEXT_Y + 1.0, 26)), 0.010, hexc("#C8DCC0"), 0.6)
+volume_box("haze_far", O + Vector((-16, TEXT_Y + 1.02, 0.01)), O + Vector((16, 82, 26)), 0.003, hexc("#C8DCC0"), 0.6)
 volume_box("haze_room", (-2.2, -3.2, 0.005), (2.2, 2.1, 2.4), 0.022, hexc("#E6EEE4"), 0.6)
 def spot(name, loc, target, power, colour, size_deg, blend, radius=0.3):
     ld = bpy.data.lights.new(name, "SPOT"); ld.energy = power; ld.color = colour[:3]; ld.spot_size = math.radians(size_deg); ld.spot_blend = blend; ld.shadow_soft_size = radius
