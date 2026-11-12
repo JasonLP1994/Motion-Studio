@@ -683,23 +683,23 @@ def android_mat():
     cav = T.m("POWER", T.m("SUBTRACT", 1.0, ao.outputs["AO"], clamp=True), 1.6)
     skin = mix_shader(T, T.m("MULTIPLY", cav, 1.8, clamp=True), chrome.outputs[0], gold.outputs[0])
     # circuit lanes: vertical + horizontal traces, broken into segments; code blocks on the forehead
-    vx = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", px, 46.0)), 0.5)), 0.05)
-    hz = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", pz, 60.0)), 0.5)), 0.04)
-    seg = T.m("GREATER_THAN", T.wn(T.combine(T.m("FLOOR", T.m("MULTIPLY", px, 11.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 13.0)), 3.0)), 0.45)
+    vx = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", px, 38.0)), 0.5)), 0.022)
+    hz = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", pz, 44.0)), 0.5)), 0.018)
+    seg = T.m("GREATER_THAN", T.wn(T.combine(T.m("FLOOR", T.m("MULTIPLY", px, 19.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 23.0)), 3.0)), 0.78)
     lanes = T.m("MULTIPLY", T.m("MAXIMUM", vx, hz), seg)
     gx = T.m("MULTIPLY", px, 34.0); gz = T.m("MULTIPLY", pz, 34.0)
     glyph = T.sep(atlas_sample(T, T.wn(T.combine(T.m("FLOOR", gx), T.m("FLOOR", gz)), "2D"), (T.m("FRACT", gx), T.m("FRACT", gz))))[0]
-    fore = T.m("MULTIPLY", T.m("GREATER_THAN", pz, 0.68), T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", px, nose.x)), 0.12))
-    glow = T.m("ADD", T.m("MULTIPLY", lanes, 0.8), T.m("MULTIPLY", glyph, T.m("MULTIPLY", fore, 1.4)))
+    fore = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", pz, 0.7), T.m("LESS_THAN", pz, 0.86)), T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", px, nose.x)), 0.07))
+    glow = T.m("ADD", T.m("MULTIPLY", lanes, 0.6), T.m("MULTIPLY", glyph, T.m("MULTIPLY", fore, 0.9)))
     reveal = T.m("LESS_THAN", pz, T.m("MULTIPLY", boot, 1.05))
-    em = emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", glow, reveal), 5.0))
+    em = emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", glow, reveal), 3.5))
     out(T, add_shader(T, skin, em)); return m
 hm.materials.append(android_mat())
 eye_series = step_series(FACE["eyes"])
 me_, TE = new_mat("ph_eyes"); es = TE.keyed("eyes", eye_series, "CONSTANT")
-out(TE, add_shader(TE, principled(TE, hexc("#0A1A0C"), 0.05, coat=1.0).outputs[0], emission(TE, TE.ramp(0.8, [(0.0, C["green2"]), (1.0, C["cream"])]), TE.m("MULTIPLY", es, 6.0))))
+out(TE, add_shader(TE, principled(TE, hexc("#0A1A0C"), 0.05, coat=1.0).outputs[0], emission(TE, TE.ramp(0.35, [(0.0, C["green2"]), (1.0, C["cream"])]), TE.m("MULTIPLY", es, 3.0))))
 for k, e in enumerate(eyes_at):
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.024, location=e, segments=24, ring_count=12)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.014, location=e, segments=24, ring_count=12)
     eo = bpy.context.object; eo.name = f"android_eye{k}"; eo.data.materials.append(me_); eo.parent = head
     ld = bpy.data.lights.new(f"eye_light{k}", "POINT"); ld.color = C["green2"][:3]; ld.shadow_soft_size = 0.02
     el = bpy.data.objects.new(f"eye_light{k}", ld); sc.collection.objects.link(el); el.parent = head; el.location = e + Vector((0, -0.03, 0))
@@ -708,13 +708,13 @@ zs = []
 for f in range(1, N + 1):
     k = min(1.0, max(0.0, (f - FACE["rise"][0]) / (FACE["rise"][1] - FACE["rise"][0]))); k = 1 - (1 - k) ** 3
     zs.append(FACE["z_from"] + (FACE["z_to"] - FACE["z_from"]) * k + FACE["drift"] * max(0.0, (f - FACE["rise"][1]) / (N - FACE["rise"][1])))
-keys(head, "location", [(O.x, FACE["y"], z) for z in zs], 3)
-for k in range(2): keys(bpy.data.objects[f"eye_light{k}"].data, "energy", [v * 40.0 for v in eye_series], 1, "CONSTANT")
+keys(head, "location", [(O.x - nose.x * FACE["scale"], FACE["y"], z) for z in zs], 3)
+for k in range(2): keys(bpy.data.objects[f"eye_light{k}"].data, "energy", [v * 12.0 for v in eye_series], 1, "CONSTANT")
 # the face's lighting (reference: strong green rims from behind, a cool top highlight on the chrome, little front)
 hc = O + Vector((0, FACE["y"], 5.5))
-area_light("face_rim_l", O + Vector((-8.5, FACE["y"] + 6, 7.0)), hc, (2.0, 6.0), 2600, C["green2"])
-area_light("face_rim_r", O + Vector((8.5, FACE["y"] + 6, 7.0)), hc, (2.0, 6.0), 2600, C["green2"])
-area_light("face_top", O + Vector((0, FACE["y"] - 3, 17.0)), hc, (3.0, 1.2), 1600, C["sage2"])
+area_light("face_rim_l", O + Vector((-7.0, FACE["y"] + 4, 6.5)), hc, (1.5, 7.0), 6500, C["green2"])
+area_light("face_rim_r", O + Vector((7.0, FACE["y"] + 4, 6.5)), hc, (1.5, 7.0), 6500, C["green2"])
+area_light("face_top", O + Vector((0, FACE["y"] - 6, 16.0)), hc, (7.0, 3.0), 2400, C["cream"])
 area_light("face_fill", O + Vector((0, FACE["y"] - 14, 3.0)), hc, (6.0, 2.0), 120, C["green"], reflect=False)
 
 # ---------------- atmosphere: real haze, a real beam, raking lights, floating dust ----------------
