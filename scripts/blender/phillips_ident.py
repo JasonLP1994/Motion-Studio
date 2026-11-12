@@ -420,11 +420,11 @@ def tower_material():
     br = T.n("ShaderNodeTexBrick"); br.inputs["Scale"].default_value = 1.0; br.inputs["Mortar Size"].default_value = 0.012; br.offset = 0.0
     br.inputs["Brick Width"].default_value = 1.4; br.inputs["Row Height"].default_value = 0.9; T.link(T.combine(T.m("ADD", px, py), pz), br.inputs["Vector"])
     pr = T.n("ShaderNodeTexNoise"); pr.inputs["Scale"].default_value = 0.8; T.link(p, pr.inputs["Vector"])
-    trough = T.m("ADD", 0.16, T.m("MULTIPLY", pr.outputs["Fac"], 0.3))
-    b = principled(T, hexc("#0D1C14"), trough, metal=0.35, coat=0.6, coat_rough=0.08, spec=0.8)
+    trough = T.m("ADD", 0.28, T.m("MULTIPLY", pr.outputs["Fac"], 0.25))
+    b = principled(T, hexc("#18301F"), trough, metal=0.2, coat=0.45, coat_rough=0.1, spec=0.7)
     tb = T.n("ShaderNodeBump"); tb.inputs["Strength"].default_value = 0.6; tb.inputs["Distance"].default_value = 0.02; tb.invert = True
     T.link(br.outputs["Fac"], tb.inputs["Height"]); T.link(tb.outputs[0], b.inputs["Normal"])
-    out(T, add_shader(T, b.outputs[0], emission(T, T.ramp(T.wn(cell), [(0.0, C["green"]), (0.7, C["green2"]), (1.0, C["lime"])]), T.m("MULTIPLY", T.m("MULTIPLY", lit, win), 0.9)))); return m
+    out(T, add_shader(T, b.outputs[0], emission(T, T.ramp(T.wn(cell), [(0.0, C["green"]), (0.7, C["green2"]), (1.0, C["lime"])]), T.m("MULTIPLY", T.m("MULTIPLY", lit, win), 0.0)))); return m
 M_TOWER = tower_material()
 m_, T_ = new_mat("ph_edge"); out(T_, emission(T_, C["green2"], 3.0)); M_EDGE = m_
 # towers: varied shapes, bevelled, with ledges, fins, chamfered and spire tops (lots of edges and faces for light to rake)
@@ -444,6 +444,29 @@ def ledges(bm, glow, cx, cy, w, d, z0, z1, every):
         bm_box(bm, (cx, cy, z), (w + 0.22, d + 0.22, 0.14))                                   # a protruding band
         if rnd.random() < 0.35: bm_box(glow, (cx, cy, z - 0.09), (w + 0.24, d + 0.24, 0.025))  # some glow underneath
         z += every
+def drawers(bm, glow, origin, u, n, width, z0, z1):
+    """a wall made of cupboard/drawer fronts pulled out by different depths, with dark gaps and the odd glowing slot.
+    origin: bottom-left of the wall at z0 (on the wall plane); u: unit vector across the wall; n: outward normal"""
+    up = Vector((0, 0, 1)); z = z0
+    while z < z1 - 0.3:
+        rh = min(z1 - z, rnd.choice([0.5, 0.8, 0.8, 1.2, 1.6, 2.4]))
+        x = 0.0
+        while x < width - 0.2:
+            cw = min(width - x, rnd.choice([0.5, 0.7, 1.0, 1.0, 1.4, 2.0]))
+            if rnd.random() < 0.82:
+                depth = rnd.choice([0.06, 0.12, 0.12, 0.25, 0.4, 0.65]); g = 0.045  # gap between fronts
+                c = origin + u * (x + cw / 2) + up * (z - z0 + rh / 2) + n * (depth / 2)
+                size = Vector((abs(u.x) * (cw - g) + abs(n.x) * depth, abs(u.y) * (cw - g) + abs(n.y) * depth, rh - g))
+                bm_box(bm, tuple(c), tuple(size))
+                if rnd.random() < 0.14:  # a lit slot under the front, like light leaking from a drawer
+                    sc_ = origin + u * (x + cw / 2) + up * (z - z0 + 0.03) + n * (depth * 0.5)
+                    bm_box(glow, tuple(sc_), tuple(Vector((abs(u.x) * (cw - 0.12) + abs(n.x) * depth * 0.9, abs(u.y) * (cw - 0.12) + abs(n.y) * depth * 0.9, 0.02))))
+            x += cw
+        z += rh
+def facade(bm, glow, cx, cy, w, d, z0, z1, side):
+    """drawer walls on the street-facing side and the camera-facing front of a box volume"""
+    drawers(bm, glow, Vector((cx - side * w / 2, cy - d / 2, z0)), Vector((0, 1, 0)), Vector((-side, 0, 0)), d, z0, z1)
+    drawers(bm, glow, Vector((cx - w / 2, cy - d / 2, z0)), Vector((1, 0, 0)), Vector((0, -1, 0)), w, z0, z1)
 def tower(name, cx, cy, side):
     bm, glow = bmesh.new(), bmesh.new(); kind = rnd.choice(["setback", "setback", "octa", "round", "chamfer", "spire", "fins", "hex"])
     w, d, h = rnd.uniform(1.8, 4.2), rnd.uniform(2.0, 4.6), rnd.uniform(10, 48)
@@ -451,7 +474,8 @@ def tower(name, cx, cy, side):
         z = 0.0; ww, dd = w, d
         for k in range(rnd.randint(2, 4)):
             hh = h * rnd.uniform(0.3, 0.5) if k < 3 else h * 0.2
-            bm_box(bm, (cx, cy, z + hh / 2), (ww, dd, hh)); ledges(bm, glow, cx, cy, ww, dd, z, z + hh, rnd.uniform(2.5, 4.5))
+            bm_box(bm, (cx, cy, z + hh / 2), (ww, dd, hh)); facade(bm, glow, cx, cy, ww, dd, z, z + hh, side)
+            bm_box(bm, (cx, cy, z + hh - 0.08), (ww + 0.9, dd + 0.9, 0.16))  # a deep slab at each setback
             z += hh; ww *= rnd.uniform(0.62, 0.82); dd *= rnd.uniform(0.62, 0.82)
         h = z
     elif kind in ("octa", "round", "hex"):
@@ -468,20 +492,20 @@ def tower(name, cx, cy, side):
         top = [v for v in vs if v.co.z > h - 0.01]; tilt = rnd.choice([0, 1])
         for v in top:  # slanted roof
             if (v.co.x > cx) if tilt else (v.co.y > cy): v.co.z += rnd.uniform(2, 5)
-        ledges(bm, glow, cx, cy, w, d, 0, h, rnd.uniform(3, 5))
+        facade(bm, glow, cx, cy, w, d, 0, h, side)
     elif kind == "spire":
-        bm_box(bm, (cx, cy, h / 2), (w, d, h)); ledges(bm, glow, cx, cy, w, d, 0, h, rnd.uniform(3, 5))
+        bm_box(bm, (cx, cy, h / 2), (w, d, h)); facade(bm, glow, cx, cy, w, d, 0, h, side)
         bm_prism(bm, (cx, cy, h + h * 0.18), min(w, d) * 0.62, 0.04, h * 0.36, 4, math.pi / 4)
     else:  # fins: a slab with vertical fins across its street face
-        bm_box(bm, (cx, cy, h / 2), (w, d, h)); nf = rnd.randint(3, 6); fx = cx - side * (w / 2 + 0.18)
+        bm_box(bm, (cx, cy, h / 2), (w, d, h)); facade(bm, glow, cx, cy, w, d, 0, h, side); nf = rnd.randint(2, 4); fx = cx - side * (w / 2 + 0.75)
         for k in range(nf):
             fy = cy - d / 2 + (k + 0.5) * d / nf
-            bm_box(bm, (fx, fy, h / 2), (0.36, 0.12, h * rnd.uniform(0.85, 1.0)))
+            bm_box(bm, (fx, fy, h / 2), (1.2, 0.14, h * rnd.uniform(0.85, 1.0)))
             if rnd.random() < 0.4: bm_box(glow, (fx - side * 0.19, fy, h * 0.45), (0.02, 0.04, h * 0.8))
     if rnd.random() < 0.5:  # a vertical glowing strip on the street-facing corner
         bm_box(glow, (cx - side * (w / 2 + 0.03), cy - d / 2 - 0.03, h * 0.45), (0.035, 0.035, h * 0.88))
     t_ = obj_from_bm(name, bm, M_TOWER)
-    bv = t_.modifiers.new("bevel", "BEVEL"); bv.width = rnd.uniform(0.05, 0.12); bv.segments = 3; bv.limit_method = "ANGLE"; bv.harden_normals = True
+    bv = t_.modifiers.new("bevel", "BEVEL"); bv.width = rnd.uniform(0.012, 0.025); bv.segments = 2; bv.limit_method = "ANGLE"; bv.harden_normals = True
     t_.data.shade_smooth() if hasattr(t_.data, "shade_smooth") else None
     for p_ in t_.data.polygons: p_.use_smooth = True
     try: t_.data.use_auto_smooth = True; t_.data.auto_smooth_angle = math.radians(35)
@@ -538,7 +562,7 @@ for wi, word in enumerate(CFG["words"]):
     keys(L.data, "energy", [v * 320 for v in series], 1, "CONSTANT")
 
 # sample the letters' front faces for the swarm targets
-bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+sc.frame_set(200); bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
 tris = []
 for ob, _ in words:
     me = ob.evaluated_get(dg).to_mesh(); mw = ob.matrix_world
@@ -549,7 +573,7 @@ for ob, _ in words:
         for i in range(1, len(vs_) - 1):
             a, b, c = vs_[0], vs_[i], vs_[i + 1]; tris.append((a, b, c, ((b - a).cross(c - a)).length / 2))
     ob.evaluated_get(dg).to_mesh_clear()
-tot = sum(t[3] for t in tris); NPART = 2200
+sc.frame_set(1); tot = sum(t[3] for t in tris); NPART = 2200
 pts = []
 for _ in range(NPART):
     r = rnd.uniform(0, tot)
@@ -619,8 +643,8 @@ keys(beam.data, "energy", [40000 if f < 190 else max(14000, 40000 - (f - 190) * 
 # small, bright, hidden lights: crisp highlights run along bevels, ledges and fins (no big pale reflections)
 for k, (lx, ly, lz, ty, col, pw) in enumerate([(-2.5, 8, 9, 14, "sage2", 260), (2.5, 16, 7, 22, "lime", 200), (-2.0, 26, 12, 32, "green2", 260),
                                                (2.2, 34, 10, 40, "sage2", 240), (-2.4, 44, 8, 50, "lime", 200), (0.0, 30, 22, 36, "cream", 300)]):
-    area_light(f"rake_{k}", O + Vector((lx, ly, lz)), O + Vector((-lx * 2.6, ty, lz * 0.5)), (0.6, 0.35), pw, C[col])
-    area_light(f"rakeM_{k}", O + Vector((-lx, ly + 2, lz + 3)), O + Vector((lx * 2.6, ty + 2, lz * 0.6)), (0.6, 0.35), pw * 0.8, C[col])
+    area_light(f"rake_{k}", O + Vector((lx, ly, lz)), O + Vector((-lx * 2.6, ty, lz * 0.5)), (0.6, 0.35), pw * 4, C[col])
+    area_light(f"rakeM_{k}", O + Vector((-lx, ly + 2, lz + 3)), O + Vector((lx * 2.6, ty + 2, lz * 0.6)), (0.6, 0.35), pw * 3.2, C[col])
 area_light("back_glow", O + Vector((0, 60, 4.5)), O + Vector((0, 40, 2.5)), (10.0, 4.0), 700, C["green2"], reflect=False)  # behind the words: rim + glowing air
 area_light("screen_spill", (SCX, -0.5, SCZ), (SCX, -2.0, SCZ), (0.42, 0.32), 0, C["lime"])                            # helps the screen's cone show in the room haze
 spill = bpy.data.objects["screen_spill"].data
