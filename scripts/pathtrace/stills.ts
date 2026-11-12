@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { TTFLoader } from "three/examples/jsm/loaders/TTFLoader.js";
 import { Font } from "three/examples/jsm/loaders/FontLoader.js";
+import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { WebGLPathTracer, GradientEquirectTexture, PhysicalCamera } from "three-gpu-pathtracer";
 import { statueConfig as C } from "../../src/statue/config";
@@ -16,7 +17,7 @@ const q = new URLSearchParams(location.search);
 const SHOT = q.get("shot") ?? "macro";
 const SPP = Number(q.get("spp") ?? 64);
 const W = Number(q.get("w") ?? 1920), H = Number(q.get("h") ?? 1080);
-const TIME: Record<string, number> = { macro: 2.6, break: 7.6, rome: 18.9 };
+const TIME: Record<string, number> = { macro: 1.7, break: 7.6, rome: 18.9 };
 const t = TIME[SHOT];
 const log: string[] = []; (window as any).log = log;
 
@@ -47,17 +48,17 @@ const paintMask = (x: number, y: number, z: number, topY: number, flow: number) 
 // ---------- materials: real blood, not paint ----------
 // Blood: very dark red body, near-black where thick, brighter crimson where thin, glassy wet top coat.
 const BLOOD_THIN = new THREE.Color("#9A0A10"), BLOOD_THICK = new THREE.Color("#2E0003");
-const blood = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.03, clearcoat: 1, clearcoatRoughness: 0.01, ior: 1.36, specularIntensity: 1 });
-const bloodFlat = new THREE.MeshPhysicalMaterial({ color: "#5A0207", roughness: 0.025, clearcoat: 1, clearcoatRoughness: 0.01, ior: 1.36 });
-const marble = new THREE.MeshPhysicalMaterial({ color: C.colors.marble, roughness: 0.32, clearcoat: 0.25, clearcoatRoughness: 0.4, sheen: 0.4, sheenRoughness: 0.6, sheenColor: new THREE.Color("#FFD6CC") });
-const marbleRaw = new THREE.MeshPhysicalMaterial({ color: "#D9D1C4", roughness: 0.75 }); // broken insides: matte, slightly darker
+const blood = new THREE.MeshPhysicalMaterial({ name: "blood" } as any) as THREE.MeshPhysicalMaterial; blood.setValues({ vertexColors: true, roughness: 0.03, clearcoat: 1, clearcoatRoughness: 0.01, ior: 1.36, specularIntensity: 1 });
+const bloodFlat = new THREE.MeshPhysicalMaterial({ name: "bloodFlat" } as any) as THREE.MeshPhysicalMaterial; bloodFlat.setValues({ color: "#5A0207", roughness: 0.025, clearcoat: 1, clearcoatRoughness: 0.01, ior: 1.36 });
+const marble = new THREE.MeshPhysicalMaterial({ name: "marble" } as any) as THREE.MeshPhysicalMaterial; marble.setValues({ color: C.colors.marble, roughness: 0.32, clearcoat: 0.25, clearcoatRoughness: 0.4, sheen: 0.4, sheenRoughness: 0.6, sheenColor: new THREE.Color("#FFD6CC") });
+const marbleRaw = new THREE.MeshPhysicalMaterial({ name: "marbleRaw" } as any) as THREE.MeshPhysicalMaterial; marbleRaw.setValues({ color: "#D9D1C4", roughness: 0.75 }); // broken insides: matte, slightly darker
 const noiseTex = (seed: number, size = 1024, scale = 6) => {
   const c = document.createElement("canvas"); c.width = c.height = size; const g = c.getContext("2d")!; const img = g.createImageData(size, size);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) { const v = fbm(x / size * scale, y / size * scale, seed) * 0.8 + n3(x / size * 90, y / size * 90, seed) * 0.2; const k = (y * size + x) * 4; img.data[k] = img.data[k + 1] = img.data[k + 2] = Math.round(v * 255); img.data[k + 3] = 255; }
   g.putImageData(img, 0, 0); const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; return tex;
 };
 const stoneRough = noiseTex(3.7); stoneRough.repeat.set(6, 6);
-const stone = new THREE.MeshPhysicalMaterial({ color: "#1E0608", roughness: 0.55, roughnessMap: stoneRough, clearcoat: 0.15, clearcoatRoughness: 0.35 });
+const stone = new THREE.MeshPhysicalMaterial({ name: "stone" } as any) as THREE.MeshPhysicalMaterial; stone.setValues({ color: "#1E0608", roughness: 0.55, roughnessMap: stoneRough, clearcoat: 0.15, clearcoatRoughness: 0.35 });
 
 // ---------- helpers ----------
 // Thin liquid film over a heightfield: positive f = inside the liquid. Rounded meniscus edge.
@@ -149,6 +150,19 @@ async function main() {
 
   if (SHOT === "rome") {
     // bird's-eye: dark stone floor with ROME carved in Cinzel capitals, the grooves brim-full of blood
+    if (q.get("export")) {
+      // same mask as the video (Statue.tsx drawRome): Blender carves the grooves and fills them from it
+      document.fonts.add(await new FontFace("CinzelLocal", "url(fonts/Cinzel.ttf)", { weight: "700" }).load());
+      const Wm = 4096, Hm = 1280, c = document.createElement("canvas"); c.width = Wm; c.height = Hm; const g = c.getContext("2d")!;
+      g.fillStyle = "#000"; g.fillRect(0, 0, Wm, Hm); g.font = `${C.rome.weight} 880px CinzelLocal`; g.textAlign = "center"; g.textBaseline = "middle";
+      const m = g.measureText(C.rome.text); const k = Math.min(1, (Wm * 0.92) / m.width);
+      g.save(); g.translate(Wm / 2, Hm / 2 + 40); g.scale(k, 1); g.fillStyle = "#fff"; (g as any).letterSpacing = "60px"; g.fillText(C.rome.text, 0, 0); g.restore();
+      const png = await new Promise<Blob>((res) => c.toBlob((b) => res(b!), "image/png"));
+      await fetch(`/save?name=rome_mask.png`, { method: "POST", body: png });
+      const meta = { shot: SHOT, t, fov: shot.fov, aspect: W / H, pos: cp.toArray(), look: cl.toArray(), up: cam.up.toArray(), focus: cp.distanceTo(new THREE.Vector3(C.rome.centre[0], 0, C.rome.centre[1])), fStop: 3.2, topDown: true, romeCentre: C.rome.centre, romeWidth: C.rome.width, romeAspect: Hm / Wm };
+      await fetch(`/save?name=rome.json`, { method: "POST", body: JSON.stringify(meta, null, 1) });
+      log.push("exported rome mask"); (window as any).exported = true; (window as any).ready = true; return;
+    }
     const font = new Font(new TTFLoader().parse(await (await fetch("fonts/Cinzel.ttf")).arrayBuffer()));
     const cnv = document.createElement("canvas").getContext("2d")!;
     document.fonts.add(await new FontFace("CinzelLocal", "url(fonts/Cinzel.ttf)", { weight: "700" }).load());
@@ -226,6 +240,16 @@ async function main() {
     cam.fStop = SHOT === "macro" ? 2.0 : 2.8; cam.focusDistance = cp.distanceTo(focusP); cam.apertureBlades = 7;
   }
 
+  if (q.get("export")) {
+    // hand the scene to Blender: meshes as GLB (three.js Y-up; Blender's importer converts), camera + DOF as JSON
+    const group = new THREE.Group(); scene.children.filter((o) => (o as THREE.Mesh).isMesh).forEach((o) => group.add(o.clone()));
+    group.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial; if (m && m.roughnessMap) { const c = m.clone(); c.roughnessMap = null; c.name = m.name; (o as THREE.Mesh).material = c; } });
+    const glb = await new GLTFExporter().parseAsync(group, { binary: true }) as ArrayBuffer;
+    await fetch(`/save?name=${SHOT}.glb`, { method: "POST", body: glb });
+    const cl2 = cl; const meta = { shot: SHOT, t, fov: shot.fov, aspect: W / H, pos: cp.toArray(), look: cl2.toArray(), up: cam.up.toArray(), focus: cam.focusDistance, fStop: cam.fStop, topDown: !!shot.topDown };
+    await fetch(`/save?name=${SHOT}.json`, { method: "POST", body: JSON.stringify(meta, null, 1) });
+    log.push(`exported ${SHOT}.glb (${(glb.byteLength / 1e6).toFixed(1)} MB)`); (window as any).exported = true; (window as any).ready = true; return;
+  }
   const pt = new WebGLPathTracer(renderer);
   pt.renderDelay = 0; pt.minSamples = 0; pt.fadeDuration = 0; pt.dynamicLowRes = false; pt.rasterizeScene = false;
   pt.tiles.set(Number(q.get("tiles") ?? 3), Number(q.get("tiles") ?? 3)); pt.bounces = 8; pt.transmissiveBounces = 6; pt.filterGlossyFactor = 0.3; pt.multipleImportanceSampling = true;

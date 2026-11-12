@@ -10,7 +10,9 @@ const tmp = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), "pt-"));
 esbuild.buildSync({ entryPoints: [path.join(__dirname, "stills.ts")], bundle: true, format: "esm", outfile: path.join(tmp, "bundle.js"), logLevel: "warning" });
 fs.writeFileSync(path.join(tmp, "index.html"), '<!doctype html><html><body style="margin:0;background:#000"><script type="module" src="bundle.js"></script></body></html>');
 const types = { ".js": "text/javascript", ".html": "text/html", ".ttf": "font/ttf" };
+const outDir = process.env.PT_OUT || path.dirname(path.resolve(out));
 const srv = http.createServer((q, r) => {
+  if (q.method === "POST" && q.url.startsWith("/save?name=")) { const name = path.basename(decodeURIComponent(q.url.split("=")[1])); const ws = fs.createWriteStream(path.join(outDir, name)); q.pipe(ws); ws.on("finish", () => { r.writeHead(200); r.end("ok"); }); return; }
   const u = decodeURIComponent(q.url.split("?")[0]); const f = [path.join(tmp, u === "/" ? "index.html" : u), path.join(pub, u)].find((x) => fs.existsSync(x) && fs.statSync(x).isFile());
   if (!f) { r.writeHead(404); return r.end(); }
   r.writeHead(200, { "Content-Type": types[path.extname(f)] || "application/octet-stream" }); fs.createReadStream(f).pipe(r);
@@ -24,6 +26,7 @@ srv.listen(0, async () => {
   await p.waitForFunction("window.ready === true || window.failed", null, { timeout: 0 });
   console.log(stamp(), await p.evaluate("window.log.join('\\n')"));
   if (await p.evaluate("window.failed")) { await b.close(); srv.close(); process.exit(1); }
+  if (await p.evaluate("window.exported")) { await b.close(); srv.close(); return; }
   const target = Number(spp);
   let done = 0, shotN = 0;
   while (done < target) {

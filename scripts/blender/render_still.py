@@ -1,0 +1,168 @@
+# Render one PaintedStatue still in Blender Cycles (CPU path tracing).
+# Usage: blender -b --factory-startup -P scripts/blender/render_still.py -- <shot> <export dir> <out.png> [samples]
+# The scene comes from scripts/pathtrace/run.cjs ... "export=1": <shot>.glb (meshes, three.js Y-up) + <shot>.json
+# (camera) or, for "rome", rome_mask.png (the video's letter mask). Materials here replace the exported ones by name.
+import bpy, sys, json, math, os
+from mathutils import Vector, Matrix
+
+argv = sys.argv[sys.argv.index("--") + 1:]
+SHOT, SRC, OUT = argv[0], argv[1], argv[2]
+SAMPLES = int(argv[3]) if len(argv) > 3 else 256
+meta = json.load(open(os.path.join(SRC, f"{SHOT}.json")))
+b3 = lambda v: Vector((v[0], -v[2], v[1]))  # three.js (Y-up) -> Blender (Z-up)
+hexc = lambda h, a=1.0: tuple(pow(int(h[i:i + 2], 16) / 255, 2.2) for i in (1, 3, 5)) + (a,)
+
+for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
+sc = bpy.context.scene
+
+# ---------- materials ----------
+def principled(name):
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name); m.use_nodes = True
+    nt = m.node_tree; nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial"); bs = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(bs.outputs[0], out.inputs["Surface"]); return m, nt, bs
+
+def noise(nt, scale, detail=6, rough=0.55):
+    n = nt.nodes.new("ShaderNodeTexNoise"); n.inputs["Scale"].default_value = scale; n.inputs["Detail"].default_value = detail; n.inputs["Roughness"].default_value = rough
+    geo = nt.nodes.get("WorldPos") or nt.nodes.new("ShaderNodeNewGeometry"); geo.name = "WorldPos"; nt.links.new(geo.outputs["Position"], n.inputs["Vector"])  # same scale on every object
+    return n
+
+def bump(nt, bs, height_socket, strength, dist=0.002):
+    b = nt.nodes.new("ShaderNodeBump"); b.inputs["Strength"].default_value = strength; b.inputs["Distance"].default_value = dist
+    nt.links.new(height_socket, b.inputs["Height"]); nt.links.new(b.outputs[0], bs.inputs["Normal"]); return b
+
+def mat_blood(name, vertex_colours):
+    # blood: dark red body, near-black where thick, crimson where thin; light scatters a little inside; glassy wet coat
+    m, nt, bs = principled(name)
+    if vertex_colours:
+        a = nt.nodes.new("ShaderNodeVertexColor"); a.layer_name = "Col"; nt.links.new(a.outputs["Color"], bs.inputs["Base Color"])
+    else:
+        bs.inputs["Base Color"].default_value = hexc("#4A0206")
+    bs.inputs["Roughness"].default_value = 0.035
+    bs.inputs["IOR"].default_value = 1.36
+    bs.inputs["Subsurface Weight"].default_value = 0.35
+    bs.inputs["Subsurface Radius"].default_value = (1.0, 0.06, 0.03)
+    bs.inputs["Subsurface Scale"].default_value = 0.004
+    bs.inputs["Coat Weight"].default_value = 1.0; bs.inputs["Coat Roughness"].default_value = 0.01; bs.inputs["Coat IOR"].default_value = 1.4
+    n = noise(nt, 140, 2, 0.5); bump(nt, bs, n.outputs["Fac"], 0.04, 0.0005)  # faint surface tension ripples
+    return m
+
+def mat_marble(name, raw=False):
+    m, nt, bs = principled(name)
+    # veins: warped noise -> thin grey lines over warm white
+    n = noise(nt, 2.5, 8, 0.6); w = nt.nodes.new("ShaderNodeMath"); w.operation = "SINE"
+    mul = nt.nodes.new("ShaderNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = 22.0
+    nt.links.new(n.outputs["Fac"], mul.inputs[0]); nt.links.new(mul.outputs[0], w.inputs[0])
+    ramp = nt.nodes.new("ShaderNodeValToRGB"); ramp.color_ramp.elements[0].position = 0.0; ramp.color_ramp.elements[1].position = 0.12
+    ramp.color_ramp.elements[0].color = hexc("#B9B2A8"); ramp.color_ramp.elements[1].color = hexc("#D9D1C4" if raw else "#EDE6DA")
+    ab = nt.nodes.new("ShaderNodeMath"); ab.operation = "ABSOLUTE"; nt.links.new(w.outputs[0], ab.inputs[0]); nt.links.new(ab.outputs[0], ramp.inputs[0])
+    nt.links.new(ramp.outputs["Color"], bs.inputs["Base Color"])
+    bs.inputs["Roughness"].default_value = 0.72 if raw else 0.3
+    bs.inputs["Subsurface Weight"].default_value = 0.5 if not raw else 0.35
+    bs.inputs["Subsurface Radius"].default_value = (1.0, 0.75, 0.55); bs.inputs["Subsurface Scale"].default_value = 0.02
+    if not raw: bs.inputs["Coat Weight"].default_value = 0.15; bs.inputs["Coat Roughness"].default_value = 0.3
+    pores = noise(nt, 900 if not raw else 260, 4, 0.7); bump(nt, bs, pores.outputs["Fac"], 0.12 if not raw else 0.45, 0.001)
+    return m
+
+def mat_stone(name):
+    # dark maroon polished stone: mottled colour, patchy gloss, fine grain
+    m, nt, bs = principled(name)
+    n = noise(nt, 3.0, 8, 0.6); ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = hexc("#080102"); ramp.color_ramp.elements[1].color = hexc("#1A0507")
+    ramp.color_ramp.elements[0].position = 0.35; ramp.color_ramp.elements[1].position = 0.7
+    nt.links.new(n.outputs["Fac"], ramp.inputs[0]); nt.links.new(ramp.outputs["Color"], bs.inputs["Base Color"])
+    r = noise(nt, 6.0, 4, 0.5); rr = nt.nodes.new("ShaderNodeMapRange"); rr.inputs["To Min"].default_value = 0.32; rr.inputs["To Max"].default_value = 0.7
+    nt.links.new(r.outputs["Fac"], rr.inputs["Value"]); nt.links.new(rr.outputs["Result"], bs.inputs["Roughness"])
+    bs.inputs["Specular IOR Level"].default_value = 0.3
+    g = noise(nt, 400, 3, 0.6); bump(nt, bs, g.outputs["Fac"], 0.05, 0.0005)
+    return m
+
+MATS = {"blood": lambda: mat_blood("bl_blood", True), "bloodFlat": lambda: mat_blood("bl_bloodFlat", False), "marble": lambda: mat_marble("bl_marble"), "marbleRaw": lambda: mat_marble("bl_marbleRaw", True), "stone": lambda: mat_stone("bl_stone")}
+
+# ---------- scene ----------
+if SHOT == "rome":
+    img = bpy.data.images.load(os.path.join(SRC, "rome_mask.png")); img.colorspace_settings.name = "Non-Color"
+    cx, cz = meta["romeCentre"]; w = meta["romeWidth"]; h = w * meta["romeAspect"]
+    # carved grooves: a dense grid displaced down by the letter mask (V-cut walls from the mask's soft edge)
+    bpy.ops.mesh.primitive_grid_add(x_subdivisions=1800, y_subdivisions=560, size=1, calc_uvs=True)
+    g = bpy.context.object; g.name = "carving"; g.scale = (w, h, 1); g.location = (cx, -cz, 0); bpy.ops.object.transform_apply(scale=True)
+    tex = bpy.data.textures.new("romeMask", "IMAGE"); tex.image = img; tex.extension = "CLIP"
+    d = g.modifiers.new("carve", "DISPLACE"); d.texture = tex; d.texture_coords = "UV"; d.strength = -0.022; d.mid_level = 0.0
+    g.data.materials.append(MATS["stone"]()); bpy.ops.object.shade_smooth()
+    # the rest of the infinite floor: a big slab with a rectangular hole where the carving grid sits
+    import bmesh
+    me = bpy.data.meshes.new("floor"); bm = bmesh.new(); B = 30.0
+    x0, x1, y0, y1 = cx - w / 2, cx + w / 2, -cz - h / 2, -cz + h / 2
+    V = [bm.verts.new(p) for p in [(-B, -B, 0), (B, -B, 0), (B, B, 0), (-B, B, 0), (x0, y0, 0), (x1, y0, 0), (x1, y1, 0), (x0, y1, 0)]]
+    for q in [(0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]: bm.faces.new([V[i] for i in q])
+    bm.to_mesh(me); fl = bpy.data.objects.new("floor", me); sc.collection.objects.link(fl); fl.data.materials.append(MATS["stone"]())
+    # the blood: a liquid surface just under the stone, cut out by the mask; the groove walls hold it
+    bpy.ops.mesh.primitive_plane_add(size=1, calc_uvs=True)
+    bl = bpy.context.object; bl.name = "romeBlood"; bl.scale = (w, h, 1); bl.location = (cx, -cz, -0.0028); bpy.ops.object.transform_apply(scale=True)
+    m = mat_blood("romeBlood", False); nt = m.node_tree; bs = nt.nodes["Principled BSDF"]; bs.inputs["Base Color"].default_value = hexc("#8A0812"); bs.inputs["Subsurface Weight"].default_value = 0.6
+    ti = nt.nodes.new("ShaderNodeTexImage"); ti.image = img; ti.extension = "CLIP"
+    ramp = nt.nodes.new("ShaderNodeValToRGB"); ramp.color_ramp.elements[0].position = 0.25; ramp.color_ramp.elements[1].position = 0.3
+    nt.links.new(ti.outputs["Color"], ramp.inputs[0]); nt.links.new(ramp.outputs["Color"], bs.inputs["Alpha"])
+    # meniscus: the surface curves up to the walls (bump from the mask's soft edge)
+    bb = nt.nodes.new("ShaderNodeBump"); bb.inputs["Strength"].default_value = 0.6; bb.inputs["Distance"].default_value = 0.003; bb.invert = True
+    nt.links.new(ti.outputs["Color"], bb.inputs["Height"]); nt.links.new(bb.outputs[0], bs.inputs["Normal"])
+    m.blend_method = "HASHED"; bl.data.materials.append(m)
+else:
+    bpy.ops.import_scene.gltf(filepath=os.path.join(SRC, f"{SHOT}.glb"))
+    made = {}
+    for o in list(bpy.context.scene.objects):
+        if o.type != "MESH": continue
+        for slot in o.material_slots:
+            base = (slot.material.name if slot.material else "stone").split(".")[0]
+            if base in MATS:
+                if base not in made: made[base] = MATS[base]()
+                slot.material = made[base]
+
+# ---------- camera ----------
+cam_d = bpy.data.cameras.new("cam"); cam = bpy.data.objects.new("cam", cam_d); sc.collection.objects.link(cam); sc.camera = cam
+pos, look, up = b3(meta["pos"]), b3(meta["look"]), b3(meta["up"])
+z = (pos - look).normalized(); x = up.cross(z).normalized(); y = z.cross(x)
+cam.matrix_world = Matrix(((x.x, y.x, z.x, pos.x), (x.y, y.y, z.y, pos.y), (x.z, y.z, z.z, pos.z), (0, 0, 0, 1)))
+cam_d.sensor_fit = "VERTICAL"; cam_d.sensor_height = 24; cam_d.angle_y = math.radians(meta["fov"]); cam_d.clip_start = 0.01
+cam_d.dof.use_dof = True; cam_d.dof.focus_distance = meta["focus"]
+cam_d.dof.aperture_fstop = {"macro": 1.4, "break": 2.2, "rome": 2.8}[SHOT]; cam_d.dof.aperture_blades = 7
+
+# ---------- lights: out of shot, never seen directly (C4D omni/softbox style) ----------
+def area(name, p3, target3, size, power, colour):
+    ld = bpy.data.lights.new(name, "AREA"); ld.shape = "RECTANGLE"; ld.size, ld.size_y = size; ld.energy = power; ld.color = hexc(colour)[:3]
+    o = bpy.data.objects.new(name, ld); sc.collection.objects.link(o); o.location = b3(p3)
+    d = (b3(target3) - o.location); o.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); o.visible_camera = False
+    return o
+LK = float(os.environ.get("LIGHT", "1.0"))
+if SHOT == "rome":
+    # bird's-eye: low raking lights from the sides, so the stone stays dark and the liquid in the grooves catches the light
+    rc = (meta["romeCentre"][0], 0, meta["romeCentre"][1])
+    area("rakeL", (-2.2, 0.55, 1.1), rc, (1.6, 0.6), 150 * LK, "#FFC9C2")
+    area("rakeR", (2.0, 0.7, 0.4), rc, (1.2, 0.5), 90 * LK, "#FF5A5A")
+    area("rakeF", (0.3, 0.45, 3.4), rc, (2.0, 0.4), 60 * LK, "#FFE0DA")
+    st = bpy.data.materials.get("bl_stone")
+    if st: rr = [n for n in st.node_tree.nodes if n.bl_idname == "ShaderNodeMapRange"][0]; rr.inputs["To Min"].default_value = 0.55; rr.inputs["To Max"].default_value = 0.85
+if SHOT != "rome": area("key", (-1.5, 1.9, 2.4), (0, 0.45, 0.2), (1.4, 1.0), 130 * LK, "#FFC9C2")
+if SHOT != "rome": area("softbox", (1.6, 1.9, -0.6), (0, 0.5, 0), (1.6, 0.5), 170 * LK, "#FFE8E2")
+if SHOT != "rome": area("rim", (2.4, 2.2, -2.2), (0, 0.4, 0), (1.2, 0.6), 140 * LK, "#E0262E")
+if SHOT != "rome": area("top", (0.1, 4.0, -0.5), (0, 0, 0), (1.2, 1.2), 25 * LK, "#FF9A9A")
+
+# world: dark maroon cove; a little red ambient so shadows are not dead black
+wd = bpy.data.worlds.new("cove"); sc.world = wd; wd.use_nodes = True
+bgn = wd.node_tree.nodes["Background"]; bgn.inputs["Color"].default_value = hexc("#1C0407"); bgn.inputs["Strength"].default_value = 0.35
+
+# ---------- render ----------
+sc.render.engine = "CYCLES"; cy = sc.cycles; cy.device = "CPU"
+cy.samples = SAMPLES; cy.use_adaptive_sampling = True; cy.adaptive_threshold = 0.008
+import _cycles
+cy.use_denoising = bool(getattr(_cycles, "with_openimagedenoise", False))
+if cy.use_denoising: cy.denoiser = "OPENIMAGEDENOISE"
+cy.max_bounces = 12; cy.glossy_bounces = 8; cy.transmission_bounces = 8; cy.diffuse_bounces = 4
+cy.sample_clamp_indirect = 8.0; cy.blur_glossy = 0.5
+sc.render.resolution_x, sc.render.resolution_y = 1920, 1080; sc.render.resolution_percentage = int(os.environ.get("PCT", "100"))
+sc.render.threads_mode = "AUTO"; sc.render.use_persistent_data = False
+sc.view_settings.view_transform = "AgX"; sc.view_settings.look = "AgX - Medium High Contrast"; sc.view_settings.exposure = float(os.environ.get("EXP", "-0.2"))
+sc.render.image_settings.file_format = "PNG"; sc.render.filepath = OUT
+print(f"RENDER {SHOT}: {SAMPLES} spp, denoise={cy.use_denoising}, objects={len(sc.objects)}", flush=True)
+bpy.ops.render.render(write_still=True)
+print("SAVED", OUT, flush=True)
