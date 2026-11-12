@@ -147,10 +147,11 @@ def box(name, size, loc, mat=None):
     for v in bm.verts: v.co = Vector((v.co.x * size[0], v.co.y * size[1], v.co.z * size[2]))
     return obj_from_bm(name, bm, mat, loc)
 
-def area_light(name, loc, target, size, power, colour, visible=False):
+def area_light(name, loc, target, size, power, colour, visible=False, reflect=True):
     ld = bpy.data.lights.new(name, "AREA"); ld.shape = "RECTANGLE"; ld.size, ld.size_y = size; ld.energy = power; ld.color = colour[:3]
     o = bpy.data.objects.new(name, ld); sc.collection.objects.link(o); o.location = loc
     o.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("-Z", "Y").to_euler(); o.visible_camera = visible
+    if not reflect: o.visible_glossy = False
     return o
 
 # ---------------- TV screen material (power-on, static, rolling bar, code bleed, cracks) ----------------
@@ -203,7 +204,13 @@ M_SCREEN = screen_material("ph_screen"); M_PORTAL = screen_material("ph_portal",
 def simple_mat(name, base, rough, metal=0.0, coat=0.0):
     m, T = new_mat(name); out(T, principled(T, base, rough, metal, coat).outputs[0]); return m
 
-M_BODY = simple_mat("ph_tvbody", hexc("#0E1712"), 0.42, coat=0.35)
+def body_mat():
+    m, T = new_mat("ph_tvbody"); pos = T.n("ShaderNodeTexCoord").outputs["Object"]
+    wear = T.n("ShaderNodeTexNoise"); wear.inputs["Scale"].default_value = 18.0; wear.inputs["Detail"].default_value = 8; T.link(pos, wear.inputs["Vector"])
+    b = principled(T, hexc("#0E1712"), T.m("ADD", 0.22, T.m("MULTIPLY", wear.outputs["Fac"], 0.35)), coat=0.7, coat_rough=0.12)
+    bp = T.n("ShaderNodeBump"); bp.inputs["Strength"].default_value = 0.08; T.link(wear.outputs["Fac"], bp.inputs["Height"]); T.link(bp.outputs[0], b.inputs["Normal"])
+    out(T, b.outputs[0]); return m
+M_BODY = body_mat()
 M_METAL = simple_mat("ph_metal", hexc("#8C978F"), 0.28, metal=1.0)
 M_DARK = simple_mat("ph_dark", hexc("#030604"), 0.6)
 M_TABLE = simple_mat("ph_table", hexc("#140F0B"), 0.5, coat=0.4)
@@ -213,8 +220,18 @@ def floor_mat(name, circuits):
     m, T = new_mat(name); t = T.time()
     pos = T.n("ShaderNodeNewGeometry").outputs["Position"]
     nz = T.n("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 1.6; nz.inputs["Detail"].default_value = 6; T.link(pos, nz.inputs["Vector"])
-    rough = T.m("ADD", 0.02, T.m("MULTIPLY", T.m("POWER", nz.outputs["Fac"], 3.0), 0.5))
-    b = principled(T, C["black"], rough, spec=0.6)
+    pud = T.n("ShaderNodeTexNoise"); pud.inputs["Scale"].default_value = 0.45 if circuits else 1.2; pud.inputs["Detail"].default_value = 4; T.link(pos, pud.inputs["Vector"])
+    wet = T.m("MULTIPLY", T.m("SUBTRACT", pud.outputs["Fac"], 0.47), 14.0, clamp=True)            # 1 = standing water
+    dry = T.m("ADD", 0.18, T.m("MULTIPLY", nz.outputs["Fac"], 0.35))
+    rough = T.m("ADD", T.m("MULTIPLY", dry, T.m("SUBTRACT", 1.0, wet)), T.m("MULTIPLY", wet, 0.015))
+    b = principled(T, C["black"], rough, spec=0.75)
+    b.inputs["Base Color"].default_value = hexc("#06100A")
+    rip = T.n("ShaderNodeTexNoise", noise_dimensions="4D"); rip.inputs["Scale"].default_value = 26.0; rip.inputs["Detail"].default_value = 2
+    T.link(pos, rip.inputs["Vector"]); T.link(T.m("MULTIPLY", t, 0.8), rip.inputs["W"])
+    grit = T.n("ShaderNodeTexNoise"); grit.inputs["Scale"].default_value = 140.0; T.link(pos, grit.inputs["Vector"])
+    hgt = T.m("ADD", T.m("MULTIPLY", rip.outputs["Fac"], T.m("MULTIPLY", wet, 0.4)), T.m("MULTIPLY", grit.outputs["Fac"], T.m("SUBTRACT", 1.0, wet)))
+    bp = T.n("ShaderNodeBump"); bp.inputs["Strength"].default_value = 0.12; bp.inputs["Distance"].default_value = 0.01
+    T.link(hgt, bp.inputs["Height"]); T.link(bp.outputs[0], b.inputs["Normal"])
     if not circuits: out(T, b.outputs[0]); return m
     px, py, _ = T.sep(pos)
     lp = T.combine(T.m("SUBTRACT", px, O.x), py)
@@ -286,8 +303,21 @@ for k, ang in enumerate((-0.5, 0.5)):
     bpy.ops.mesh.primitive_cylinder_add(radius=0.004, depth=0.5, location=(0, 0.05, 0.47), vertices=12)
     o = bpy.context.object; o.name = f"tv_antenna{k}"; o.data.materials.append(M_METAL)
     o.rotation_euler = (0, ang, 0); o.location = (math.sin(ang) * 0.25, 0.05, 0.47 + math.cos(ang) * 0.25)
-box("tv_table", (1.1, 0.7, 0.5), (0, 0.05, -0.25), M_TABLE)
-bpy.ops.mesh.primitive_plane_add(size=4.5, location=(0, 0.4, -0.5)); bpy.context.object.name = "room_floor"; bpy.context.object.data.materials.append(M_FLOOR_ROOM)
+def cyclorama(name, mat, width=14.0, front=-8.0, back=2.2, radius=1.8, height=7.0, seg=48):
+    """infinite floor: floor (z=0) from 'front' to the cove, a quarter-circle cove of 'radius', then a wall up to 'height'"""
+    prof = [(front, 0.0), (back - radius, 0.0)]
+    for i in range(1, seg + 1):
+        a = (math.pi / 2) * i / seg; prof.append((back - radius + math.sin(a) * radius, radius - math.cos(a) * radius))
+    prof.append((back, height))
+    bm = bmesh.new(); xs = [-width / 2, width / 2]; rows = []
+    for y, z in prof: rows.append([bm.verts.new((x, y, z)) for x in xs])
+    for a, b in zip(rows, rows[1:]): bm.faces.new([a[0], a[1], b[1], b[0]])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    o = obj_from_bm(name, bm, mat)
+    for p_ in o.data.polygons: p_.use_smooth = True
+    sub = o.modifiers.new("subd", "SUBSURF"); sub.levels = 1; sub.render_levels = 2; sub.subdivision_type = "SIMPLE"
+    return o
+cyclorama("room_cyc", M_FLOOR_ROOM)
 area_light("room_rim", (-0.9, 0.9, 0.9), (0, 0, 0.3), (0.5, 0.5), 14, C["lime"])
 area_light("room_fill", (0.8, -1.6, 1.8), (0, 0, 0.2), (1.5, 1.5), 6, C["sage2"])
 
@@ -383,29 +413,95 @@ for _ in range(60):  # dense curtain where we arrive from the screen
 def tower_material():
     m, T = new_mat("ph_tower")
     p = T.n("ShaderNodeTexCoord").outputs["Object"]; px, py, pz = T.sep(p)
-    cell = T.combine(T.m("FLOOR", T.m("MULTIPLY", px, 3.0)), T.m("FLOOR", T.m("MULTIPLY", py, 3.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 2.2)))
-    lit = T.m("GREATER_THAN", T.wn(cell), 0.86)
-    fz = T.m("FRACT", T.m("MULTIPLY", pz, 2.2)); fh = T.m("FRACT", T.m("MULTIPLY", T.m("ADD", px, py), 3.0))
+    cell = T.combine(T.m("FLOOR", T.m("MULTIPLY", px, 5.0)), T.m("FLOOR", T.m("MULTIPLY", py, 5.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 3.5)))
+    lit = T.m("GREATER_THAN", T.wn(cell), 0.9)
+    fz = T.m("FRACT", T.m("MULTIPLY", pz, 3.5)); fh = T.m("FRACT", T.m("MULTIPLY", T.m("ADD", px, py), 5.0))
     win = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", fz, 0.25), T.m("LESS_THAN", fz, 0.7)), T.m("MULTIPLY", T.m("GREATER_THAN", fh, 0.2), T.m("LESS_THAN", fh, 0.75)))
-    b = principled(T, hexc("#050B07"), 0.16, metal=0.4, spec=0.7)
-    out(T, add_shader(T, b.outputs[0], emission(T, T.ramp(T.wn(cell), [(0.0, C["green"]), (0.6, C["lime"]), (1.0, C["sage2"])]), T.m("MULTIPLY", T.m("MULTIPLY", lit, win), 1.6)))); return m
+    br = T.n("ShaderNodeTexBrick"); br.inputs["Scale"].default_value = 1.0; br.inputs["Mortar Size"].default_value = 0.012; br.offset = 0.0
+    br.inputs["Brick Width"].default_value = 1.4; br.inputs["Row Height"].default_value = 0.9; T.link(T.combine(T.m("ADD", px, py), pz), br.inputs["Vector"])
+    pr = T.n("ShaderNodeTexNoise"); pr.inputs["Scale"].default_value = 0.8; T.link(p, pr.inputs["Vector"])
+    trough = T.m("ADD", 0.16, T.m("MULTIPLY", pr.outputs["Fac"], 0.3))
+    b = principled(T, hexc("#0D1C14"), trough, metal=0.35, coat=0.6, coat_rough=0.08, spec=0.8)
+    tb = T.n("ShaderNodeBump"); tb.inputs["Strength"].default_value = 0.6; tb.inputs["Distance"].default_value = 0.02; tb.invert = True
+    T.link(br.outputs["Fac"], tb.inputs["Height"]); T.link(tb.outputs[0], b.inputs["Normal"])
+    out(T, add_shader(T, b.outputs[0], emission(T, T.ramp(T.wn(cell), [(0.0, C["green"]), (0.7, C["green2"]), (1.0, C["lime"])]), T.m("MULTIPLY", T.m("MULTIPLY", lit, win), 0.9)))); return m
 M_TOWER = tower_material()
 m_, T_ = new_mat("ph_edge"); out(T_, emission(T_, C["green2"], 3.0)); M_EDGE = m_
+# towers: varied shapes, bevelled, with ledges, fins, chamfered and spire tops (lots of edges and faces for light to rake)
+def bm_box(bm, c, size):
+    r = bmesh.ops.create_cube(bm, size=1.0)
+    for v in r["verts"]: v.co = Vector((c[0] + v.co.x * size[0], c[1] + v.co.y * size[1], c[2] + v.co.z * size[2]))
+    return r["verts"]
+def bm_prism(bm, c, r1, r2, h, segs, rot=0.0):
+    r = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=segs, radius1=r1, radius2=r2, depth=h)
+    for v in r["verts"]:
+        x, y_ = v.co.x * math.cos(rot) - v.co.y * math.sin(rot), v.co.x * math.sin(rot) + v.co.y * math.cos(rot)
+        v.co = Vector((c[0] + x, c[1] + y_, c[2] + v.co.z))
+    return r["verts"]
+def ledges(bm, glow, cx, cy, w, d, z0, z1, every):
+    z = z0 + every
+    while z < z1 - 0.5:
+        bm_box(bm, (cx, cy, z), (w + 0.22, d + 0.22, 0.14))                                   # a protruding band
+        if rnd.random() < 0.35: bm_box(glow, (cx, cy, z - 0.09), (w + 0.24, d + 0.24, 0.025))  # some glow underneath
+        z += every
+def tower(name, cx, cy, side):
+    bm, glow = bmesh.new(), bmesh.new(); kind = rnd.choice(["setback", "setback", "octa", "round", "chamfer", "spire", "fins", "hex"])
+    w, d, h = rnd.uniform(1.8, 4.2), rnd.uniform(2.0, 4.6), rnd.uniform(10, 48)
+    if kind == "setback":
+        z = 0.0; ww, dd = w, d
+        for k in range(rnd.randint(2, 4)):
+            hh = h * rnd.uniform(0.3, 0.5) if k < 3 else h * 0.2
+            bm_box(bm, (cx, cy, z + hh / 2), (ww, dd, hh)); ledges(bm, glow, cx, cy, ww, dd, z, z + hh, rnd.uniform(2.5, 4.5))
+            z += hh; ww *= rnd.uniform(0.62, 0.82); dd *= rnd.uniform(0.62, 0.82)
+        h = z
+    elif kind in ("octa", "round", "hex"):
+        segs = {"octa": 8, "round": 32, "hex": 6}[kind]; r = min(w, d) / 2 * 1.15
+        bm_prism(bm, (cx, cy, h / 2), r, r, h, segs, rnd.uniform(0, 1))
+        z = rnd.uniform(2, 4)
+        while z < h - 1:
+            bm_prism(bm, (cx, cy, z), r + 0.12, r + 0.12, 0.16, segs)
+            if rnd.random() < 0.3: bm_prism(glow, (cx, cy, z - 0.1), r + 0.13, r + 0.13, 0.03, segs)
+            z += rnd.uniform(2.5, 4.0)
+        if rnd.random() < 0.5: bm_prism(bm, (cx, cy, h + 1.2), r * 0.6, 0.05, 2.4, segs)   # a cap or spike
+    elif kind == "chamfer":
+        vs = bm_box(bm, (cx, cy, h / 2), (w, d, h))
+        top = [v for v in vs if v.co.z > h - 0.01]; tilt = rnd.choice([0, 1])
+        for v in top:  # slanted roof
+            if (v.co.x > cx) if tilt else (v.co.y > cy): v.co.z += rnd.uniform(2, 5)
+        ledges(bm, glow, cx, cy, w, d, 0, h, rnd.uniform(3, 5))
+    elif kind == "spire":
+        bm_box(bm, (cx, cy, h / 2), (w, d, h)); ledges(bm, glow, cx, cy, w, d, 0, h, rnd.uniform(3, 5))
+        bm_prism(bm, (cx, cy, h + h * 0.18), min(w, d) * 0.62, 0.04, h * 0.36, 4, math.pi / 4)
+    else:  # fins: a slab with vertical fins across its street face
+        bm_box(bm, (cx, cy, h / 2), (w, d, h)); nf = rnd.randint(3, 6); fx = cx - side * (w / 2 + 0.18)
+        for k in range(nf):
+            fy = cy - d / 2 + (k + 0.5) * d / nf
+            bm_box(bm, (fx, fy, h / 2), (0.36, 0.12, h * rnd.uniform(0.85, 1.0)))
+            if rnd.random() < 0.4: bm_box(glow, (fx - side * 0.19, fy, h * 0.45), (0.02, 0.04, h * 0.8))
+    if rnd.random() < 0.5:  # a vertical glowing strip on the street-facing corner
+        bm_box(glow, (cx - side * (w / 2 + 0.03), cy - d / 2 - 0.03, h * 0.45), (0.035, 0.035, h * 0.88))
+    t_ = obj_from_bm(name, bm, M_TOWER)
+    bv = t_.modifiers.new("bevel", "BEVEL"); bv.width = rnd.uniform(0.05, 0.12); bv.segments = 3; bv.limit_method = "ANGLE"; bv.harden_normals = True
+    t_.data.shade_smooth() if hasattr(t_.data, "shade_smooth") else None
+    for p_ in t_.data.polygons: p_.use_smooth = True
+    try: t_.data.use_auto_smooth = True; t_.data.auto_smooth_angle = math.radians(35)
+    except AttributeError: pass
+    if glow.verts: g_ = obj_from_bm(name + "_glow", glow, M_EDGE); g_.visible_shadow = False
+    else: glow.free()
+    return t_
 y = -6.0
 while y < 78:
     for side in (-1, 1):
-        w, d, h = rnd.uniform(1.6, 4.0), rnd.uniform(2.0, 5.0), rnd.uniform(9, 46)
-        x = side * (rnd.uniform(3.6, 5.5) + w / 2)
-        t_ = box(f"tower_{side}_{int(y)}", (w, d, h), O + Vector((x, y + d / 2, h / 2)), M_TOWER)
-        e = box(f"edge_{side}_{int(y)}", (w, d, h), O + Vector((x, y + d / 2, h / 2)), M_EDGE)
-        wf = e.modifiers.new("wire", "WIREFRAME"); wf.thickness = 0.035; wf.use_replace = True
-        e.visible_shadow = False
-    y += rnd.uniform(3.2, 6.0)
+        x = side * rnd.uniform(5.2, 7.5)
+        tower(f"tower_{side}_{int(y)}", O.x + x, y + 2.0, side)
+        if rnd.random() < 0.55:  # a second row behind, taller, for depth
+            tower(f"towerB_{side}_{int(y)}", O.x + side * rnd.uniform(10, 15), y + rnd.uniform(0, 4), side)
+    y += rnd.uniform(3.8, 6.5)
 bpy.ops.mesh.primitive_plane_add(size=1, location=O + Vector((0, 35, 0))); cf = bpy.context.object; cf.name = "code_floor"; cf.scale = (60, 120, 1); cf.data.materials.append(M_FLOOR_CODE)
 # light shaft at the end of the street
 m_, T_ = new_mat("ph_shaft")
 lw = T_.n("ShaderNodeLayerWeight"); lw.inputs["Blend"].default_value = 0.5
-shaftK = T_.keyed("shaftK", [0.55 if f < 190 else max(0.12, 0.55 - (f - 190) * 0.04) for f in range(1, N + 1)])
+shaftK = T_.keyed("shaftK", [0.22 if f < 190 else max(0.06, 0.22 - (f - 190) * 0.016) for f in range(1, N + 1)])
 fac = T_.m("MULTIPLY", T_.m("POWER", T_.m("SUBTRACT", 1.0, lw.outputs["Facing"]), 3.0), shaftK)
 out(T_, mix_shader(T_, fac, T_.n("ShaderNodeBsdfTransparent").outputs[0], emission(T_, C["green2"], 3.0))); m_.blend_method = "HASHED"; M_SHAFT = m_
 bpy.ops.mesh.primitive_cylinder_add(radius=1.4, depth=90, location=O + Vector((0, 64, 40)), vertices=64); sh = bpy.context.object; sh.name = "shaft"; sh.data.materials.append(M_SHAFT); sh.visible_shadow = False
@@ -433,6 +529,7 @@ for wi, word in enumerate(CFG["words"]):
     start = 0 if wi == 0 else len(CFG["words"][0]) + 1
     cxw = (start + len(word) / 2) * cell - TARGET_W / 2
     ob = make_word(wi, word, SIZE); ob.location = O + Vector((cxw, TEXT_Y, TEXT_Z))
+    keys(ob, "hide_render", [f < 192 for f in range(1, N + 1)], 1, "CONSTANT"); keys(ob, "hide_viewport", [f < 192 for f in range(1, N + 1)], 1, "CONSTANT")
     series = step_series(CFG["neon_a"] if wi == 0 else CFG["neon_b"])
     series = [v if f < CFG["black"] else 0 for f, v in zip(range(1, N + 1), series)]
     ob.data.materials.append(neon_mat(f"ph_neon_{wi}", series)); words.append((ob, series))
@@ -504,6 +601,42 @@ off = G_.v("ADD", G_.v("SCALE", named("delta", "FLOAT_VECTOR"), scale=G_.m("SUBT
 spn = G_.n("GeometryNodeSetPosition"); G_.link(gin.outputs[0], spn.inputs["Geometry"]); G_.link(off, spn.inputs["Offset"]); G_.link(spn.outputs[0], gout.inputs[0])
 sw.modifiers.new("fly", "NODES").node_group = ng
 
+# ---------------- atmosphere: real haze, a real beam, raking lights, floating dust ----------------
+def volume_box(name, lo, hi, density, colour, aniso):
+    c = (Vector(lo) + Vector(hi)) / 2; sz = Vector(hi) - Vector(lo)
+    o = box(name, tuple(sz), tuple(c)); m, T = new_mat(f"ph_{name}")
+    pv = T.n("ShaderNodeVolumePrincipled"); pv.inputs["Color"].default_value = colour; pv.inputs["Density"].default_value = density; pv.inputs["Anisotropy"].default_value = aniso
+    o_ = T.n("ShaderNodeOutputMaterial"); T.link(pv.outputs[0], o_.inputs["Volume"]); o.data.materials.append(m); o.visible_shadow = False
+    return o
+volume_box("haze_street", O + Vector((-16, -10, 0.01)), O + Vector((16, 82, 26)), 0.010, hexc("#C8DCC0"), 0.6)
+volume_box("haze_room", (-2.2, -3.2, 0.005), (2.2, 2.1, 2.4), 0.022, hexc("#E6EEE4"), 0.6)
+def spot(name, loc, target, power, colour, size_deg, blend, radius=0.3):
+    ld = bpy.data.lights.new(name, "SPOT"); ld.energy = power; ld.color = colour[:3]; ld.spot_size = math.radians(size_deg); ld.spot_blend = blend; ld.shadow_soft_size = radius
+    o = bpy.data.objects.new(name, ld); sc.collection.objects.link(o); o.location = loc
+    o.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("-Z", "Y").to_euler(); return o
+beam = spot("beam", O + Vector((0, 64, 30)), O + Vector((0, 64, 0)), 90000, C["green2"], 9, 0.6, 0.6)   # the light shaft through the haze
+keys(beam.data, "energy", [40000 if f < 190 else max(14000, 40000 - (f - 190) * 1800) for f in range(1, N + 1)], 1)
+# small, bright, hidden lights: crisp highlights run along bevels, ledges and fins (no big pale reflections)
+for k, (lx, ly, lz, ty, col, pw) in enumerate([(-2.5, 8, 9, 14, "sage2", 260), (2.5, 16, 7, 22, "lime", 200), (-2.0, 26, 12, 32, "green2", 260),
+                                               (2.2, 34, 10, 40, "sage2", 240), (-2.4, 44, 8, 50, "lime", 200), (0.0, 30, 22, 36, "cream", 300)]):
+    area_light(f"rake_{k}", O + Vector((lx, ly, lz)), O + Vector((-lx * 2.6, ty, lz * 0.5)), (0.6, 0.35), pw, C[col])
+    area_light(f"rakeM_{k}", O + Vector((-lx, ly + 2, lz + 3)), O + Vector((lx * 2.6, ty + 2, lz * 0.6)), (0.6, 0.35), pw * 0.8, C[col])
+area_light("back_glow", O + Vector((0, 60, 4.5)), O + Vector((0, 40, 2.5)), (10.0, 4.0), 700, C["green2"], reflect=False)  # behind the words: rim + glowing air
+area_light("screen_spill", (SCX, -0.5, SCZ), (SCX, -2.0, SCZ), (0.42, 0.32), 0, C["lime"])                            # helps the screen's cone show in the room haze
+spill = bpy.data.objects["screen_spill"].data
+keys(spill, "energy", [p * 6 for p in step_series([(f, p) for f, p, _ in CFG["screen"]])][:CFG["shatter"]] + [0] * (N - CFG["shatter"]), 1, "CONSTANT")
+def dust(name, lo, hi, count, size, mat, drift):
+    bm = bmesh.new()
+    for _ in range(count):
+        c = Vector((rnd.uniform(lo[0], hi[0]), rnd.uniform(lo[1], hi[1]), rnd.uniform(lo[2], hi[2])))
+        r = size * rnd.uniform(0.5, 1.4); vs_ = [bm.verts.new(c + Vector(d) * r) for d in ((1, 0, -0.7), (-1, 0, -0.7), (0, 1, 0.7), (0, -1, 0.7))]
+        for f_ in ((0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)): bm.faces.new([vs_[i] for i in f_])
+    o = obj_from_bm(name, bm, mat); o.visible_shadow = False
+    keys(o, "location", [tuple(Vector(drift) * (f / FPS)) for f in range(1, N + 1)], 3); return o
+mdust, TD = new_mat("ph_dust"); out(TD, add_shader(TD, principled(TD, hexc("#E8F0DC"), 0.9).outputs[0], emission(TD, C["green2"], 0.15))); M_DUST = mdust
+dust("dust_room", (-1.2, -2.4, 0.05), (1.2, 0.2, 1.5), 900, 0.0018, M_DUST, (0.004, 0.0, 0.012))
+dust("dust_street", O + Vector((-8, -2, 0.2)), O + Vector((8, 56, 12)), 4000, 0.012, M_DUST, (0.05, 0.0, 0.08))
+
 # ---------------- camera ----------------
 def ease_io(x): x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
 def ease_in(x): x = max(0.0, min(1.0, x)); return x ** 2.6
@@ -543,14 +676,14 @@ for fc in cam.animation_data.action.fcurves:  # the cut is a jump, not a slide
 
 # ---------------- world, haze, glow, flash and the cut to black ----------------
 wd = bpy.data.worlds.new("void"); sc.world = wd; wd.use_nodes = True
-bg = wd.node_tree.nodes["Background"]; bg.inputs["Color"].default_value = C["forest"]; bg.inputs["Strength"].default_value = 0.05
+bg = wd.node_tree.nodes["Background"]; bg.inputs["Color"].default_value = hexc("#06100A"); bg.inputs["Strength"].default_value = 0.04
 wd.mist_settings.start = 6.0; wd.mist_settings.depth = 70.0; wd.mist_settings.falloff = "QUADRATIC"
 vl = sc.view_layers[0]; vl.use_pass_mist = True
 sc.use_nodes = True; ct = sc.node_tree; ct.nodes.clear(); CT = NT(ct)
 rl = CT.n("CompositorNodeRLayers")
 haze = CT.n("CompositorNodeMixRGB", blend_type="SCREEN"); haze.inputs[2].default_value = hexc("#1C5A2E")
 hz = CT.n("CompositorNodeMath", operation="MULTIPLY"); hz.name = "hazeK"; hz.inputs[1].default_value = 0.0
-keys(ct, 'nodes["hazeK"].inputs[1].default_value', [0.0 if f < CFG["cut"] else 0.5 for f in range(1, N + 1)], 1, "CONSTANT")
+keys(ct, 'nodes["hazeK"].inputs[1].default_value', [0.0 if f < CFG["cut"] else 0.12 for f in range(1, N + 1)], 1, "CONSTANT")
 ct.links.new(rl.outputs["Mist"], hz.inputs[0]); ct.links.new(hz.outputs[0], haze.inputs[0]); ct.links.new(rl.outputs["Image"], haze.inputs[1])
 glare = CT.n("CompositorNodeGlare", glare_type="FOG_GLOW", quality="HIGH", size=8, threshold=0.9, mix=0.0)
 ct.links.new(haze.outputs[0], glare.inputs[0])
@@ -567,7 +700,7 @@ view = CT.n("CompositorNodeViewer"); ct.links.new(fade.outputs[0], view.inputs[0
 # ---------------- render settings + save ----------------
 cy = sc.cycles; sc.render.engine = "CYCLES"
 cy.max_bounces = 10; cy.glossy_bounces = 6; cy.transmission_bounces = 6; cy.transparent_max_bounces = 32; cy.diffuse_bounces = 3
-cy.sample_clamp_indirect = 6.0; cy.blur_glossy = 0.6
+cy.sample_clamp_indirect = 6.0; cy.blur_glossy = 0.6; cy.volume_bounces = 1; cy.volume_step_rate = 1.0; cy.volume_max_steps = 256
 sc.render.resolution_x, sc.render.resolution_y = 1920, 1080
 sc.view_settings.view_transform = "AgX"; sc.view_settings.look = "AgX - Punchy"; sc.view_settings.exposure = 0.0
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
