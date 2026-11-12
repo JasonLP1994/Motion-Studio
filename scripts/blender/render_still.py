@@ -3,6 +3,7 @@
 # The scene comes from scripts/pathtrace/run.cjs ... "export=1": <shot>.glb (meshes, three.js Y-up) + <shot>.json
 # (camera) or, for "rome", rome_mask.png (the video's letter mask). Materials here replace the exported ones by name.
 import bpy, sys, json, math, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -163,6 +164,11 @@ sc.render.resolution_x, sc.render.resolution_y = 1920, 1080; sc.render.resolutio
 sc.render.threads_mode = "AUTO"; sc.render.use_persistent_data = False
 sc.view_settings.view_transform = "AgX"; sc.view_settings.look = "AgX - Medium High Contrast"; sc.view_settings.exposure = float(os.environ.get("EXP", "-0.2"))
 sc.render.image_settings.file_format = "PNG"; sc.render.filepath = OUT
-print(f"RENDER {SHOT}: {SAMPLES} spp, denoise={cy.use_denoising}, objects={len(sc.objects)}", flush=True)
-bpy.ops.render.render(write_still=True)
-print("SAVED", OUT, flush=True)
+FARM = os.environ.get("FARM_BLEND")  # save a farm-ready .blend instead of rendering here
+if FARM:
+    import farm_prep
+    farm_prep.prepare(sc, FARM, samples=int(os.environ.get("FARM_SAMPLES", "128")), frames=(1, 1), name=SHOT)
+else:
+    print(f"RENDER {SHOT}: {SAMPLES} spp, denoise={cy.use_denoising}, objects={len(sc.objects)}", flush=True)
+    bpy.ops.render.render(write_still=True)
+    print("SAVED", OUT, flush=True)
