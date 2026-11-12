@@ -235,9 +235,9 @@ def shard_mat():
     # real glass: clear and refractive, carrying a fading ghost of the picture
     m, T = new_mat("ph_shard"); t = T.time(); uv = T.n("ShaderNodeTexCoord").outputs["UV"]; ux, uy, _ = T.sep(uv)
     stat = T.wn(T.combine(T.m("FLOOR", T.m("MULTIPLY", ux, 300.0)), T.m("FLOOR", T.m("MULTIPLY", uy, 225.0)), T.m("FLOOR", T.m("MULTIPLY", t, 30.0))))
-    fade = T.keyed("ghost", [1.0 if f <= CFG["shatter"] else max(0.0, 1 - (f - CFG["shatter"]) / 9) for f in range(1, N + 1)])
+    fade = T.keyed("ghost", [1.0 if f <= CFG["shatter"] else max(0.0, 1 - (f - CFG["shatter"]) / 4) for f in range(1, N + 1)])
     g = principled(T, (1, 1, 1, 1), 0.02, spec=0.5); g.inputs["Transmission Weight"].default_value = 1.0; g.inputs["IOR"].default_value = 1.52
-    out(T, add_shader(T, g.outputs[0], emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", stat, fade), 2.2)))); return m
+    out(T, add_shader(T, g.outputs[0], emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", stat, fade), 0.5)))); return m
 M_SHARD = shard_mat()
 M_METAL = simple_mat("ph_metal", hexc("#8C978F"), 0.28, metal=1.0)
 M_DARK = simple_mat("ph_dark", hexc("#030604"), 0.6)
@@ -369,8 +369,8 @@ def cyclorama(name, mat, width=14.0, front=-8.0, back=2.2, radius=1.8, height=7.
     sub = o.modifiers.new("subd", "SUBSURF"); sub.levels = 1; sub.render_levels = 2; sub.subdivision_type = "SIMPLE"
     return o
 cyclorama("room_cyc", M_FLOOR_ROOM)
-area_light("room_key", (-0.9, -1.3, 1.7), (0, 0, 0.45), (1.2, 0.8), 38, C["cream"])          # soft top-front key: shows the walnut and bezel
-area_light("room_rim", (0.95, 0.85, 1.05), (0, 0, 0.45), (0.5, 1.0), 45, C["green2"])          # green rim from behind-right
+area_light("room_key", (-1.3, -0.6, 2.4), (0, 0, 0.45), (1.2, 0.8), 45, C["cream"])          # soft top-front key: shows the walnut and bezel
+area_light("room_rim", (0.95, 0.85, 1.05), (0, 0, 0.45), (0.5, 1.0), 30, C["green2"])          # green rim from behind-right
 area_light("room_kick", (-1.0, 0.7, 0.6), (0, 0, 0.35), (0.4, 0.8), 18, C["sage2"])           # cool kicker behind-left
 
 # glass shards: a Voronoi split of the screen, each a thin slab that flies at the camera
@@ -710,7 +710,7 @@ sw.modifiers.new("fly", "NODES").node_group = ng
 # ---------------- the android face rising behind the words ----------------
 # The head is the free-to-use "Portrait of a Man" scan (public/models), turned into black chrome with gold creases,
 # green circuit lanes and code, and glowing eyes. It rises through the floor behind PHILLIPS DIGITAL.
-FACE = {"model": os.path.join(ROOT, "public/models/bearded-man-200k.stl"), "y": TEXT_Y + 4.5, "scale": 17.5,
+FACE = {"model": os.path.join(ROOT, "public/models/bearded-man-200k.stl"), "y": TEXT_Y + 8.5, "scale": 17.5,
         "rise": (165, 205), "z_from": -24.0, "z_to": -5.9, "drift": 0.3, "roll": 0.36, "yaw": 0.1,
         "boot": (172, 212), "eyes": [(204, 0.0), (206, 3.0), (207, 0.2), (208, 6.0), (222, 1.0), (223, 6.0)]}
 bpy.ops.wm.stl_import(filepath=FACE["model"]); head = bpy.context.selected_objects[0]; head.name = "android_head"
@@ -722,10 +722,22 @@ for v, p in zip(hm.vertices, hp): v.co = p
 for poly in hm.polygons: poly.use_smooth = True
 HH = max(p.z for p in hp)
 nose = min((p for p in hp if 0.45 < p.z / HH < 0.55), key=lambda p: p.y)                      # front-most point = nose
+from mathutils.bvhtree import BVHTree
+bvh = BVHTree.FromPolygons([tuple(p) for p in hp], [tuple(pl.vertices) for pl in hm.polygons])
+def surf(x, z):
+    hit = bvh.ray_cast(Vector((x, -2.0, z)), Vector((0, 1, 0)))
+    return hit[0]
+# eye sockets: the deepest surface points (largest y) in a small window at eye height either side of the nose
 eyes_at = []
 for sx in (-1, 1):
-    band = [p for p in hp if 0.59 < p.z / HH < 0.65 and 0.045 < sx * (p.x - nose.x) < 0.1]
-    f_ = min(band, key=lambda p: p.y); eyes_at.append(Vector((f_.x, f_.y - 0.004, f_.z)))
+    best = None
+    for ix in range(12):
+        for iz in range(10):
+            x = nose.x + sx * (0.04 + ix * 0.006); z = nose.z + 0.07 + iz * 0.008
+            h = surf(x, z)
+            if h is not None and (best is None or h.y > best.y): best = h
+    eyes_at.append(best + Vector((0, -0.006, 0)))
+print("EYES", [tuple(round(c, 3) for c in e) for e in eyes_at], "NOSE", tuple(round(c, 3) for c in nose), flush=True)
 def android_mat():
     m, T = new_mat("ph_android"); obj = T.n("ShaderNodeTexCoord").outputs["Object"]; px, py, pz = T.sep(obj)
     boot = T.keyed("boot", [min(1.0, max(0.0, (f - FACE["boot"][0]) / (FACE["boot"][1] - FACE["boot"][0]))) for f in range(1, N + 1)])
@@ -742,7 +754,7 @@ def android_mat():
     gx = T.m("MULTIPLY", px, 34.0); gz = T.m("MULTIPLY", pz, 34.0)
     glyph = T.sep(atlas_sample(T, T.wn(T.combine(T.m("FLOOR", gx), T.m("FLOOR", gz)), "2D"), (T.m("FRACT", gx), T.m("FRACT", gz))))[0]
     fore = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", pz, 0.7), T.m("LESS_THAN", pz, 0.86)), T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", px, nose.x)), 0.07))
-    glow = T.m("ADD", T.m("MULTIPLY", lanes, 0.6), T.m("MULTIPLY", glyph, T.m("MULTIPLY", fore, 0.9)))
+    glow = T.m("ADD", T.m("MULTIPLY", lanes, 0.22), T.m("MULTIPLY", glyph, T.m("MULTIPLY", fore, 0.9)))
     reveal = T.m("LESS_THAN", pz, T.m("MULTIPLY", boot, 1.05))
     em = emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", glow, reveal), 3.5))
     out(T, add_shader(T, skin, em)); return m
@@ -876,8 +888,8 @@ fade = CT.n("CompositorNodeMixRGB", blend_type="MULTIPLY"); fade.name = "fade"; 
 ct.links.new(expo.outputs[0], fade.inputs[1])
 keys(ct, 'nodes["fade"].inputs[0].default_value', [1.0 if f >= CFG["black"] else max(0.0, 1 - (f - 1) / 6) for f in range(1, N + 1)], 1, "CONSTANT")
 cb = CT.n("CompositorNodeColorBalance", correction_method="LIFT_GAMMA_GAIN")
-cb.lift = (0.985, 1.0, 1.0); cb.gamma = (0.98, 1.02, 1.0); cb.gain = (0.94, 1.0, 0.97)   # pull the yellow out, keep blacks clean
-hs = CT.n("CompositorNodeHueSat"); hs.inputs["Saturation"].default_value = 1.12; hs.inputs["Hue"].default_value = 0.505  # nudge yellow-green towards green
+cb.lift = (0.99, 1.0, 1.0); cb.gamma = (1.0, 1.0, 1.0); cb.gain = (0.97, 1.0, 0.99)   # pull the yellow out, keep blacks clean
+hs = CT.n("CompositorNodeHueSat"); hs.inputs["Saturation"].default_value = 1.04; hs.inputs["Hue"].default_value = 0.5
 ct.links.new(fade.outputs[0], cb.inputs[1]); ct.links.new(cb.outputs[0], hs.inputs["Image"])
 comp = CT.n("CompositorNodeComposite"); ct.links.new(hs.outputs[0], comp.inputs["Image"])
 view = CT.n("CompositorNodeViewer"); ct.links.new(hs.outputs[0], view.inputs[0])
