@@ -27,6 +27,7 @@ CFG = {
     "neon_b": [(200, 1), (201, 0), (203, 1), (206, 0), (207, 1), (224, 0.2), (225, 1)],  # DIGITAL
     "black": 232,
 }
+STATUE = {"model": os.path.join(ROOT, "public/models/theodoric-200k.stl"), "y": 70.0, "height": 9.0, "boot": (180, 214)}
 FPS, N = CFG["fps"], CFG["frames"]
 rnd = random.Random(7)
 hexc = lambda h, a=1.0: tuple(pow(int(h[i:i + 2], 16) / 255, 2.2) for i in (1, 3, 5)) + (a,)
@@ -587,7 +588,7 @@ lw = T_.n("ShaderNodeLayerWeight"); lw.inputs["Blend"].default_value = 0.5
 shaftK = T_.keyed("shaftK", [0.22 if f < 190 else max(0.06, 0.22 - (f - 190) * 0.016) for f in range(1, N + 1)])
 fac = T_.m("MULTIPLY", T_.m("POWER", T_.m("SUBTRACT", 1.0, lw.outputs["Facing"]), 3.0), shaftK)
 out(T_, mix_shader(T_, fac, T_.n("ShaderNodeBsdfTransparent").outputs[0], emission(T_, C["green2"], 3.0))); m_.blend_method = "HASHED"; M_SHAFT = m_
-bpy.ops.mesh.primitive_cylinder_add(radius=1.4, depth=90, location=O + Vector((0, 64, 40)), vertices=64); sh = bpy.context.object; sh.name = "shaft"; sh.data.materials.append(M_SHAFT); sh.visible_shadow = False
+bpy.ops.mesh.primitive_cylinder_add(radius=1.4, depth=90, location=O + Vector((0, STATUE["y"] + 3.5, 40)), vertices=64); sh = bpy.context.object; sh.name = "shaft"; sh.data.materials.append(M_SHAFT); sh.visible_shadow = False
 
 # ---------------- PHILLIPS DIGITAL: swarm, then neon ----------------
 FONT = bpy.data.fonts.load(CFG["font_text"])
@@ -684,91 +685,32 @@ off = G_.v("ADD", G_.v("SCALE", named("delta", "FLOAT_VECTOR"), scale=G_.m("SUBT
 spn = G_.n("GeometryNodeSetPosition"); G_.link(gin.outputs[0], spn.inputs["Geometry"]); G_.link(off, spn.inputs["Offset"]); G_.link(spn.outputs[0], gout.inputs[0])
 sw.modifiers.new("fly", "NODES").node_group = ng
 
-# ---------------- the android face rising behind the words ----------------
-# The head is the free-to-use "Portrait of a Man" scan (public/models), turned into black chrome with gold creases,
-# green circuit lanes and code, and glowing eyes. It rises through the floor behind PHILLIPS DIGITAL.
-FACE = {"model": os.path.join(ROOT, "public/models/bearded-man-200k.stl"), "y": TEXT_Y + 8.5, "scale": 17.5,
-        "rise": (165, 205), "z_from": -24.0, "z_to": -5.9, "drift": 0.3, "roll": 0.36, "yaw": 0.1,
-        "boot": (172, 212), "eyes": [(204, 0.0), (206, 3.0), (207, 0.2), (208, 6.0), (222, 1.0), (223, 6.0)]}
-bpy.ops.wm.stl_import(filepath=FACE["model"]); head = bpy.context.selected_objects[0]; head.name = "android_head"
-head.matrix_world = Matrix.Identity(4); hm = head.data; raw = [v.co.copy() for v in hm.vertices]
-cen = Vector(((max(v.x for v in raw) + min(v.x for v in raw)) / 2, 0, (max(v.z for v in raw) + min(v.z for v in raw)) / 2))
-M3 = Matrix.Rotation(FACE["yaw"], 3, "Z") @ Matrix.Rotation(FACE["roll"], 3, "Y") @ Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0))) @ Euler((0.0, math.pi / 2, math.pi), "ZXY").to_matrix()
-hp = [M3 @ (v - cen) for v in raw]; zmin = min(p.z for p in hp); hp = [p - Vector((0, 0, zmin)) for p in hp]
-for v, p in zip(hm.vertices, hp): v.co = p
-for poly in hm.polygons: poly.use_smooth = True
-HH = max(p.z for p in hp)
-nose = min((p for p in hp if 0.45 < p.z / HH < 0.55), key=lambda p: p.y)                      # front-most point = nose
-from mathutils.bvhtree import BVHTree
-bvh = BVHTree.FromPolygons([tuple(p) for p in hp], [tuple(pl.vertices) for pl in hm.polygons])
-def surf(x, z):
-    hit = bvh.ray_cast(Vector((x, -2.0, z)), Vector((0, 1, 0)))
-    return hit[0]
-# eye sockets: the deepest surface points (largest y) in a small window at eye height either side of the nose
-eyes_at = []
-for sx in (-1, 1):
-    best = None
-    for ix in range(12):
-        for iz in range(10):
-            x = nose.x + sx * (0.04 + ix * 0.006); z = nose.z + 0.07 + iz * 0.008
-            h = surf(x, z)
-            if h is not None and (best is None or h.y > best.y): best = h
-    eyes_at.append(best + Vector((0, -0.006, 0)))
-print("EYES", [tuple(round(c, 3) for c in e) for e in eyes_at], "NOSE", tuple(round(c, 3) for c in nose), flush=True)
-def android_mat():
-    m, T = new_mat("ph_android"); obj = T.n("ShaderNodeTexCoord").outputs["Object"]; px, py, pz = T.sep(obj)
-    boot = T.keyed("boot", [min(1.0, max(0.0, (f - FACE["boot"][0]) / (FACE["boot"][1] - FACE["boot"][0]))) for f in range(1, N + 1)])
-    ao = T.n("ShaderNodeAmbientOcclusion", samples=8, only_local=True); ao.inputs["Distance"].default_value = 0.35
-    chrome = principled(T, hexc("#050906"), 0.07, metal=1.0, coat=1.0, coat_rough=0.02)
-    gold = principled(T, hexc("#B88A2E"), 0.22, metal=1.0)
-    cav = T.m("POWER", T.m("SUBTRACT", 1.0, ao.outputs["AO"], clamp=True), 1.6)
-    skin = mix_shader(T, T.m("MULTIPLY", cav, 1.8, clamp=True), chrome.outputs[0], gold.outputs[0])
-    # circuit lanes: vertical + horizontal traces, broken into segments; code blocks on the forehead
-    vx = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", px, 38.0)), 0.5)), 0.022)
-    hz = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", pz, 44.0)), 0.5)), 0.018)
-    seg = T.m("GREATER_THAN", T.wn(T.combine(T.m("FLOOR", T.m("MULTIPLY", px, 19.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 23.0)), 3.0)), 0.78)
-    lanes = T.m("MULTIPLY", T.m("MAXIMUM", vx, hz), seg)
-    gx = T.m("MULTIPLY", px, 34.0); gz = T.m("MULTIPLY", pz, 34.0)
-    glyph = T.sep(atlas_sample(T, T.wn(T.combine(T.m("FLOOR", gx), T.m("FLOOR", gz)), "2D"), (T.m("FRACT", gx), T.m("FRACT", gz))))[0]
-    fore = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", pz, 0.7), T.m("LESS_THAN", pz, 0.86)), T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", px, nose.x)), 0.07))
-    glow = T.m("ADD", T.m("MULTIPLY", lanes, 0.22), T.m("MULTIPLY", glyph, T.m("MULTIPLY", fore, 0.9)))
+# ---------------- a distant statue at the end of the street ----------------
+# "Theodoric the Great" (Court Church, Innsbruck), scan by Oliver Laric, threedscans.com (free to use without copyright
+# restrictions), decimated to 200k triangles in public/models. Dark obsidian chrome, gold in the crevices, faint green
+# circuits that boot up as the neon ignites. Small in frame: a silhouette in the beam, behind the words.
+bpy.ops.wm.stl_import(filepath=STATUE["model"]); stat = bpy.context.selected_objects[0]; stat.name = "statue"
+stat.matrix_world = Matrix.Identity(4)
+for poly in stat.data.polygons: poly.use_smooth = True
+def statue_mat():
+    m, T = new_mat("ph_statue"); obj = T.n("ShaderNodeTexCoord").outputs["Object"]; px, py, pz = T.sep(obj)
+    boot = T.keyed("boot", [min(1.0, max(0.0, (f - STATUE["boot"][0]) / (STATUE["boot"][1] - STATUE["boot"][0]))) for f in range(1, N + 1)])
+    ao = T.n("ShaderNodeAmbientOcclusion", samples=8, only_local=True); ao.inputs["Distance"].default_value = 0.4
+    chrome = principled(T, hexc("#060A07"), 0.12, metal=1.0, coat=0.8, coat_rough=0.05)
+    gold = principled(T, hexc("#A87C2A"), 0.3, metal=1.0)
+    cav = T.m("POWER", T.m("SUBTRACT", 1.0, ao.outputs["AO"], clamp=True), 1.4)
+    skin = mix_shader(T, T.m("MULTIPLY", cav, 1.6, clamp=True), chrome.outputs[0], gold.outputs[0])
+    hz = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", pz, 70.0)), 0.5)), 0.03)
+    seg = T.m("GREATER_THAN", T.wn(T.combine(T.m("FLOOR", T.m("MULTIPLY", px, 25.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 35.0)), 5.0)), 0.7)
     reveal = T.m("LESS_THAN", pz, T.m("MULTIPLY", boot, 1.05))
-    em = emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", glow, reveal), 3.5))
+    em = emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", T.m("MULTIPLY", hz, seg), reveal), 3.0))
     out(T, add_shader(T, skin, em)); return m
-hm.materials.append(android_mat())
-eye_series = step_series(FACE["eyes"])
-me_, TE = new_mat("ph_eyes"); es = TE.keyed("eyes", eye_series, "CONSTANT")
-out(TE, add_shader(TE, principled(TE, hexc("#0A1A0C"), 0.05, coat=1.0).outputs[0], emission(TE, C["green2"], TE.m("MULTIPLY", es, 4.0))))
-for k, e in enumerate(eyes_at):
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.014, location=e, segments=24, ring_count=12)
-    eo = bpy.context.object; eo.name = f"android_eye{k}"; eo.data.materials.append(me_); eo.parent = head
-    ld = bpy.data.lights.new(f"eye_light{k}", "POINT"); ld.color = C["green2"][:3]; ld.shadow_soft_size = 0.02
-    el = bpy.data.objects.new(f"eye_light{k}", ld); sc.collection.objects.link(el); el.parent = head; el.location = e + Vector((0, -0.03, 0))
-head.scale = (FACE["scale"],) * 3
-zs = []
-for f in range(1, N + 1):
-    k = min(1.0, max(0.0, (f - FACE["rise"][0]) / (FACE["rise"][1] - FACE["rise"][0]))); k = 1 - (1 - k) ** 3
-    zs.append(FACE["z_from"] + (FACE["z_to"] - FACE["z_from"]) * k + FACE["drift"] * max(0.0, (f - FACE["rise"][1]) / (N - FACE["rise"][1])))
-keys(head, "location", [(O.x - nose.x * FACE["scale"], FACE["y"], z) for z in zs], 3)
-for k in range(2): keys(bpy.data.objects[f"eye_light{k}"].data, "energy", [v * 12.0 for v in eye_series], 1, "CONSTANT")
-# the face's lighting (reference: strong green rims from behind, a cool top highlight on the chrome, little front)
-hc = O + Vector((0, FACE["y"], 4.5))
-area_light("face_rim_l", O + Vector((-5.2, FACE["y"] + 2.2, 4.8)), hc, (1.0, 6.0), 4200, C["green2"])
-area_light("face_rim_r", O + Vector((5.2, FACE["y"] + 2.2, 4.8)), hc, (1.0, 6.0), 4200, C["green2"])
-area_light("face_top", O + Vector((0, FACE["y"] - 5, 13.0)), hc, (6.0, 2.5), 1800, C["cream"])
-# a fan of glowing bars radiating behind the head (reference background); the chrome reflects them
-fan_k = [0.0 if f < 200 else min(1.0, (f - 200) / 8) for f in range(1, N + 1)]
-mf, TF = new_mat("ph_fan"); fk = TF.keyed("fan", fan_k)
-fuv = TF.n("ShaderNodeTexCoord").outputs["UV"]; fx_, fy_, _ = TF.sep(fuv)
-soft = TF.m("MULTIPLY", TF.m("SUBTRACT", 1.0, TF.m("POWER", TF.m("ABSOLUTE", TF.m("MULTIPLY", TF.m("SUBTRACT", fx_, 0.5), 2.0)), 2.0)), fy_)
-out(TF, mix_shader(TF, TF.m("MULTIPLY", soft, fk), TF.n("ShaderNodeBsdfTransparent").outputs[0], emission(TF, C["green2"], 3.0))); mf.blend_method = "HASHED"
-for i in range(14):
-    a_ = math.radians(-78 + i * 12 + rnd.uniform(-3, 3)); L_len = rnd.uniform(10, 16)
-    bpy.ops.mesh.primitive_plane_add(size=1, calc_uvs=True); bar = bpy.context.object; bar.name = f"fan_{i:02d}"
-    bar.scale = (rnd.uniform(0.18, 0.4), L_len, 1); bar.rotation_euler = (math.pi / 2, a_, 0)
-    bar.location = O + Vector((math.sin(a_) * (L_len / 2 + 2.5), FACE["y"] + 5.5, 4.5 + math.cos(a_) * (L_len / 2 + 2.5)))
-    bar.data.materials.append(mf); bar.visible_shadow = False
-area_light("face_fill", O + Vector((0, FACE["y"] - 14, 3.0)), hc, (6.0, 2.0), 120, C["green"], reflect=False)
+stat.data.materials.append(statue_mat())
+stat.scale = (STATUE["height"],) * 3; stat.location = O + Vector((0, STATUE["y"], 0))
+sc_ = O + Vector((0, STATUE["y"], STATUE["height"] * 0.55))
+area_light("statue_rim_l", O + Vector((-4.0, STATUE["y"] + 3.0, 6.0)), sc_, (0.8, 5.0), 2200, C["green2"])
+area_light("statue_rim_r", O + Vector((4.0, STATUE["y"] + 3.0, 6.0)), sc_, (0.8, 5.0), 2200, C["green2"])
+area_light("statue_top", O + Vector((0, STATUE["y"] - 4.0, 14.0)), sc_, (3.0, 1.5), 900, C["cream"])
 
 # ---------------- atmosphere: real haze, a real beam, raking lights, floating dust ----------------
 def volume_box(name, lo, hi, density, colour, aniso):
@@ -784,7 +726,7 @@ def spot(name, loc, target, power, colour, size_deg, blend, radius=0.3):
     ld = bpy.data.lights.new(name, "SPOT"); ld.energy = power; ld.color = colour[:3]; ld.spot_size = math.radians(size_deg); ld.spot_blend = blend; ld.shadow_soft_size = radius
     o = bpy.data.objects.new(name, ld); sc.collection.objects.link(o); o.location = loc
     o.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("-Z", "Y").to_euler(); return o
-beam = spot("beam", O + Vector((0, 64, 30)), O + Vector((0, 64, 0)), 90000, C["green2"], 9, 0.6, 0.6)   # the light shaft through the haze
+beam = spot("beam", O + Vector((0, STATUE["y"], 30)), O + Vector((0, STATUE["y"], 0)), 90000, C["green2"], 9, 0.6, 0.6)   # the light shaft through the haze
 keys(beam.data, "energy", [40000 if f < 190 else max(14000, 40000 - (f - 190) * 1800) for f in range(1, N + 1)], 1)
 # small, bright, hidden lights: crisp highlights run along bevels, ledges and fins (no big pale reflections)
 for k, (lx, ly, lz, ty, col, pw) in enumerate([(-2.5, 8, 9, 14, "sage2", 260), (2.5, 16, 7, 22, "lime", 200), (-2.0, 26, 12, 32, "green2", 260),
