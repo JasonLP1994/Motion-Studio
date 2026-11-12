@@ -10,73 +10,10 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 SHOT, SRC, OUT = argv[0], argv[1], argv[2]
 SAMPLES = int(argv[3]) if len(argv) > 3 else 256
 meta = json.load(open(os.path.join(SRC, f"{SHOT}.json")))
-b3 = lambda v: Vector((v[0], -v[2], v[1]))  # three.js (Y-up) -> Blender (Z-up)
-hexc = lambda h, a=1.0: tuple(pow(int(h[i:i + 2], 16) / 255, 2.2) for i in (1, 3, 5)) + (a,)
+from looks import b3, hexc, principled, noise, bump, mat_blood, mat_marble, mat_stone, area
 
 for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
 sc = bpy.context.scene
-
-# ---------- materials ----------
-def principled(name):
-    m = bpy.data.materials.get(name) or bpy.data.materials.new(name); m.use_nodes = True
-    nt = m.node_tree; nt.nodes.clear()
-    out = nt.nodes.new("ShaderNodeOutputMaterial"); bs = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    nt.links.new(bs.outputs[0], out.inputs["Surface"]); return m, nt, bs
-
-def noise(nt, scale, detail=6, rough=0.55):
-    n = nt.nodes.new("ShaderNodeTexNoise"); n.inputs["Scale"].default_value = scale; n.inputs["Detail"].default_value = detail; n.inputs["Roughness"].default_value = rough
-    geo = nt.nodes.get("WorldPos") or nt.nodes.new("ShaderNodeNewGeometry"); geo.name = "WorldPos"; nt.links.new(geo.outputs["Position"], n.inputs["Vector"])  # same scale on every object
-    return n
-
-def bump(nt, bs, height_socket, strength, dist=0.002):
-    b = nt.nodes.new("ShaderNodeBump"); b.inputs["Strength"].default_value = strength; b.inputs["Distance"].default_value = dist
-    nt.links.new(height_socket, b.inputs["Height"]); nt.links.new(b.outputs[0], bs.inputs["Normal"]); return b
-
-def mat_blood(name, vertex_colours):
-    # blood: dark red body, near-black where thick, crimson where thin; light scatters a little inside; glassy wet coat
-    m, nt, bs = principled(name)
-    if vertex_colours:
-        a = nt.nodes.new("ShaderNodeVertexColor"); a.layer_name = "Col"; nt.links.new(a.outputs["Color"], bs.inputs["Base Color"])
-    else:
-        bs.inputs["Base Color"].default_value = hexc("#4A0206")
-    bs.inputs["Roughness"].default_value = 0.035
-    bs.inputs["IOR"].default_value = 1.36
-    bs.inputs["Subsurface Weight"].default_value = 0.35
-    bs.inputs["Subsurface Radius"].default_value = (1.0, 0.06, 0.03)
-    bs.inputs["Subsurface Scale"].default_value = 0.004
-    bs.inputs["Coat Weight"].default_value = 1.0; bs.inputs["Coat Roughness"].default_value = 0.01; bs.inputs["Coat IOR"].default_value = 1.4
-    n = noise(nt, 140, 2, 0.5); bump(nt, bs, n.outputs["Fac"], 0.04, 0.0005)  # faint surface tension ripples
-    return m
-
-def mat_marble(name, raw=False):
-    m, nt, bs = principled(name)
-    # veins: warped noise -> thin grey lines over warm white
-    n = noise(nt, 2.5, 8, 0.6); w = nt.nodes.new("ShaderNodeMath"); w.operation = "SINE"
-    mul = nt.nodes.new("ShaderNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = 22.0
-    nt.links.new(n.outputs["Fac"], mul.inputs[0]); nt.links.new(mul.outputs[0], w.inputs[0])
-    ramp = nt.nodes.new("ShaderNodeValToRGB"); ramp.color_ramp.elements[0].position = 0.0; ramp.color_ramp.elements[1].position = 0.12
-    ramp.color_ramp.elements[0].color = hexc("#B9B2A8"); ramp.color_ramp.elements[1].color = hexc("#D9D1C4" if raw else "#EDE6DA")
-    ab = nt.nodes.new("ShaderNodeMath"); ab.operation = "ABSOLUTE"; nt.links.new(w.outputs[0], ab.inputs[0]); nt.links.new(ab.outputs[0], ramp.inputs[0])
-    nt.links.new(ramp.outputs["Color"], bs.inputs["Base Color"])
-    bs.inputs["Roughness"].default_value = 0.72 if raw else 0.3
-    bs.inputs["Subsurface Weight"].default_value = 0.5 if not raw else 0.35
-    bs.inputs["Subsurface Radius"].default_value = (1.0, 0.75, 0.55); bs.inputs["Subsurface Scale"].default_value = 0.02
-    if not raw: bs.inputs["Coat Weight"].default_value = 0.15; bs.inputs["Coat Roughness"].default_value = 0.3
-    pores = noise(nt, 900 if not raw else 260, 4, 0.7); bump(nt, bs, pores.outputs["Fac"], 0.12 if not raw else 0.45, 0.001)
-    return m
-
-def mat_stone(name):
-    # dark maroon polished stone: mottled colour, patchy gloss, fine grain
-    m, nt, bs = principled(name)
-    n = noise(nt, 3.0, 8, 0.6); ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = hexc("#080102"); ramp.color_ramp.elements[1].color = hexc("#1A0507")
-    ramp.color_ramp.elements[0].position = 0.35; ramp.color_ramp.elements[1].position = 0.7
-    nt.links.new(n.outputs["Fac"], ramp.inputs[0]); nt.links.new(ramp.outputs["Color"], bs.inputs["Base Color"])
-    r = noise(nt, 6.0, 4, 0.5); rr = nt.nodes.new("ShaderNodeMapRange"); rr.inputs["To Min"].default_value = 0.32; rr.inputs["To Max"].default_value = 0.7
-    nt.links.new(r.outputs["Fac"], rr.inputs["Value"]); nt.links.new(rr.outputs["Result"], bs.inputs["Roughness"])
-    bs.inputs["Specular IOR Level"].default_value = 0.3
-    g = noise(nt, 400, 3, 0.6); bump(nt, bs, g.outputs["Fac"], 0.05, 0.0005)
-    return m
 
 MATS = {"blood": lambda: mat_blood("bl_blood", True), "bloodFlat": lambda: mat_blood("bl_bloodFlat", False), "marble": lambda: mat_marble("bl_marble"), "marbleRaw": lambda: mat_marble("bl_marbleRaw", True), "stone": lambda: mat_stone("bl_stone")}
 
@@ -129,11 +66,6 @@ cam_d.dof.use_dof = True; cam_d.dof.focus_distance = meta["focus"]
 cam_d.dof.aperture_fstop = {"macro": 1.4, "break": 2.2, "rome": 2.8}[SHOT]; cam_d.dof.aperture_blades = 7
 
 # ---------- lights: out of shot, never seen directly (C4D omni/softbox style) ----------
-def area(name, p3, target3, size, power, colour):
-    ld = bpy.data.lights.new(name, "AREA"); ld.shape = "RECTANGLE"; ld.size, ld.size_y = size; ld.energy = power; ld.color = hexc(colour)[:3]
-    o = bpy.data.objects.new(name, ld); sc.collection.objects.link(o); o.location = b3(p3)
-    d = (b3(target3) - o.location); o.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); o.visible_camera = False
-    return o
 LK = float(os.environ.get("LIGHT", "1.0"))
 if SHOT == "rome":
     # bird's-eye: low raking lights from the sides, so the stone stays dark and the liquid in the grooves catches the light
