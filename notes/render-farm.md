@@ -40,6 +40,15 @@ Prices change. The farm always shows a quote before you pay, and that quote is t
    - checks frames from the whole video and scores it;
    - saves it as the next version in `renders/`.
 
+## Animations that come as a folder (ZIP)
+Some animations use per-frame maps that Blender can't pack inside the `.blend` (for example
+PaintedStatue's `floor/m_####.png` liquid maps). Then Claude sends a **ZIP of a folder**: the `.blend`,
+`floor/`, `rome_mask.png` and a README. Upload the **whole ZIP or folder** to the farm (most accept a
+ZIP or project folder), not just the `.blend`, or the pool and ROME liquid will be missing.
+- The file is saved with preview settings: 64 samples, denoiser, no motion blur. For the final, set
+  Render > Samples to 128 and tick Motion Blur (shutter 0.5) before uploading, or ask the farm to override.
+- Frames: 1-600 at 30 fps, 1920x1080, PNG to `render/painted_statue_####.png`.
+
 ## Why frames and not an MP4 from the farm
 If one frame fails or a node crashes, only that frame is re-rendered. The sound is added here, mixed and
 checked, so the farm's output stays silent.
