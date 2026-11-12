@@ -427,100 +427,130 @@ def tower_material():
     out(T, add_shader(T, b.outputs[0], emission(T, T.ramp(T.wn(cell), [(0.0, C["green"]), (0.7, C["green2"]), (1.0, C["lime"])]), T.m("MULTIPLY", T.m("MULTIPLY", lit, win), 0.0)))); return m
 M_TOWER = tower_material()
 m_, T_ = new_mat("ph_edge"); out(T_, emission(T_, C["green2"], 3.0)); M_EDGE = m_
-# towers: varied shapes, bevelled, with ledges, fins, chamfered and spire tops (lots of edges and faces for light to rake)
-def bm_box(bm, c, size):
-    r = bmesh.ops.create_cube(bm, size=1.0)
-    for v in r["verts"]: v.co = Vector((c[0] + v.co.x * size[0], c[1] + v.co.y * size[1], c[2] + v.co.z * size[2]))
-    return r["verts"]
-def bm_prism(bm, c, r1, r2, h, segs, rot=0.0):
-    r = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=segs, radius1=r1, radius2=r2, depth=h)
-    for v in r["verts"]:
-        x, y_ = v.co.x * math.cos(rot) - v.co.y * math.sin(rot), v.co.x * math.sin(rot) + v.co.y * math.cos(rot)
-        v.co = Vector((c[0] + x, c[1] + y_, c[2] + v.co.z))
-    return r["verts"]
-def ledges(bm, glow, cx, cy, w, d, z0, z1, every):
-    z = z0 + every
-    while z < z1 - 0.5:
-        bm_box(bm, (cx, cy, z), (w + 0.22, d + 0.22, 0.14))                                   # a protruding band
-        if rnd.random() < 0.35: bm_box(glow, (cx, cy, z - 0.09), (w + 0.24, d + 0.24, 0.025))  # some glow underneath
-        z += every
-def drawers(bm, glow, origin, u, n, width, z0, z1):
-    """a wall made of cupboard/drawer fronts pulled out by different depths, with dark gaps and the odd glowing slot.
-    origin: bottom-left of the wall at z0 (on the wall plane); u: unit vector across the wall; n: outward normal"""
+# ---------------- the city: a C4D-style cloner with random + noise effectors (geometry nodes) ----------------
+def vnoise2(x, y):
+    """smooth 2D value noise 0..1 (deterministic)"""
+    def h(i, j): return (math.sin(i * 127.1 + j * 311.7) * 43758.5453) % 1.0
+    i, j = math.floor(x), math.floor(y); fx, fy = x - i, y - j; fx, fy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
+    a_, b_, c_, d_ = h(i, j), h(i + 1, j), h(i, j + 1), h(i + 1, j + 1)
+    return a_ + (b_ - a_) * fx + (c_ - a_) * fy + (a_ - b_ - c_ + d_) * fx * fy
+
+def tower_variant(name, base, rough, metal, coat, aniso=0.0, circuit=False):
+    m, T = new_mat(name); p_ = T.n("ShaderNodeTexCoord").outputs["Object"]
+    pr = T.n("ShaderNodeTexNoise"); pr.inputs["Scale"].default_value = 3.0; T.link(p_, pr.inputs["Vector"])
+    b = principled(T, hexc(base), T.m("ADD", rough, T.m("MULTIPLY", pr.outputs["Fac"], 0.12)), metal=metal, coat=coat, coat_rough=0.06, spec=0.7)
+    b.inputs["Anisotropic"].default_value = aniso
+    bp = T.n("ShaderNodeBump"); bp.inputs["Strength"].default_value = 0.15; T.link(pr.outputs["Fac"], bp.inputs["Height"]); T.link(bp.outputs[0], b.inputs["Normal"])
+    shader = b.outputs[0]
+    if circuit:  # thin glowing traces etched into the faces
+        px, py, pz = T.sep(p_)
+        lanes = T.m("MAXIMUM", T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", T.m("ADD", px, py), 6.0)), 0.5)), 0.02),
+                    T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", pz, 9.0)), 0.5)), 0.015))
+        on = T.m("GREATER_THAN", T.wn(T.combine(T.m("FLOOR", T.m("MULTIPLY", T.m("ADD", px, py), 3.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 4.0)))), 0.6)
+        shader = add_shader(T, shader, emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", lanes, on), 2.2)))
+    out(T, shader); return m
+MATS_CITY = {
+    "satin": tower_variant("ph_city_satin", "#18301F", 0.3, 0.2, 0.45),
+    "glass": tower_variant("ph_city_glass", "#040806", 0.03, 0.0, 1.0),
+    "concrete": tower_variant("ph_city_concrete", "#2A3A30", 0.75, 0.0, 0.0),
+    "metal": tower_variant("ph_city_metal", "#7E8C82", 0.32, 1.0, 0.0, aniso=0.6),
+    "circuit": tower_variant("ph_city_circuit", "#08120C", 0.2, 0.3, 0.6, circuit=True),
+}
+mg_, TG_ = new_mat("ph_city_glow"); out(TG_, add_shader(TG_, principled(TG_, hexc("#0C1A10"), 0.2, coat=1.0).outputs[0], emission(TG_, C["green2"], 1.4))); MATS_CITY["glow"] = mg_
+
+def src_shape(name, mat, shape="cube", bevel=0.035):
+    bm = bmesh.new()
+    if shape == "cube": bmesh.ops.create_cube(bm, size=1.0)
+    else: bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=8, radius1=0.5, radius2=0.5, depth=1.0)
+    bmesh.ops.bevel(bm, geom=list(bm.edges), offset=bevel, segments=2, affect="EDGES", profile=0.5)
+    for f in bm.faces: f.smooth = False
+    o = obj_from_bm(name, bm, mat, (0, 0, -500)); o.hide_render = True; o.hide_viewport = True
+    return o
+
+def cloner(name, source, pts, scale, rot=None, nrm=None, base=None, amp=None):
+    """points + per-point scale/rotation; optional animated 'drawer' push along nrm: d = base + amp * noise(pos, time)"""
+    me = bpy.data.meshes.new(name); me.vertices.add(len(pts)); me.vertices.foreach_set("co", [c for p_ in pts for c in p_])
+    def attr(nm, data, kind):
+        at = me.attributes.new(nm, kind, "POINT"); at.data.foreach_set("vector" if kind == "FLOAT_VECTOR" else "value", [c for t in data for c in t] if kind == "FLOAT_VECTOR" else data)
+    attr("scl", scale, "FLOAT_VECTOR"); attr("rot", rot or [0.0] * len(pts), "FLOAT")
+    anim = nrm is not None
+    if anim: attr("nrm", nrm, "FLOAT_VECTOR"); attr("base", base, "FLOAT"); attr("amp", amp, "FLOAT")
+    o = bpy.data.objects.new(name, me); sc.collection.objects.link(o)
+    ng = bpy.data.node_groups.new(f"{name}_gn", "GeometryNodeTree")
+    ng.interface.new_socket(name="Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
+    ng.interface.new_socket(name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    G = NT(ng); gi = G.n("NodeGroupInput"); go = G.n("NodeGroupOutput")
+    def named(nm, dt):
+        n_ = G.n("GeometryNodeInputNamedAttribute", data_type=dt); n_.inputs["Name"].default_value = nm; return n_.outputs["Attribute"]
+    geo = gi.outputs[0]; scl = named("scl", "FLOAT_VECTOR")
+    if anim:
+        t = G.n("GeometryNodeInputSceneTime").outputs["Seconds"]
+        pos = G.n("GeometryNodeInputPosition").outputs[0]
+        nz = G.n("ShaderNodeTexNoise", noise_dimensions="4D"); nz.inputs["Scale"].default_value = 0.35; nz.inputs["Detail"].default_value = 1.0
+        G.link(pos, nz.inputs["Vector"]); G.link(G.m("MULTIPLY", t, 0.45), nz.inputs["W"])
+        d = G.m("MAXIMUM", G.m("ADD", named("base", "FLOAT"), G.m("MULTIPLY", named("amp", "FLOAT"), G.m("MULTIPLY", G.m("SUBTRACT", nz.outputs["Fac"], 0.5), 3.0))), 0.03)
+        n_ = named("nrm", "FLOAT_VECTOR"); an = G.v("ABSOLUTE", n_)
+        scl = G.v("ADD", G.v("MULTIPLY", scl, G.v("SUBTRACT", (1.0, 1.0, 1.0), an)), G.v("SCALE", an, scale=d))
+        sp = G.n("GeometryNodeSetPosition"); G.link(geo, sp.inputs["Geometry"]); G.link(G.v("SCALE", n_, scale=G.m("MULTIPLY", d, 0.5)), sp.inputs["Offset"]); geo = sp.outputs[0]
+    oi = G.n("GeometryNodeObjectInfo"); oi.inputs["Object"].default_value = source
+    iop = G.n("GeometryNodeInstanceOnPoints"); G.link(geo, iop.inputs["Points"]); G.link(oi.outputs["Geometry"], iop.inputs["Instance"])
+    G.link(scl, iop.inputs["Scale"]); G.link(G.combine(0.0, 0.0, named("rot", "FLOAT")), iop.inputs["Rotation"])
+    G.link(iop.outputs[0], go.inputs[0])
+    o.modifiers.new("cloner", "NODES").node_group = ng; o.visible_shadow = True
+    return o
+
+SRC = {k: src_shape(f"src_{k}", m_) for k, m_ in MATS_CITY.items()}
+SRC_OCTA = {k: src_shape(f"srco_{k}", MATS_CITY[k], "octa") for k in ("satin", "glass", "metal")}
+blocks = {k: ([], [], []) for k in list(SRC) + [f"o_{k}" for k in SRC_OCTA]}
+drawer = {k: ([], [], [], [], [], []) for k in ("satin", "metal", "concrete", "glass", "glow")}
+def add_block(key, cx, cy, z0, w, d, h, rot=0.0):
+    pts, scl, rots = blocks[key]; pts.append((cx, cy, z0 + h / 2)); scl.append((w, d, h)); rots.append(rot)
+def add_drawers(origin, u, n, width, z0, z1, style):
+    """rectangles across a wall; each becomes a clone that the noise effector slides in and out along n"""
     up = Vector((0, 0, 1)); z = z0
     while z < z1 - 0.3:
-        rh = min(z1 - z, rnd.choice([0.5, 0.8, 0.8, 1.2, 1.6, 2.4]))
-        x = 0.0
+        rh = min(z1 - z, rnd.choice(style["rows"])); x = 0.0
         while x < width - 0.2:
-            cw = min(width - x, rnd.choice([0.5, 0.7, 1.0, 1.0, 1.4, 2.0]))
-            if rnd.random() < 0.82:
-                depth = rnd.choice([0.06, 0.12, 0.12, 0.25, 0.4, 0.65]); g = 0.045  # gap between fronts
-                c = origin + u * (x + cw / 2) + up * (z - z0 + rh / 2) + n * (depth / 2)
-                size = Vector((abs(u.x) * (cw - g) + abs(n.x) * depth, abs(u.y) * (cw - g) + abs(n.y) * depth, rh - g))
-                bm_box(bm, tuple(c), tuple(size))
-                if rnd.random() < 0.14:  # a lit slot under the front, like light leaking from a drawer
-                    sc_ = origin + u * (x + cw / 2) + up * (z - z0 + 0.03) + n * (depth * 0.5)
-                    bm_box(glow, tuple(sc_), tuple(Vector((abs(u.x) * (cw - 0.12) + abs(n.x) * depth * 0.9, abs(u.y) * (cw - 0.12) + abs(n.y) * depth * 0.9, 0.02))))
+            cw = min(width - x, rnd.choice(style["cols"]))
+            if rnd.random() < style["fill"]:
+                key = "glow" if (rnd.random() < 0.07 and cw <= 1.0 and rh <= 1.2) else style["mat"]
+                P_, S_, R_, N_, B_, A_ = drawer[key]; g = 0.05
+                c = origin + u * (x + cw / 2) + up * (z - z0 + rh / 2)
+                P_.append(tuple(c)); S_.append((abs(u.x) * (cw - g) + abs(n.x), abs(u.y) * (cw - g) + abs(n.y), rh - g)); R_.append(0.0)
+                N_.append(tuple(n)); B_.append(rnd.choice(style["depths"])); A_.append(style["amp"] if rnd.random() < style["moving"] else 0.0)
             x += cw
         z += rh
-def facade(bm, glow, cx, cy, w, d, z0, z1, side):
-    """drawer walls on the street-facing side and the camera-facing front of a box volume"""
-    drawers(bm, glow, Vector((cx - side * w / 2, cy - d / 2, z0)), Vector((0, 1, 0)), Vector((-side, 0, 0)), d, z0, z1)
-    drawers(bm, glow, Vector((cx - w / 2, cy - d / 2, z0)), Vector((1, 0, 0)), Vector((0, -1, 0)), w, z0, z1)
-def tower(name, cx, cy, side):
-    bm, glow = bmesh.new(), bmesh.new(); kind = rnd.choice(["setback", "setback", "octa", "round", "chamfer", "spire", "fins", "hex"])
-    w, d, h = rnd.uniform(1.8, 4.2), rnd.uniform(2.0, 4.6), rnd.uniform(10, 48)
-    if kind == "setback":
-        z = 0.0; ww, dd = w, d
-        for k in range(rnd.randint(2, 4)):
-            hh = h * rnd.uniform(0.3, 0.5) if k < 3 else h * 0.2
-            bm_box(bm, (cx, cy, z + hh / 2), (ww, dd, hh)); facade(bm, glow, cx, cy, ww, dd, z, z + hh, side)
-            bm_box(bm, (cx, cy, z + hh - 0.08), (ww + 0.9, dd + 0.9, 0.16))  # a deep slab at each setback
-            z += hh; ww *= rnd.uniform(0.62, 0.82); dd *= rnd.uniform(0.62, 0.82)
-        h = z
-    elif kind in ("octa", "round", "hex"):
-        segs = {"octa": 8, "round": 32, "hex": 6}[kind]; r = min(w, d) / 2 * 1.15
-        bm_prism(bm, (cx, cy, h / 2), r, r, h, segs, rnd.uniform(0, 1))
-        z = rnd.uniform(2, 4)
-        while z < h - 1:
-            bm_prism(bm, (cx, cy, z), r + 0.12, r + 0.12, 0.16, segs)
-            if rnd.random() < 0.3: bm_prism(glow, (cx, cy, z - 0.1), r + 0.13, r + 0.13, 0.03, segs)
-            z += rnd.uniform(2.5, 4.0)
-        if rnd.random() < 0.5: bm_prism(bm, (cx, cy, h + 1.2), r * 0.6, 0.05, 2.4, segs)   # a cap or spike
-    elif kind == "chamfer":
-        vs = bm_box(bm, (cx, cy, h / 2), (w, d, h))
-        top = [v for v in vs if v.co.z > h - 0.01]; tilt = rnd.choice([0, 1])
-        for v in top:  # slanted roof
-            if (v.co.x > cx) if tilt else (v.co.y > cy): v.co.z += rnd.uniform(2, 5)
-        facade(bm, glow, cx, cy, w, d, 0, h, side)
-    elif kind == "spire":
-        bm_box(bm, (cx, cy, h / 2), (w, d, h)); facade(bm, glow, cx, cy, w, d, 0, h, side)
-        bm_prism(bm, (cx, cy, h + h * 0.18), min(w, d) * 0.62, 0.04, h * 0.36, 4, math.pi / 4)
-    else:  # fins: a slab with vertical fins across its street face
-        bm_box(bm, (cx, cy, h / 2), (w, d, h)); facade(bm, glow, cx, cy, w, d, 0, h, side); nf = rnd.randint(2, 4); fx = cx - side * (w / 2 + 0.75)
-        for k in range(nf):
-            fy = cy - d / 2 + (k + 0.5) * d / nf
-            bm_box(bm, (fx, fy, h / 2), (1.2, 0.14, h * rnd.uniform(0.85, 1.0)))
-            if rnd.random() < 0.4: bm_box(glow, (fx - side * 0.19, fy, h * 0.45), (0.02, 0.04, h * 0.8))
-    if rnd.random() < 0.5:  # a vertical glowing strip on the street-facing corner
-        bm_box(glow, (cx - side * (w / 2 + 0.03), cy - d / 2 - 0.03, h * 0.45), (0.035, 0.035, h * 0.88))
-    t_ = obj_from_bm(name, bm, M_TOWER)
-    bv = t_.modifiers.new("bevel", "BEVEL"); bv.width = rnd.uniform(0.012, 0.025); bv.segments = 2; bv.limit_method = "ANGLE"; bv.harden_normals = True
-    t_.data.shade_smooth() if hasattr(t_.data, "shade_smooth") else None
-    for p_ in t_.data.polygons: p_.use_smooth = True
-    try: t_.data.use_auto_smooth = True; t_.data.auto_smooth_angle = math.radians(35)
-    except AttributeError: pass
-    if glow.verts: g_ = obj_from_bm(name + "_glow", glow, M_EDGE); g_.visible_shadow = False
-    else: glow.free()
-    return t_
-y = -6.0
-while y < 78:
-    for side in (-1, 1):
-        x = side * rnd.uniform(5.2, 7.5)
-        tower(f"tower_{side}_{int(y)}", O.x + x, y + 2.0, side)
-        if rnd.random() < 0.55:  # a second row behind, taller, for depth
-            tower(f"towerB_{side}_{int(y)}", O.x + side * rnd.uniform(10, 15), y + rnd.uniform(0, 4), side)
-    y += rnd.uniform(3.8, 6.5)
+STYLES = [  # facade styles: drawers, slats, louvres, big cantilevers
+    {"rows": [0.5, 0.8, 1.2, 1.6], "cols": [0.5, 0.7, 1.0, 1.4], "fill": 0.85, "depths": [0.08, 0.15, 0.3, 0.55], "amp": 0.35, "moving": 0.5, "mat": "satin"},
+    {"rows": [6.0, 9.0], "cols": [0.25, 0.35], "fill": 0.9, "depths": [0.3, 0.5], "amp": 0.15, "moving": 0.3, "mat": "metal"},          # vertical slats
+    {"rows": [0.35, 0.45], "cols": [3.0, 5.0], "fill": 0.9, "depths": [0.25, 0.4], "amp": 0.2, "moving": 0.4, "mat": "concrete"},       # horizontal louvres
+    {"rows": [2.0, 3.0, 4.0], "cols": [1.5, 2.0], "fill": 0.45, "depths": [0.8, 1.4, 2.2], "amp": 0.6, "moving": 0.6, "mat": "glass"},  # cantilevered boxes
+]
+CELL = 1.9
+for side in (-1, 1):
+    for col in range(8):
+        for row in range(int(90 / CELL)):
+            cx = O.x + side * (5.0 + col * CELL); cy = -8 + row * CELL
+            if rnd.random() < 0.1: continue                                            # plazas / gaps
+            hn = vnoise2((cx - O.x) * 0.09 + side * 9, cy * 0.07)                       # noise effector: skyline clusters
+            h = 2.5 + 46 * (hn ** 2.2) * rnd.uniform(0.55, 1.25) * (0.55 if col == 0 else 1.0) + col * 1.2
+            w, d = CELL * rnd.uniform(0.62, 0.96), CELL * rnd.uniform(0.62, 0.96)
+            mk = rnd.choices(["satin", "glass", "concrete", "metal", "circuit"], [0.32, 0.24, 0.18, 0.12, 0.14])[0]
+            if col >= 1 and rnd.random() < 0.12 and mk in SRC_OCTA: add_block(f"o_{mk}", cx, cy, 0, min(w, d), min(w, d), h, rnd.uniform(0, 1))
+            else: add_block(mk, cx + rnd.uniform(-0.12, 0.12), cy + rnd.uniform(-0.12, 0.12), 0, w, d, h, rnd.choice([0.0, 0.0, math.pi / 2]) if col else 0.0)
+            if rnd.random() < 0.3 and h > 6:                                                # stacked / jenga block on top
+                add_block(rnd.choice(["satin", "glass", "metal"]), cx + rnd.uniform(-0.4, 0.4), cy + rnd.uniform(-0.4, 0.4), h, w * rnd.uniform(0.4, 0.8), d * rnd.uniform(0.4, 0.8), rnd.uniform(2, 9), rnd.uniform(0, 0.8))
+            if rnd.random() < 0.08:                                                         # a glowing light bar on a corner
+                add_block("glow", cx - side * w / 2, cy - d / 2, 0, 0.05, 0.05, h * rnd.uniform(0.5, 0.95))
+            if col == 0:                                                                    # street wall: a cloned facade on it
+                st = rnd.choice(STYLES)
+                add_drawers(Vector((cx - side * w / 2, cy - d / 2, 0.0)), Vector((0, 1, 0)), Vector((-side, 0, 0)), d, 0.4, h, st)
+                add_drawers(Vector((cx - w / 2, cy - d / 2, 0.0)), Vector((1, 0, 0)), Vector((0, -1, 0)), w, 0.4, h, st)
+for key, (pts, scl, rots) in blocks.items():
+    if pts: cloner(f"city_{key}", SRC_OCTA[key[2:]] if key.startswith("o_") else SRC[key], pts, scl, rots)
+for key, (P_, S_, R_, N_, B_, A_) in drawer.items():
+    if P_: cloner(f"facade_{key}", SRC[key], P_, S_, R_, N_, B_, A_)
+log_counts = {k: len(v[0]) for k, v in blocks.items()}; print("CITY", log_counts, {k: len(v[0]) for k, v in drawer.items()}, flush=True)
 bpy.ops.mesh.primitive_plane_add(size=1, location=O + Vector((0, 35, 0))); cf = bpy.context.object; cf.name = "code_floor"; cf.scale = (60, 120, 1); cf.data.materials.append(M_FLOOR_CODE)
 # light shaft at the end of the street
 m_, T_ = new_mat("ph_shaft")
