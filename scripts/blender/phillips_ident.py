@@ -4,7 +4,7 @@
 # of falling code -> glyphs swarm into PHILLIPS DIGITAL -> neon flickers on -> hard cut to black.
 # Colours: phillipsdigital.net (forest-black, lime, cream). Plan: notes/philips-digital/plan.md
 import bpy, bmesh, math, random, os, sys
-from mathutils import Vector, Matrix, Quaternion
+from mathutils import Vector, Matrix, Quaternion, Euler
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -654,6 +654,68 @@ off = G_.v("ADD", G_.v("SCALE", named("delta", "FLOAT_VECTOR"), scale=G_.m("SUBT
            G_.v("SCALE", named("arc", "FLOAT_VECTOR"), scale=G_.m("SINE", G_.m("MULTIPLY", k_, math.pi))))
 spn = G_.n("GeometryNodeSetPosition"); G_.link(gin.outputs[0], spn.inputs["Geometry"]); G_.link(off, spn.inputs["Offset"]); G_.link(spn.outputs[0], gout.inputs[0])
 sw.modifiers.new("fly", "NODES").node_group = ng
+
+# ---------------- the android face rising behind the words ----------------
+# The head is the free-to-use "Portrait of a Man" scan (public/models), turned into black chrome with gold creases,
+# green circuit lanes and code, and glowing eyes. It rises through the floor behind PHILLIPS DIGITAL.
+FACE = {"model": os.path.join(ROOT, "public/models/bearded-man-200k.stl"), "y": TEXT_Y + 8.0, "scale": 12.0,
+        "rise": (165, 205), "z_from": -13.0, "z_to": -1.6, "drift": 0.35, "roll": 0.36, "yaw": 0.1,
+        "boot": (172, 212), "eyes": [(204, 0.0), (206, 3.0), (207, 0.2), (208, 6.0), (222, 1.0), (223, 6.0)]}
+bpy.ops.wm.stl_import(filepath=FACE["model"]); head = bpy.context.selected_objects[0]; head.name = "android_head"
+head.matrix_world = Matrix.Identity(4); hm = head.data; raw = [v.co.copy() for v in hm.vertices]
+cen = Vector(((max(v.x for v in raw) + min(v.x for v in raw)) / 2, 0, (max(v.z for v in raw) + min(v.z for v in raw)) / 2))
+M3 = Matrix.Rotation(FACE["yaw"], 3, "Z") @ Matrix.Rotation(FACE["roll"], 3, "Y") @ Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0))) @ Euler((0.0, math.pi / 2, math.pi), "ZXY").to_matrix()
+hp = [M3 @ (v - cen) for v in raw]; zmin = min(p.z for p in hp); hp = [p - Vector((0, 0, zmin)) for p in hp]
+for v, p in zip(hm.vertices, hp): v.co = p
+for poly in hm.polygons: poly.use_smooth = True
+HH = max(p.z for p in hp)
+nose = min((p for p in hp if 0.45 < p.z / HH < 0.55), key=lambda p: p.y)                      # front-most point = nose
+eyes_at = []
+for sx in (-1, 1):
+    band = [p for p in hp if 0.59 < p.z / HH < 0.65 and 0.045 < sx * (p.x - nose.x) < 0.1]
+    f_ = min(band, key=lambda p: p.y); eyes_at.append(Vector((f_.x, f_.y - 0.004, f_.z)))
+def android_mat():
+    m, T = new_mat("ph_android"); obj = T.n("ShaderNodeTexCoord").outputs["Object"]; px, py, pz = T.sep(obj)
+    boot = T.keyed("boot", [min(1.0, max(0.0, (f - FACE["boot"][0]) / (FACE["boot"][1] - FACE["boot"][0]))) for f in range(1, N + 1)])
+    ao = T.n("ShaderNodeAmbientOcclusion", samples=8, only_local=True); ao.inputs["Distance"].default_value = 0.35
+    chrome = principled(T, hexc("#050906"), 0.07, metal=1.0, coat=1.0, coat_rough=0.02)
+    gold = principled(T, hexc("#B88A2E"), 0.22, metal=1.0)
+    cav = T.m("POWER", T.m("SUBTRACT", 1.0, ao.outputs["AO"], clamp=True), 1.6)
+    skin = mix_shader(T, T.m("MULTIPLY", cav, 1.8, clamp=True), chrome.outputs[0], gold.outputs[0])
+    # circuit lanes: vertical + horizontal traces, broken into segments; code blocks on the forehead
+    vx = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", px, 46.0)), 0.5)), 0.05)
+    hz = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", T.m("FRACT", T.m("MULTIPLY", pz, 60.0)), 0.5)), 0.04)
+    seg = T.m("GREATER_THAN", T.wn(T.combine(T.m("FLOOR", T.m("MULTIPLY", px, 11.0)), T.m("FLOOR", T.m("MULTIPLY", pz, 13.0)), 3.0)), 0.45)
+    lanes = T.m("MULTIPLY", T.m("MAXIMUM", vx, hz), seg)
+    gx = T.m("MULTIPLY", px, 34.0); gz = T.m("MULTIPLY", pz, 34.0)
+    glyph = T.sep(atlas_sample(T, T.wn(T.combine(T.m("FLOOR", gx), T.m("FLOOR", gz)), "2D"), (T.m("FRACT", gx), T.m("FRACT", gz))))[0]
+    fore = T.m("MULTIPLY", T.m("GREATER_THAN", pz, 0.68), T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", px, nose.x)), 0.12))
+    glow = T.m("ADD", T.m("MULTIPLY", lanes, 0.8), T.m("MULTIPLY", glyph, T.m("MULTIPLY", fore, 1.4)))
+    reveal = T.m("LESS_THAN", pz, T.m("MULTIPLY", boot, 1.05))
+    em = emission(T, C["green2"], T.m("MULTIPLY", T.m("MULTIPLY", glow, reveal), 5.0))
+    out(T, add_shader(T, skin, em)); return m
+hm.materials.append(android_mat())
+eye_series = step_series(FACE["eyes"])
+me_, TE = new_mat("ph_eyes"); es = TE.keyed("eyes", eye_series, "CONSTANT")
+out(TE, add_shader(TE, principled(TE, hexc("#0A1A0C"), 0.05, coat=1.0).outputs[0], emission(TE, TE.ramp(0.8, [(0.0, C["green2"]), (1.0, C["cream"])]), TE.m("MULTIPLY", es, 6.0))))
+for k, e in enumerate(eyes_at):
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.024, location=e, segments=24, ring_count=12)
+    eo = bpy.context.object; eo.name = f"android_eye{k}"; eo.data.materials.append(me_); eo.parent = head
+    ld = bpy.data.lights.new(f"eye_light{k}", "POINT"); ld.color = C["green2"][:3]; ld.shadow_soft_size = 0.02
+    el = bpy.data.objects.new(f"eye_light{k}", ld); sc.collection.objects.link(el); el.parent = head; el.location = e + Vector((0, -0.03, 0))
+head.scale = (FACE["scale"],) * 3
+zs = []
+for f in range(1, N + 1):
+    k = min(1.0, max(0.0, (f - FACE["rise"][0]) / (FACE["rise"][1] - FACE["rise"][0]))); k = 1 - (1 - k) ** 3
+    zs.append(FACE["z_from"] + (FACE["z_to"] - FACE["z_from"]) * k + FACE["drift"] * max(0.0, (f - FACE["rise"][1]) / (N - FACE["rise"][1])))
+keys(head, "location", [(O.x, FACE["y"], z) for z in zs], 3)
+for k in range(2): keys(bpy.data.objects[f"eye_light{k}"].data, "energy", [v * 40.0 for v in eye_series], 1, "CONSTANT")
+# the face's lighting (reference: strong green rims from behind, a cool top highlight on the chrome, little front)
+hc = O + Vector((0, FACE["y"], 5.5))
+area_light("face_rim_l", O + Vector((-8.5, FACE["y"] + 6, 7.0)), hc, (2.0, 6.0), 2600, C["green2"])
+area_light("face_rim_r", O + Vector((8.5, FACE["y"] + 6, 7.0)), hc, (2.0, 6.0), 2600, C["green2"])
+area_light("face_top", O + Vector((0, FACE["y"] - 3, 17.0)), hc, (3.0, 1.2), 1600, C["sage2"])
+area_light("face_fill", O + Vector((0, FACE["y"] - 14, 3.0)), hc, (6.0, 2.0), 120, C["green"], reflect=False)
 
 # ---------------- atmosphere: real haze, a real beam, raking lights, floating dust ----------------
 def volume_box(name, lo, hi, density, colour, aniso):
