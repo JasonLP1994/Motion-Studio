@@ -99,13 +99,13 @@ add(load("impact/fs-177242-cinematic-impact.ogg"), t_of(SHATTER), 0.55)
 add(load("transition/fs-683096-woosh.ogg"), cut_s - 0.18, 0.8)
 add(load("transition/fs-856168-cyberpunk-glitch-hologram-tran.ogg"), cut_s - 0.05, 0.5)
 # ---- inside the code ----
-sub = np.sin(2 * np.pi * 41 * tt) * 0.22 + np.sin(2 * np.pi * 61.5 * tt) * 0.08
-air = lowpass(rng.standard_normal(L), 400) * 0.25
+sub = np.sin(2 * np.pi * 41 * tt) * 0.13 + np.sin(2 * np.pi * 61.5 * tt) * 0.05
+air = lowpass(rng.standard_normal(L), 400) * 0.15
 w_env = np.clip((tt - cut_s) / 0.3, 0, 1) * world
 mix += ((sub + air) * w_env)[:, None]
 data = load("typing/fs-416777-digital-typing-wav.ogg", speed=1.6)
 data = np.tile(data, (int(np.ceil((black_s - cut_s) * SR / len(data))) + 1, 1))[: int((black_s - cut_s) * SR)]
-add(highpass(data, 1500) * 0.5, cut_s, 0.35)                                            # glyphs ticking in the rain
+add(highpass(data, 1500) * 0.5, cut_s, 0.22)                                            # glyphs ticking in the rain
 # the swarm gathering into the words
 sw = load("typing/fs-511418-data-reveal-sound.ogg", speed=1.2)
 add(sw * fade(len(sw), 300, 200)[:, None], t_of(160), 0.55)
