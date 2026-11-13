@@ -63,3 +63,6 @@ public/video/
 public/videos/
 public/footage/
 __pycache__/
+
+# IONADE sting: rendered frames and the user brand files stay local
+public/ionade/
