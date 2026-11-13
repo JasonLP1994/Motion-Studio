@@ -22,7 +22,7 @@ CFG = {
     "can": (30, 44, 104, 118),                # can enters, pour starts, pour ends, can gone
     "fill": (46, 104, 0.0125, 0.128),         # level rises from frame a to b, z from-to (metres)
     "slice": (116, 126),                      # orange slice released, lands
-    "cam": ((0.0, -0.62, 0.215), (0.0, -0.50, 0.195), (0.0, 0.0, 0.092)),  # start, end, look-at
+    "cam": ((0.0, -0.62, 0.215), (0.0, -0.50, 0.195), (0.0, 0.0, 0.092), (0.0, 0.0, 0.128)),  # start, end, look-at start/end (tilts up: headroom for the logo)
 }
 FPS, N = CFG["fps"], CFG["frames"]
 rnd = random.Random(5)
@@ -471,10 +471,10 @@ for i, (x, y, rz) in enumerate([(-0.155, 0.235, 11), (-0.085, 0.205, 6)]):
 cam_d = bpy.data.cameras.new("cam"); cam = bpy.data.objects.new("cam", cam_d); sc.collection.objects.link(cam); sc.camera = cam
 cam_d.sensor_fit = "VERTICAL"; cam_d.sensor_height = 24.0; cam_d.lens = 45.0; cam_d.clip_start = 0.01
 cam_d.dof.use_dof = True; cam_d.dof.aperture_fstop = 2.2; cam_d.dof.aperture_blades = 7
-p0, p1, look = (Vector(v) for v in CFG["cam"]); locs, rots, focus = [], [], []
+p0, p1, look0, look1 = (Vector(v) for v in CFG["cam"]); locs, rots, focus = [], [], []
 lands = [rel + 7 for rel in CFG["ice_drop"]]
 for f in F:
-    k = ease_io((f - 1) / (N - 1)); p = p0.lerp(p1, k)
+    k = ease_io((f - 1) / (N - 1)); p = p0.lerp(p1, k); look = look0.lerp(look1, ease_io((f - 60) / 100))
     sh = sum(0.0009 * math.exp(-(f - L) * 0.6) * math.sin((f - L) * 2.4) for L in lands if f >= L)
     p = p + Vector((0, 0, sh)); d = (look - p)
     locs.append(tuple(p)); rots.append(tuple(d.to_track_quat("-Z", "Y").to_euler())); focus.append(d.length - 0.03)

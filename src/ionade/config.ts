@@ -14,6 +14,6 @@ export const ionadeConfig = {
     bandHeight: 520,     // px
   },
   flash: { at: 146, length: 12 },             // light sweep across the logo when the bolt "fires"
-  logoBox: { cx: 512, cy: 560, width: 800 },  // landed position; kept left of the right-edge UI and above the bottom fifth
-  scrim: { from: 132, to: 146, opacity: 0.32 }, // a soft navy wash from the top so the logo reads over the drink
+  logoBox: { cx: 512, cy: 430, width: 780 },  // landed position; kept left of the right-edge UI and above the bottom fifth
+  scrim: { from: 132, to: 146, opacity: 0 }, // off: navy over the orange wall muddied it to brown
 };
