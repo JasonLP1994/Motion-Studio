@@ -557,6 +557,7 @@ STYLES = [  # facade styles: drawers, slats, louvres, big cantilevers
     {"rows": [2.0, 3.0, 4.0], "cols": [1.5, 2.0], "fill": 0.45, "depths": [0.8, 1.4, 2.2], "amp": 0.6, "moving": 0.6, "mat": "glass"},  # cantilevered boxes
 ]
 CELL = 1.9
+TEXT_Y = 50.0
 for side in (-1, 1):
     for col in range(8):
         for row in range(int(90 / CELL)):
@@ -574,6 +575,8 @@ for side in (-1, 1):
                 add_block("glow", cx - side * w / 2, cy - d / 2, 0, 0.05, 0.05, h * rnd.uniform(0.5, 0.95))
             if col == 0:                                                                    # street wall: a cloned facade on it
                 st = rnd.choice(STYLES)
+                if TEXT_Y - 14 < cy < TEXT_Y + 2:                                            # keep the facades shallow in front of the words
+                    st = dict(st, depths=[min(dd, 0.3) for dd in st["depths"]], amp=min(st["amp"], 0.15))
                 add_drawers(Vector((cx - side * w / 2, cy - d / 2, 0.0)), Vector((0, 1, 0)), Vector((-side, 0, 0)), d, 0.4, h, st)
                 add_drawers(Vector((cx - w / 2, cy - d / 2, 0.0)), Vector((1, 0, 0)), Vector((0, -1, 0)), w, 0.4, h, st)
 for key, (pts, scl, rots) in blocks.items():
