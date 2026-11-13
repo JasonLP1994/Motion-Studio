@@ -26,7 +26,7 @@ stylised pour (no fluid sim), synthesised sound (ice clinks, pour, fizz, can his
 ## Second by second (frames at 30 fps)
 | Frames | Time | What you see | Sound |
 |---|---|---|---|
-| 1-34 | 0-1.1 s | Empty fluted glass; ice cubes drop in from above one by one (f2, f10, f17, f24) and settle with a small bounce; slow push-in | a clink per cube |
+| 1-44 | 0-1.5 s | Close-up at the rim: ice cubes fall in slow motion (released f2, f11, f20, f29; land f14, f23, f32, f41); the camera follows them down the glass | a clink per cube |
 | 30-44 | 1.0-1.5 s | An IONADE can tilts in from the top right | can slide |
 | 44-104 | 1.5-3.5 s | The orange stream hits, the level rises, foam and bubbles climb, the ice lifts as it floats | pour + rising fizz |
 | 104-118 | 3.5-3.9 s | The stream's tail falls, the can leaves | pour tail |
@@ -40,3 +40,10 @@ stylised pour (no fluid sim), synthesised sound (ice clinks, pour, fizz, can his
 - Remotion composition `IonadeSting` (src/ionade/): the frames as background + the logo swipe; config in src/ionade/config.ts.
 - scripts/sound/ionade_sound.py: the sound, same frame keys.
 - Check three stills (f20 ice, f80 pour, f170 logo) before the full preview.
+
+## Camera (v2, user request)
+"A camera on a spline that goes from the top to bottom of the glass and rotates, starting on a close-up of the ice falling in,
+to the end shot." CFG["cam_path"] in ionade_pour.py: a Catmull-Rom spline around the glass from the left (clear of the pouring can):
+close at the rim (f1) -> down the glass following the ice (f34) -> low and close through the pour, the soda rising past the lens
+(f70-104) -> pulls out to the front end shot (f146), settled for the logo. A curved orange backdrop wraps the whole set so every
+angle has orange behind the glass. Ice falls at a quarter of real gravity (slow motion) so it reads.

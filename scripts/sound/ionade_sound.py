@@ -15,7 +15,7 @@ rng = np.random.default_rng(3)
 t_of = lambda f: (f - 1) / FPS
 
 # same keys as the scene and the logo
-ICE_LAND = [r + 7 for r in (2, 10, 17, 24)]
+ICE_LAND = [14, 23, 32, 41]  # printed by ionade_pour.py (ICE_LANDS): slow-motion fall
 CAN_IN, POUR_A, POUR_B, CAN_OUT = 30, 44, 104, 118
 SLICE_LAND = 126
 SWIPE, LAND, FLASH = 132, 142, 146

@@ -18,11 +18,15 @@ CFG = {
     "col": {"orange": "#FA6108", "navy": "#0B2E7A", "cream": "#FBF5ED", "wall": "#F2650F", "soda": "#FF7410",
             "oak": "#5A3A1E", "oak2": "#2E1C0E", "marble": "#EDEBE7", "vein": "#9A9A9C",
             "tred": "#8E1A1F", "tnavy": "#1B2A55", "tgreen": "#1E4733", "tline": "#D9B44A", "peel": "#F26A0A", "flesh": "#FF7A0E"},
-    "ice_drop": [2, 10, 17, 24],              # frame each cube is released (lands ~7 frames later)
+    "ice_drop": [2, 11, 20, 29],              # frame each cube is released (slow-motion fall, ~10-12 frames)
     "can": (30, 44, 104, 118),                # can enters, pour starts, pour ends, can gone
     "fill": (46, 104, 0.0125, 0.128),         # level rises from frame a to b, z from-to (metres)
     "slice": (116, 126),                      # orange slice released, lands
-    "cam": ((0.0, -0.62, 0.215), (0.0, -0.50, 0.195), (0.0, 0.0, 0.092), (0.0, 0.0, 0.128)),  # start, end, look-at start/end (tilts up: headroom for the logo)
+    # camera spline (cylindrical around the glass): (frame, angle deg, radius m, height m, look-at height m)
+    # starts close above the rim looking down at the ice, spirals down and around the glass (from the left, clear of
+    # the can), stays low and close through the pour, then pulls out to the front end shot with headroom for the logo
+    "cam_path": [(1, -170, 0.150, 0.200, 0.150), (34, -150, 0.155, 0.140, 0.090), (70, -128, 0.160, 0.100, 0.080),
+                 (104, -110, 0.200, 0.075, 0.095), (146, -90, 0.500, 0.195, 0.128), (200, -90, 0.488, 0.193, 0.128)],
 }
 FPS, N = CFG["fps"], CFG["frames"]
 rnd = random.Random(5)
@@ -163,7 +167,7 @@ def glass_mat():
     cl = T.n("ShaderNodeTexNoise"); cl.inputs["Scale"].default_value = 60.0; T.link(oc, cl.inputs["Vector"])
     z = T.sep(oc)[2]
     below = T.m("SUBTRACT", 1.0, T.m("SMOOTH_MIN", 1.0, T.m("MULTIPLY", T.m("MAXIMUM", T.m("SUBTRACT", z, T.m("ADD", lev, 0.004)), 0.0), 90.0), 0.1), clamp=True)
-    dens = T.m("ADD", 0.16, T.m("MULTIPLY", below, 0.18))
+    dens = T.m("ADD", 0.04, T.m("MULTIPLY", below, 0.28))  # clear while empty, beads where the cold soda is
     cover = T.m("GREATER_THAN", cl.outputs["Fac"], T.m("SUBTRACT", 1.0, dens))
     h = T.m("MULTIPLY", bead, cover)
     b = bsdf(T, (1, 1, 1, 1), 0.0, Transmission_Weight=1.0, IOR=1.5)
@@ -199,11 +203,11 @@ def ice_mat():
     # clear ice with a frosted skin and a milky core so it reads against the bright orange
     b = bsdf(T, (1, 1, 1, 1), 0.10, Transmission_Weight=1.0, Coat_Weight=0.5, Coat_Roughness=0.02)
     # ice bends light like ice in air, much less once the soda surrounds it (Cycles can't nest IORs)
-    T.link(T.keyed("ice_ior", [1.31 - 0.16 * max(0.0, min(1.0, (f - fa) / 14)) for f in F]), b.inputs["IOR"])
+    T.link(T.keyed("ice_ior", [1.31 - 0.12 * max(0.0, min(1.0, (f - fa) / 14)) for f in F]), b.inputs["IOR"])
     T.link(bump(T, nz.outputs["Fac"], 0.5, 0.0008), b.inputs["Normal"])
     frost = bsdf(T, (0.92, 0.95, 1.0, 1), 0.5, Subsurface_Weight=1.0, Subsurface_Radius=(0.004, 0.004, 0.005))
     edge = T.n("ShaderNodeLayerWeight"); edge.inputs["Blend"].default_value = 0.25
-    mx = T.n("ShaderNodeMixShader"); T.link(T.m("MULTIPLY", edge.outputs["Facing"], 0.6), mx.inputs[0]); T.link(b.outputs[0], mx.inputs[1]); T.link(frost.outputs[0], mx.inputs[2])
+    mx = T.n("ShaderNodeMixShader"); T.link(T.m("MULTIPLY", edge.outputs["Facing"], 0.9), mx.inputs[0]); T.link(b.outputs[0], mx.inputs[1]); T.link(frost.outputs[0], mx.inputs[2])
     out(T, shadow_pass(T, mx.outputs[0], (0.9, 0.9, 0.9, 1))); return m
 
 def bubble_mat():
@@ -288,16 +292,16 @@ def slice_mat():
     mp = T.n("ShaderNodeMapping"); mp.inputs["Scale"].default_value = (1.0, 1.0, 2.6); T.link(T.coord(), mp.inputs["Vector"]); T.link(mp.outputs[0], vor.inputs["Vector"])
     col = T.mixc(T.m("POWER", vor.outputs["Distance"], 2.0), C["flesh"], hexc("#FFB347"))
     col = T.mixc(pith, col, hexc("#FFF0D8")); col = T.mixc(peel, col, C["peel"])
-    b = bsdf(T, col, 0.12, Subsurface_Weight=0.35, Subsurface_Radius=(0.006, 0.0025, 0.0008), Coat_Weight=1.0, Coat_Roughness=0.02)
+    b = bsdf(T, col, 0.12, Subsurface_Weight=0.15, Subsurface_Radius=(0.006, 0.0025, 0.0008), Coat_Weight=1.0, Coat_Roughness=0.02)
     T.link(bump(T, T.m("MULTIPLY", vor.outputs["Distance"], T.m("SUBTRACT", 1.0, pith)), 1.0, 0.0012), b.inputs["Normal"])
     out(T, b.outputs[0]); return m
 
 # ---------------- set: marble counter, orange wall, coaster, tartan ----------------
 M_MARBLE, M_WALL, M_OAK = marble_mat(), wall_mat(), oak_mat()
 bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=0.5); counter = obj_from_bm("counter", bm, M_MARBLE, smooth=False)
-counter.scale = (1.4, 1.0, 1.0); counter.location = (0, -0.1, 0)
-bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=0.5); wall = obj_from_bm("wall", bm, M_WALL, smooth=False)
-wall.rotation_euler = (math.pi / 2, 0, 0); wall.scale = (2.0, 1.4, 1.0); wall.location = (0, 0.40, 0.5)
+counter.scale = (2.4, 1.6, 1.0); counter.location = (0, -0.4, 0)
+# a curved orange backdrop all the way round, so the orbiting camera always has orange behind the glass
+wall = revolve("wall", [(-0.01, 0.62, "s"), (0.9, 0.62, "s")], 128, M_WALL)
 
 def rounded_box(name, half, rad, res, mat, jitter=0.0, seed=0):
     bm = bmesh.new(); bmesh.ops.create_cube(bm, size=2.0)
@@ -381,14 +385,14 @@ def bubbles():
 bubbles()
 
 # ---------------- ice: four rounded cubes dropped in, then floating on the rising liquid ----------------
-M_ICE = ice_mat()
+M_ICE = ice_mat(); ICE_LANDS = []
 # two layers: the first two cubes sit low, the last two float with their tops out of the soda
 REST = [((0.008, 0.009), 0.013, (0.12, -0.05, 0.4)), ((-0.010, -0.008), 0.013, (-0.08, 0.1, 1.1)),
         ((-0.009, 0.008), 0.038, (0.3, 0.2, 2.0)), ((0.010, -0.006), 0.038, (-0.25, 0.15, 0.7))]
 FLOAT = [0.031, 0.031, 0.0062, 0.0068]  # how far each cube's centre floats below the surface
 for k, (rel, ((x, y), zr, rot)) in enumerate(zip(CFG["ice_drop"], REST)):
     ice = rounded_box(f"ice_{k}", (0.0125, 0.0125, 0.0115), 0.0035, 8, M_ICE, jitter=0.0004, seed=k)
-    z_rest = BASE_IN + zr; z0 = 0.33; g = 9.8; locs, rots = [], []
+    z_rest = BASE_IN + zr; z0 = 0.25; g = 2.6; locs, rots = [], []  # slow motion: a quarter of real gravity
     t_fall = math.sqrt(2 * (z0 - z_rest) / g)
     for f in F:
         t = (f - rel) / FPS
@@ -399,7 +403,7 @@ for k, (rel, ((x, y), zr, rot)) in enumerate(zip(CFG["ice_drop"], REST)):
         z = max(z, LV[f - 1] - FLOAT[k]) if t >= t_fall else z   # floats as the level rises
         bob = 0.0006 * math.sin(f * 0.21 + k) * (LV[f - 1] > z_rest)
         locs.append((x, y, z + bob)); rots.append((rot[0] + frot * 2.2, rot[1] - frot * 1.6, rot[2] + frot * 3.0))
-    keys(ice, "location", locs, 3); keys(ice, "rotation_euler", rots, 3)
+    keys(ice, "location", locs, 3); keys(ice, "rotation_euler", rots, 3); ICE_LANDS.append(round(rel + t_fall * FPS))
 
 # ---------------- the pouring can and the stream ----------------
 CAN = [(0.0, 0.0, "s"), (0.0, 0.0255, "s"), (0.004, 0.0315, "s"), (0.010, 0.033, "s"), (0.108, 0.033, "s"), (0.118, 0.0285, "s"),
@@ -467,25 +471,54 @@ slab = rounded_box("slab", (0.11, 0.07, 0.006), 0.002, 4, M_MARBLE); slab.locati
 for i, (x, y, rz) in enumerate([(-0.155, 0.235, 11), (-0.085, 0.205, 6)]):
     cb = make_can(f"can_back_{i}"); cb.location = (x, y, 0.012); cb.rotation_euler = (0, 0, math.radians(rz))
 
-# ---------------- camera: just above the rim, slow push-in, a nudge on each ice impact ----------------
+# ---------------- camera: a spline around and down the glass (Catmull-Rom through CFG["cam_path"]) ----------------
 cam_d = bpy.data.cameras.new("cam"); cam = bpy.data.objects.new("cam", cam_d); sc.collection.objects.link(cam); sc.camera = cam
-cam_d.sensor_fit = "VERTICAL"; cam_d.sensor_height = 24.0; cam_d.lens = 45.0; cam_d.clip_start = 0.01
-cam_d.dof.use_dof = True; cam_d.dof.aperture_fstop = 2.2; cam_d.dof.aperture_blades = 7
-p0, p1, look0, look1 = (Vector(v) for v in CFG["cam"]); locs, rots, focus = [], [], []
-lands = [rel + 7 for rel in CFG["ice_drop"]]
+cam_d.sensor_fit = "VERTICAL"; cam_d.sensor_height = 24.0; cam_d.lens = 45.0; cam_d.clip_start = 0.005
+cam_d.dof.use_dof = True; cam_d.dof.aperture_fstop = 3.2; cam_d.dof.aperture_blades = 7  # close-ups need a little more depth
+KP = CFG["cam_path"]
+def spline(f):
+    """smooth through the keys: Catmull-Rom on each channel, eased in time between keys so it glides, never stops dead mid-path"""
+    f = max(KP[0][0], min(KP[-1][0], f))
+    i = max(0, min(len(KP) - 2, next(k for k in range(len(KP) - 1) if KP[k + 1][0] >= f)))
+    p = [KP[max(0, i - 1)], KP[i], KP[i + 1], KP[min(len(KP) - 1, i + 2)]]
+    u = (f - p[1][0]) / (p[2][0] - p[1][0])
+    out = []
+    for c in range(1, 5):
+        a, b, cc, d = (q[c] for q in p)
+        m1 = (cc - a) / 2 * (p[2][0] - p[1][0]) / max(1, p[2][0] - p[0][0]) * 2
+        m2 = (d - b) / 2 * (p[2][0] - p[1][0]) / max(1, p[3][0] - p[1][0]) * 2
+        if i == len(KP) - 2: m2 = 0.0                 # arrive at the end shot with no velocity
+        if i == 0: m1 = (cc - b) * 0.6                 # already drifting on frame 1
+        h00, h10, h01, h11 = 2*u**3 - 3*u**2 + 1, u**3 - 2*u**2 + u, -2*u**3 + 3*u**2, u**3 - u**2
+        out.append(h00 * b + h10 * m1 + h01 * cc + h11 * m2)
+    return out
+locs, rots, focus = [], [], []
+lands = ICE_LANDS
 for f in F:
-    k = ease_io((f - 1) / (N - 1)); p = p0.lerp(p1, k); look = look0.lerp(look1, ease_io((f - 60) / 100))
-    sh = sum(0.0009 * math.exp(-(f - L) * 0.6) * math.sin((f - L) * 2.4) for L in lands if f >= L)
-    p = p + Vector((0, 0, sh)); d = (look - p)
-    locs.append(tuple(p)); rots.append(tuple(d.to_track_quat("-Z", "Y").to_euler())); focus.append(d.length - 0.03)
+    ang, rad, hz, lz = spline(f); a = math.radians(ang)
+    p = Vector((rad * math.cos(a), rad * math.sin(a), hz)); look = Vector((0.0, 0.0, lz))
+    sh = sum(0.0007 * math.exp(-(f - L) * 0.6) * math.sin((f - L) * 2.4) for L in lands if f >= L)  # a nudge on each ice landing
+    p = p + Vector((0, 0, sh)); d = look - p
+    locs.append(tuple(p)); rots.append(tuple(d.to_track_quat("-Z", "Y").to_euler())); focus.append(max(0.05, d.length - 0.02))
 keys(cam, "location", locs, 3); keys(cam, "rotation_euler", rots, 3); keys(cam_d, "dof.focus_distance", focus)
+# Euler flips would spin the camera: make the rotation curves continuous
+for fc in cam.animation_data.action.fcurves:
+    if fc.data_path == "rotation_euler":
+        pts = fc.keyframe_points; prev = pts[0].co[1]
+        for kp in pts:
+            v = kp.co[1]
+            while v - prev > math.pi: v -= 2 * math.pi
+            while v - prev < -math.pi: v += 2 * math.pi
+            kp.co[1] = v; prev = v
+        fc.update()
 
 # ---------------- light: warm key left, strips behind for glass edges, a glow behind the liquid ----------------
 area("key", (-0.45, -0.35, 0.42), (0, 0, 0.08), (0.45, 0.6), 3.4, hexc("#FFF1E0"))
-area("fill", (0.5, -0.45, 0.2), (0, 0, 0.08), (0.5, 0.5), 0.85, hexc("#FFE2C8"))
+area("fill", (0.40, -0.38, 0.2), (0, 0, 0.08), (0.4, 0.4), 0.85, hexc("#FFE2C8"))
 area("strip_l", (-0.22, 0.20, 0.10), (0, 0, 0.08), (0.03, 0.45), 1.2, (1, 1, 1))
 area("strip_r", (0.22, 0.20, 0.10), (0, 0, 0.08), (0.03, 0.45), 1.2, (1, 1, 1))
 area("wall_wash", (0.0, -0.1, 0.55), (0.0, 0.40, 0.25), (0.8, 0.4), 4.8, hexc("#FFE9D6"), glossy=False)
+area("wall_wash_l", (0.0, 0.05, 0.55), (-0.6, -0.15, 0.2), (0.6, 0.3), 3.0, hexc("#FFE9D6"), glossy=False)
 area("top", (0.0, -0.05, 0.6), (0, 0, 0.1), (0.25, 0.25), 0.7, (1, 1, 1))
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True
 wd.node_tree.nodes["Background"].inputs["Color"].default_value = hexc("#F4A060"); wd.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.03
@@ -497,4 +530,5 @@ cy.volume_bounces = 1; cy.sample_clamp_indirect = 6.0; cy.caustics_reflective = 
 sc.render.resolution_x, sc.render.resolution_y = CFG["res"]; sc.render.resolution_percentage = 100
 sc.view_settings.view_transform = "AgX"; sc.view_settings.look = "AgX - Punchy"; sc.view_settings.exposure = 0.0
 import farm_prep
+print("ICE_LANDS", ICE_LANDS, flush=True)
 farm_prep.prepare(sc, OUT, samples=128 if MODE == "farm" else 64, frames=(1, N), name="ionade", fps=FPS, motion_blur=(MODE == "farm"))
