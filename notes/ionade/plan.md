@@ -47,3 +47,13 @@ to the end shot." CFG["cam_path"] in ionade_pour.py: a Catmull-Rom spline around
 close at the rim (f1) -> down the glass following the ice (f34) -> low and close through the pour, the soda rising past the lens
 (f70-104) -> pulls out to the front end shot (f146), settled for the logo. A curved orange backdrop wraps the whole set so every
 angle has orange behind the glass. Ice falls at a quarter of real gravity (slow motion) so it reads.
+
+## Edit (v3, user request: "use 2 cameras from different angles to cut in and out scenes of the pour")
+Camera A = the spline; camera B = two pour angles. Timeline markers bound to cameras do the cuts (farms honour them):
+| Frames | Camera | Shot |
+|---|---|---|
+| 1-45 | A | close at the rim, slow-motion ice, following it down the glass |
+| 46-63 | B | the IONADE can lip: the glossy orange stream peeling off down into the glass (jolt as it hits) |
+| 64-83 | A | low and close: the soda and foam rising past the lens |
+| 84-99 | B | top-down into the glass: the stream plunging past the floating ice into a ring of foam |
+| 100-200 | A | holds low, then whips out (f106-128) to the end shot; a small push as the logo lands (f142); 2.6 deg roll through the orbit |

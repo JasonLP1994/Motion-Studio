@@ -82,6 +82,10 @@ def crackle(dur, rate_fn, gain):
 fz_start = t_of(POUR_A + 4); fz = crackle(DUR - fz_start, lambda t: 40 + 900 * min(1, t / 2.0) * np.exp(-max(0, t - 2.2) / 2.5), 1.0)
 add(np.stack([fz, np.roll(fz, 211)], 1), fz_start, 0.35)
 
+# ---- the camera whips out from the low pour shot to the end shot (f106-128): a soft air whoosh ----
+WHIP = 106
+add(load("whoosh/fs-169867-swoosh.ogg", 0.85), t_of(WHIP) + 0.05, 0.3, -0.2)
+
 # ---- the slice landing on the rim: a soft wet thud ----
 n = int(0.25 * SR); t = np.arange(n) / SR
 thud = np.sin(2 * np.pi * 140 * t) * np.exp(-t * 30) + band(rng.standard_normal(n), 200, 1800) * env(n, 1, 45) * 0.5

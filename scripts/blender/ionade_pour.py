@@ -26,7 +26,13 @@ CFG = {
     # starts close above the rim looking down at the ice, spirals down and around the glass (from the left, clear of
     # the can), stays low and close through the pour, then pulls out to the front end shot with headroom for the logo
     "cam_path": [(1, -170, 0.150, 0.200, 0.150), (34, -150, 0.155, 0.140, 0.090), (70, -128, 0.160, 0.100, 0.080),
-                 (104, -110, 0.200, 0.075, 0.095), (146, -90, 0.500, 0.195, 0.128), (200, -90, 0.488, 0.193, 0.128)],
+                 (100, -112, 0.195, 0.075, 0.095), (106, -108, 0.205, 0.080, 0.098), (128, -90, 0.505, 0.196, 0.128),
+                 (142, -90, 0.492, 0.194, 0.128), (200, -90, 0.484, 0.193, 0.128)],   # f106-128: the whip out; f142: small push as the logo lands
+    # the pour is covered by a second camera from other angles; the edit cuts A -> B -> A -> B -> A on these frames
+    "cuts": [(1, "A"), (46, "B"), (64, "A"), (84, "B"), (100, "A")],
+    # camera B setups: (first frame, last frame, start pos, end pos, look start, look end, lens mm)
+    "cam_b": [(46, 63, (0.095, -0.200, 0.205), (0.085, -0.185, 0.198), (0.012, 0.0, 0.196), (0.010, 0.0, 0.190), 50.0),   # the can lip: the stream peeling off down to the rim
+              (84, 99, (-0.022, -0.052, 0.305), (-0.016, -0.040, 0.290), (0.004, 0.0, 0.120), (0.004, 0.0, 0.124), 35.0)], # top-down: stream past the ice into the foam
 }
 FPS, N = CFG["fps"], CFG["frames"]
 rnd = random.Random(5)
@@ -191,7 +197,7 @@ def stream_mat():
     tv = T.n("ShaderNodeValue"); d = tv.outputs[0].driver_add("default_value").driver; d.type = "SCRIPTED"; d.expression = f"frame / {FPS}"
     pos = T.combine(T.m("MULTIPLY", T.sep(oc)[0], 1.0), T.sep(oc)[1], T.m("ADD", z, T.m("MULTIPLY", tv.outputs[0], 1.2)))
     nz = T.n("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 140.0; nz.inputs["Detail"].default_value = 3.0; T.link(pos, nz.inputs["Vector"])
-    b = bsdf(T, C["soda"], 0.0, Transmission_Weight=1.0, IOR=1.34)
+    b = bsdf(T, hexc("#FF7A0E"), 0.04, Transmission_Weight=0.7, IOR=1.34, Subsurface_Weight=0.3, Subsurface_Radius=(0.004, 0.0015, 0.0005), Coat_Weight=1.0, Coat_Roughness=0.0)
     T.link(bump(T, nz.outputs["Fac"], 0.5, 0.0008), b.inputs["Normal"])
     tr = T.n("ShaderNodeBsdfTransparent")
     mx = T.n("ShaderNodeMixShader"); T.link(vis, mx.inputs[0]); T.link(tr.outputs[0], mx.inputs[1]); T.link(b.outputs[0], mx.inputs[2])
@@ -217,10 +223,12 @@ def foam_mat():
     m, T = new_mat("foam"); oc = T.coord()
     amt = T.keyed("foam", FOAM)
     vor = T.n("ShaderNodeTexVoronoi", feature="SMOOTH_F1"); vor.inputs["Scale"].default_value = 700.0; T.link(oc, vor.inputs["Vector"])
-    b = bsdf(T, hexc("#FFE6C8"), 0.45)
+    b = bsdf(T, hexc("#FFDDB4"), 0.45)
     T.link(bump(T, vor.outputs["Distance"], 0.8, 0.0006), b.inputs["Normal"])
-    nz = T.n("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 150.0; T.link(oc, nz.inputs["Vector"])
-    a = T.m("GREATER_THAN", T.m("ADD", nz.outputs["Fac"], T.m("MULTIPLY", amt, 0.9)), 0.95)
+    nz = T.n("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 420.0; nz.inputs["Detail"].default_value = 4.0; T.link(oc, nz.inputs["Vector"])
+    ox, oy, _ = T.sep(oc); rr = T.m("DIVIDE", T.m("SQRT", T.m("ADD", T.m("MULTIPLY", ox, ox), T.m("MULTIPLY", oy, oy))), RI)
+    ring = T.m("POWER", rr, 3.0)  # 0 at the centre, 1 at the glass
+    a = T.m("GREATER_THAN", T.m("ADD", nz.outputs["Fac"], T.m("MULTIPLY", amt, T.m("ADD", 0.12, T.m("MULTIPLY", ring, 0.75)))), 0.98)
     a = T.m("MULTIPLY", a, T.m("GREATER_THAN", amt, 0.02))
     tr = T.n("ShaderNodeBsdfTransparent")
     mx = T.n("ShaderNodeMixShader"); T.link(a, mx.inputs[0]); T.link(tr.outputs[0], mx.inputs[1]); T.link(b.outputs[0], mx.inputs[2])
@@ -342,7 +350,7 @@ keys(lq, "hide_render", [lv - BASE_IN < 0.0015 for lv in LV], 1, "CONSTANT")
 FOAM = [0.0 if f < fa + 2 else min(1.0, (f - fa - 2) / 10) if f < CFG["can"][2] else max(0.25, 1 - (f - CFG["can"][2]) / 40) for f in F]
 foam = revolve("foam", [(0.0, 0.0, "s"), (0.0, RI - 0.0005, "s"), (0.004, RI - 0.0006, "s"), (0.006, RI - 0.006, "s"), (0.0065, 0.0, "s")], 96, foam_mat())
 keys(foam, "location", [(0, 0, lv - 0.0008) for lv in LV], 3)
-keys(foam, "scale", [(1, 1, 0.3 + 0.7 * fo) for fo in FOAM], 3)
+keys(foam, "scale", [(1, 1, 0.15 + 0.35 * fo) for fo in FOAM], 3)
 keys(foam, "hide_render", [fo < 0.02 for fo in FOAM], 1, "CONSTANT")
 
 def bubbles():
@@ -499,18 +507,41 @@ for f in F:
     p = Vector((rad * math.cos(a), rad * math.sin(a), hz)); look = Vector((0.0, 0.0, lz))
     sh = sum(0.0007 * math.exp(-(f - L) * 0.6) * math.sin((f - L) * 2.4) for L in lands if f >= L)  # a nudge on each ice landing
     p = p + Vector((0, 0, sh)); d = look - p
-    locs.append(tuple(p)); rots.append(tuple(d.to_track_quat("-Z", "Y").to_euler())); focus.append(max(0.05, d.length - 0.02))
+    roll = math.radians(2.6) * math.sin(math.pi * max(0.0, min(1.0, (f - 1) / 127)))  # a little roll through the orbit, level at the end
+    q = d.to_track_quat("-Z", "Y") @ Euler((0, 0, roll)).to_quaternion()
+    locs.append(tuple(p)); rots.append(tuple(q.to_euler())); focus.append(max(0.05, d.length - 0.02))
 keys(cam, "location", locs, 3); keys(cam, "rotation_euler", rots, 3); keys(cam_d, "dof.focus_distance", focus)
-# Euler flips would spin the camera: make the rotation curves continuous
-for fc in cam.animation_data.action.fcurves:
-    if fc.data_path == "rotation_euler":
-        pts = fc.keyframe_points; prev = pts[0].co[1]
-        for kp in pts:
-            v = kp.co[1]
-            while v - prev > math.pi: v -= 2 * math.pi
-            while v - prev < -math.pi: v += 2 * math.pi
-            kp.co[1] = v; prev = v
-        fc.update()
+
+def unwrap(obj):
+    """Euler flips would spin the camera: make the rotation curves continuous"""
+    for fc in obj.animation_data.action.fcurves:
+        if fc.data_path == "rotation_euler":
+            pts = fc.keyframe_points; prev = pts[0].co[1]
+            for kp in pts:
+                v = kp.co[1]
+                while v - prev > math.pi: v -= 2 * math.pi
+                while v - prev < -math.pi: v += 2 * math.pi
+                kp.co[1] = v; prev = v
+            fc.update()
+unwrap(cam)
+
+# camera B: two pour angles, each drifting slowly; it jumps between setups halfway through the A shot (never on a cut)
+camb_d = bpy.data.cameras.new("cam_b"); camb = bpy.data.objects.new("cam_b", camb_d); sc.collection.objects.link(camb)
+camb_d.sensor_fit = "VERTICAL"; camb_d.sensor_height = 24.0; camb_d.clip_start = 0.005
+camb_d.dof.use_dof = True; camb_d.dof.aperture_fstop = 4.0; camb_d.dof.aperture_blades = 7
+SETUPS = CFG["cam_b"]; locs, rots, focus, lens = [], [], [], []
+for f in F:
+    st = SETUPS[0] if f < (SETUPS[0][1] + SETUPS[1][0]) / 2 else SETUPS[1]
+    a0, a1, p0_, p1_, l0_, l1_, mm = st
+    k = ease_io((f - a0) / (a1 - a0)); p = Vector(p0_).lerp(Vector(p1_), k); look = Vector(l0_).lerp(Vector(l1_), k)
+    if st is SETUPS[0] and f >= 47:  # a jolt as the stream first hits
+        p = p + Vector((0, 0, 0.0012 * math.exp(-(f - 47) * 0.5) * math.sin((f - 47) * 2.6)))
+    d = look - p; locs.append(tuple(p)); rots.append(tuple(d.to_track_quat("-Z", "Y").to_euler())); focus.append(d.length); lens.append(mm)
+keys(camb, "location", locs, 3); keys(camb, "rotation_euler", rots, 3); keys(camb_d, "dof.focus_distance", focus); keys(camb_d, "lens", lens, 1, "CONSTANT")
+unwrap(camb)
+# the edit: timeline markers bound to cameras (Blender and render farms switch cameras on these frames)
+for fr, which in CFG["cuts"]:
+    mk = sc.timeline_markers.new(f"cut_{which}_{fr}", frame=fr); mk.camera = cam if which == "A" else camb
 
 # ---------------- light: warm key left, strips behind for glass edges, a glow behind the liquid ----------------
 area("key", (-0.45, -0.35, 0.42), (0, 0, 0.08), (0.45, 0.6), 3.4, hexc("#FFF1E0"))
@@ -519,7 +550,7 @@ area("strip_l", (-0.22, 0.20, 0.10), (0, 0, 0.08), (0.03, 0.45), 1.2, (1, 1, 1))
 area("strip_r", (0.22, 0.20, 0.10), (0, 0, 0.08), (0.03, 0.45), 1.2, (1, 1, 1))
 area("wall_wash", (0.0, -0.1, 0.55), (0.0, 0.40, 0.25), (0.8, 0.4), 4.8, hexc("#FFE9D6"), glossy=False)
 area("wall_wash_l", (0.0, 0.05, 0.55), (-0.6, -0.15, 0.2), (0.6, 0.3), 3.0, hexc("#FFE9D6"), glossy=False)
-area("top", (0.0, -0.05, 0.6), (0, 0, 0.1), (0.25, 0.25), 0.7, (1, 1, 1))
+area("top", (0.0, -0.05, 0.6), (0, 0, 0.1), (0.25, 0.25), 0.7, (1, 1, 1), glossy=False)  # not mirrored in the soda in the top-down shot
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True
 wd.node_tree.nodes["Background"].inputs["Color"].default_value = hexc("#F4A060"); wd.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.03
 
