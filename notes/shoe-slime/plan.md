@@ -41,3 +41,10 @@ solid object, then colours into a black-and-white shoe design. Backdrop like the
 - scripts/blender/shoe_slime.py: the whole scene (all timings, colours and cameras in its CFG block).
 - Preview frames here (low samples, ffmpeg denoise), sound from scripts/sound/shoe_slime_sound.py, mux in ffmpeg.
 - Farm: packed .blend in renders/farm/shoe-slime-v1/ (never GitHub), 128 spp + motion blur.
+
+## Revisions after feedback (lighting, materials, logo)
+- Lighting: the old key/fill/rim lights are gone. Now one emissive gradient softbox above the shoe (magenta → orange → yellow → cyan → blue, hidden from camera) makes a rainbow pool and reflections, plus one very dim omni (0.22 W) close to the shoe.
+- Atmosphere: haze volume, ground mist (domain-warped noise) and drifting dust on a mottled concrete cyclorama.
+- Shoe materials (procedural, texture depth faked with bump): breathable mesh vamp, perforations, grained leather toe cap and eyestay with double stitching, suede mudguard, speckled foam midsole, knit tongue with a woven label, metal eyelets, flat laces.
+- Logo: an original "OOZE" mark (scripts/blender/assets/ooze_logo.svg), printed on both sides, the heel and the tongue label.
+- Preview: 33% / 16 spp, denoised with ffmpeg nlmeans and scaled to 1080p. Farm build: 128 spp + OIDN + motion blur.
