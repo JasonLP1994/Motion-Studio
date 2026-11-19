@@ -219,6 +219,7 @@ SOLID = [smooth(win(f, SET - 1, SET + 3)) for f in F]
 SWEEP = [lerp(0.16, -0.02, 0.5 * smooth(win(f, SW0, SW1)) + 0.5 * win(f, SW0, SW1)) for f in F]     # drain level (m): top of the shoe -> below the sole
 GLOW = [smooth(win(f, SW0 - 2, SW0 + 3)) * (1 - smooth(win(f, SW1 - 3, SW1 + 2))) for f in F]
 TIME = [f / FPS for f in F]
+OPEN = [lerp(-0.03, 0.17, smooth(win(f, 8, 44))) for f in F]     # venom takes over: infection level climbs the clean shoe
 
 DISP = {}
 def skin(name, centroid, design, rough, design_bump=None):
@@ -229,7 +230,8 @@ def skin(name, centroid, design, rough, design_bump=None):
     # slime: near-black, a mirror-wet coat, slow flowing surface ripples
     nz = T.n("ShaderNodeTexNoise", noise_dimensions="4D"); T.link(T.v("SCALE", p, scale=70.0), nz.inputs["Vector"])
     T.link(T.keyed(f"{name}_t", [t * 0.6 for t in TIME]), nz.inputs["W"]); nz.inputs["Detail"].default_value = 3; nz.inputs["Scale"].default_value = 1.0
-    slime = bsdf(T, C["slime"], 0.03, Coat_Weight=1.0, Coat_Roughness=0.01, Specular_IOR_Level=0.7,
+    slime = bsdf(T, (0.003, 0.004, 0.012, 1), 0.03, Coat_Weight=1.0, Coat_Roughness=0.01, Specular_IOR_Level=0.7,
+                 Sheen_Weight=0.45, Sheen_Roughness=0.3, Sheen_Tint=(0.25, 0.55, 1.0, 1),
                  Normal=bump(T, nz.outputs["Fac"], 0.22, 0.002))
     solid = bsdf(T, C["solid"], 0.30, Coat_Weight=0.35, Coat_Roughness=0.12)
     if callable(design) and getattr(design, "shader", False): des = design(T, sx, sy, sz)
@@ -241,7 +243,9 @@ def skin(name, centroid, design, rough, design_bump=None):
     sw = T.keyed(f"{name}_sweep", SWEEP)
     stn = T.n("ShaderNodeTexNoise"); T.link(T.combine(sx, sy, 0.0), stn.inputs["Vector"]); stn.inputs["Scale"].default_value = 55.0; stn.inputs["Detail"].default_value = 2
     front = T.m("ADD", sw, T.m("MULTIPLY", T.m("SUBTRACT", stn.outputs["Fac"], 0.5), 0.034))     # streaky front: slime lags in runs
-    mask = T.m("MULTIPLY", T.m("SUBTRACT", sz, front), 400.0, clamp=True)
+    mdrain = T.m("MULTIPLY", T.m("SUBTRACT", sz, front), 400.0, clamp=True)
+    ofront = T.m("SUBTRACT", T.keyed(f"{name}_open", OPEN), T.m("MULTIPLY", T.m("SUBTRACT", stn.outputs["Fac"], 0.5), 0.034))
+    mask = T.m("MAXIMUM", mdrain, T.m("MULTIPLY", T.m("SUBTRACT", sz, ofront), 400.0, clamp=True))      # clean before the takeover, clean after the drain
     s2 = T.mixs(mask, s1, des)
     d = T.m("DIVIDE", T.m("SUBTRACT", sz, front), 0.0016)
     edge = T.m("MULTIPLY", T.m("EXPONENT", T.m("MULTIPLY", T.m("MULTIPLY", d, d), -1.0)), T.keyed(f"{name}_glow", GLOW))
@@ -640,7 +644,7 @@ for k, (nm, u, side) in enumerate(DRIPS):
     vals = []
     lnf = lambda f: L0 * (0.55 + 0.45 * math.sin(f * 0.12 + ph)) * (1 + 0.6 * smooth(win(f, M0, M1)))
     for f in F:
-        ln = lnf(f)
+        ln = lnf(f) * smooth(win(f, 30, 46))
         if f >= SET: ln = lnf(SET) * (1 + 0.5 * smooth(win(f, SW0, SW1 - 6))) * (1 - smooth(win(f, SW1 - 5, SW1 + 3)))   # frozen at the hit, stretch as the slime drains, then let go
         vals.append((1, 1, max(0.02, ln / 0.01) if ln > 1e-4 else 0.001))
     keys(dr, "scale", vals, 3)
@@ -681,6 +685,8 @@ for nm, o in parts.items():
         tgt = home + lp
         strand(f"burst_{nm}{k}", nm, lp, B0 + 1, B1 + 8, tgt + Vector((0, 0, -0.004)), 2.4, snap=B0 + 9 + k * 2)
         strand(f"pull_{nm}{k}", nm, lp, a0 - 6, a1, tgt, 2.8)
+    hp = rnd.choice(low); fp = home + hp; fp = Vector((fp.x + rnd.uniform(-0.05, 0.05), fp.y - 0.06, 0.004))
+    strand(f"hero_{nm}", nm, hp, a0 - 10, a1 + 1, fp, 5.5, K=13)          # a thick tentacle from the floor hauls the part in
     for k, lp in enumerate(rnd.sample(verts, 5)):                       # extra thin, beaded threads
         strand(f"thread_{nm}{k}", nm, lp, a0 - 4 + k, a1 - 1, home + lp + Vector((rnd.uniform(-0.01, 0.01), 0, -0.002)), 1.1, K=17, beads=3)
 # drops falling off the parts as they fly in, splashing flat on the floor
@@ -782,6 +788,7 @@ for gi_, (nm, (cnt, stp, sz_, clb)) in enumerate(VEINS.items()):
         o = vein_curve(f"veins_{nm}{h}", spl[h::2], VEIN_R, parts[nm]); warp_like(o, nm)
         g0 = 10 + 8 * h + 3 * gi_
         keys(o.data, "bevel_factor_end", [ease_out(win(f, g0, g0 + 30)) * (1 - ease_in(win(f, SW0 - 4 + 3 * h, SW0 + 16 + 3 * h))) for f in F])
+        keys(o.data, "bevel_depth", [VEIN_R * (1 + 0.14 * math.sin(f * 0.33 + gi_ + h * 1.7) * (f < SET)) for f in F])   # alive: veins pulse
 fl = floor_veins(110, 7)
 for h in range(3):
     o = vein_curve(f"veins_floor{h}", fl[h::3], VEIN_R * 1.4)
@@ -880,6 +887,9 @@ sbox = obj_from_bm("softbox", bm, sbm, smooth_shade=False, centre=False); sbox.l
 sbox.visible_camera = False; sbox.visible_shadow = False
 od = bpy.data.lights.new("omni", "POINT"); od.energy = 0.22; od.shadow_soft_size = 0.008; od.color = (0.75, 0.88, 1.0)
 oo = link_obj("omni", od); oo.location = (0.25, -0.13, 0.12); oo.visible_camera = False
+keys(od, "energy", [0.22 + 0.25 * smooth(win(f, SW1 - 6, SW1 + 10)) for f in F])                      # cleaner, brighter white at the end
+_ec = lambda f: smooth(win(f, SW1 - 6, SW1 + 10))
+keys(od, "color", [(lerp(0.75, 0.95, _ec(f)), lerp(0.88, 0.97, _ec(f)), 1.0) for f in F], 3)
 # a faint cool rim from behind so the black slime and the finished silhouette separate from the dark set
 rl = area("rim", (0.10, 0.50, 0.22), (0.15, 0.0, 0.05), 0.35, CFG.get("rim_power", 3.0), (0.45, 0.75, 1.0), size_y=0.12)
 # product-shoot strip: a long thin highlight running along the side (reflection only, adds no light to the set)
@@ -897,6 +907,12 @@ SET_OBJS = {"cyclorama", "haze", "mist", "dust", "softbox"}
 shoe_objs = [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and o_.name not in SET_OBJS]
 st.light_linking.receiver_collection = recv("strip_receivers", shoe_objs)
 bg.light_linking.receiver_collection = recv("glow_receivers", [cyc])
+GL0, GL1 = 332, 352     # the glint: a light-blue bar of light sweeps toe -> heel across the finished shoe as the logo lands
+gli = area("glint", (0.5, -0.30, 0.13), (0.15, 0.0, 0.05), 0.030, 0.0, (0.55, 0.82, 1.0), size_y=0.40)
+gli.visible_volume_scatter = False
+gli.light_linking.receiver_collection = recv("glint_receivers", [parts[n_] for n_ in parts])
+keys(gli, "location", [(lerp(0.55, -0.25, ease_io(win(f, GL0, GL1))), -0.30, 0.13) for f in F], 3)
+keys(gli.data, "energy", [3.5 * math.sin(math.pi * win(f, GL0, GL1)) ** 0.6 for f in F])
 ht = area("heat", (0.15, 0.10, 0.07), (0.15, 0.32, 0.0), 0.34, 2.6, (0.35, 0.70, 1.0), size_y=0.12); ht.visible_glossy = False
 ht.light_linking.receiver_collection = bg.light_linking.receiver_collection
 # veins stay inky: the big softbox doesn't light or reflect in them (only rim/strip/omni give thin highlights)

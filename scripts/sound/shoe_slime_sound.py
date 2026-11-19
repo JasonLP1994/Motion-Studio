@@ -123,6 +123,22 @@ add(squelch(b - a, 900, 160), a, 0.40)                                          
 for k in range(6): add(glorp(rng.uniform(0.10, 0.18), rng.uniform(260, 420), rng.uniform(80, 130)), b - 0.15 + k * 0.05, 0.22, rng.uniform(-0.5, 0.5))  # drips letting go
 add(load("whoosh/fs-683101-quick-woosh.ogg", 0.7), t_of(330) - 0.1, 0.18)                    # end logo in
 
+# ---- cinematic bed: a dark bass pulse under everything (ducks at the hit), a wet hiss as the veins crawl ----
+n = int(DUR * SR); t = np.arange(n) / SR
+pulse = (0.55 + 0.45 * np.exp(-((t * 1.15) % 1.0) * 6)) * np.minimum(1, t / 0.8)            # slow heartbeat swell
+drone = (np.sin(2 * np.pi * 43 * t) + 0.5 * np.sin(2 * np.pi * 64.5 * t + 0.3 * np.sin(2 * np.pi * 0.2 * t))) * pulse
+duck = 1 - 0.7 * np.exp(-np.clip(t - t_of(SET), 0, None) * 3) * (t > t_of(SET))
+drone *= duck * np.clip((DUR - t) / 1.5, 0, 1) * (1 - 0.6 * np.clip((t - t_of(SWEEP[1])) / 0.8, 0, 1))
+add(drone, 0.0, 0.22)
+def hiss(a0, a1, rise=True):
+    m = int((a1 - a0) * SR); tt = np.arange(m) / SR; u = tt / (a1 - a0)
+    crawl = 0.6 + 0.4 * np.abs(np.sin(2 * np.pi * (9 + 7 * u) * tt))
+    env = np.sin(np.pi * np.clip(u, 0, 1)) ** 0.8
+    return band(rng.standard_normal(m), 2500, 9000) * crawl * env
+add(hiss(0.0, t_of(48)), 0.0, 0.10, -0.2)                                                  # veins surge in and climb
+add(hiss(t_of(SWEEP[0]) - 0.1, t_of(SWEEP[1]) + 0.3), t_of(SWEEP[0]) - 0.1, 0.08, 0.2)    # veins slide off
+add(load("transition/fs-786514-swoosh-v2.ogg", 1.4), t_of(332), 0.12)                     # the glint
+add(load("ding/kenney-interface-glass-002.ogg", 1.25), t_of(346), 0.14, 0.2)
 mix = mix[: int(DUR * SR)]
 fade = int(0.6 * SR); mix[-fade:] *= np.linspace(1, 0, fade)[:, None]
 mix /= max(1e-9, np.abs(mix).max()) / 0.8
