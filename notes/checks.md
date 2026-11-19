@@ -39,3 +39,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DON'T let a bright softbox reflect off black design panels (they turn beige/gold): keep finished black materials low-reflectance; keep the rainbow reflections for the wet/slime phase.
 - DO make "venom" slime a web of thin, dark, glossy, branching veins that crawl over the object and across the floor (the classic Blender venom-effect grammar), not just a smooth glossy coat; keep the veins inky (no big softbox reflections on them).
 - DO light the slime shoe ident in dark blue and light blue (navy-to-ice softbox, deep blue backdrop glow, icy drain edge, cool grade); no rainbow or orange.
+- DO start the slime shoe all white (triple white); the black-and-white design only appears once the slime drains off.

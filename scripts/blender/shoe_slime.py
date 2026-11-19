@@ -239,6 +239,16 @@ def skin(name, centroid, design, rough, design_bump=None):
         dcol = design if isinstance(design, tuple) else design(T, sx, sy, sz)
         dkw = {"Normal": design_bump(T, sx, sy, sz)} if design_bump else {}
         des = bsdf(T, dcol, rough, **dkw)
+    # before the venom: the same shoe in triple white (the black-and-white design only appears when the slime drains off)
+    dn_ = getattr(design, "__name__", "")
+    if dn_ != "eyelet_shader":
+        if dn_ in ("upper_shader", "tongue_shader", "collar_shader"):
+            hole_, mh_ = breathable(T, sx, sy, sz)
+            wcol_ = ao(T, mulc(T, (0.88, 0.88, 0.86, 1), T.m("MULTIPLY", T.m("SUBTRACT", 1.0, T.m("MULTIPLY", hole_, 0.5)), T.m("ADD", 0.82, T.m("MULTIPLY", mh_, 0.18)))), 0.6)
+            wh = bsdf(T, wcol_, 0.85, Sheen_Weight=1.0, Sheen_Roughness=0.6, Normal=bump(T, T.m("ADD", mh_, T.m("MULTIPLY", knit(T, sx, sy, sz, 5200.0), 0.05)), 0.4, 0.0002))
+        else:
+            wh = bsdf(T, ao(T, (0.86, 0.86, 0.84, 1), 0.5), 0.45, Coat_Weight=0.15, Coat_Roughness=0.3, Normal=bump(T, nse(T, sx, sy, sz, 1500.0, 3), 0.15, 0.0002))
+        des = T.mixs(T.keyed(f"{name}_white", [1.0 if f < SET else 0.0 for f in F]), des, wh)
     s1 = T.mixs(T.m("MULTIPLY", T.keyed(f"{name}_solid", SOLID), 0.25), slime, solid)   # stays wet-looking after it sets
     sw = T.keyed(f"{name}_sweep", SWEEP)
     stn = T.n("ShaderNodeTexNoise"); T.link(T.combine(sx, sy, 0.0), stn.inputs["Vector"]); stn.inputs["Scale"].default_value = 55.0; stn.inputs["Detail"].default_value = 2
