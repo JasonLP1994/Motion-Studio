@@ -26,7 +26,7 @@ CFG = {
                  "tongue": (210, 236), "laces": (220, 248)},
     "wave2": (256, 282),         # one last wave through the whole slime shoe
     "set": 285,                  # it SETS: wet slime -> hard satin solid (hit + camera jolt)
-    "sweep": (293, 326),         # glowing wipe heel -> toe colours it black and white
+    "sweep": (290, 318),         # glowing wipe heel -> toe colours it black and white
     # edit: timeline markers bound to cameras
     "cuts": [(1, "wide"), (77, "sole"), (117, "toe"), (162, "heel"), (207, "laces"), (252, "hero")],
     # shot cameras: (first, last, pos start, pos end, look start, look end, lens mm, f-stop)
@@ -35,10 +35,10 @@ CFG = {
         "sole":  (77, 116, (0.37, -0.16, 0.036), (0.33, -0.13, 0.030), (0.18, 0, 0.022), (0.17, 0, 0.026), 40, 11.0),
         "toe":   (117, 161, (0.43, -0.17, 0.090), (0.38, -0.13, 0.080), (0.24, 0, 0.050), (0.24, 0, 0.052), 40, 11.0),
         "heel":  (162, 206, (-0.17, -0.15, 0.215), (-0.135, -0.12, 0.195), (0.06, 0, 0.060), (0.06, 0, 0.058), 35, 11.0),
-        "laces": (207, 251, (0.36, -0.10, 0.255), (0.32, -0.075, 0.235), (0.15, 0, 0.090), (0.15, 0, 0.092), 35, 11.0),
+        "laces": (207, 251, (0.38, -0.21, 0.205), (0.345, -0.18, 0.190), (0.155, 0, 0.082), (0.15, 0, 0.084), 40, 11.0),
     },
     # hero orbit around the shoe (cylindrical: frame, angle deg, radius m, height m, look-at height m); -90 = side view
-    "hero": [(252, -142, 0.54, 0.135, 0.055), (285, -128, 0.52, 0.125, 0.055), (330, -88, 0.50, 0.105, 0.052), (360, -62, 0.49, 0.095, 0.052)],
+    "hero": [(252, -142, 0.54, 0.135, 0.055), (285, -128, 0.52, 0.125, 0.055), (318, -84, 0.50, 0.110, 0.052), (360, -58, 0.47, 0.115, 0.050)],
 }
 FPS, N = CFG["fps"], CFG["frames"]
 rnd = random.Random(11)
@@ -151,12 +151,12 @@ def obj_from_bm(name, bm, mat=None, smooth_shade=True, centre=True):
 
 # ---------------- the shoe shape (an original chunky runner) ----------------
 WTAB = [(0, 0.030), (0.12, 0.035), (0.35, 0.037), (0.55, 0.043), (0.72, 0.049), (0.86, 0.046), (0.95, 0.038), (1.0, 0.030)]
-HTAB = [(0, 0.114), (0.06, 0.124), (0.22, 0.128), (0.36, 0.114), (0.55, 0.088), (0.70, 0.071), (0.85, 0.056), (0.95, 0.046), (1.0, 0.040)]
-NEXP = 2.8
+HTAB = [(0, 0.104), (0.06, 0.112), (0.20, 0.113), (0.36, 0.104), (0.55, 0.083), (0.70, 0.065), (0.85, 0.050), (0.95, 0.041), (1.0, 0.035)]
+NEXP = 2.35
 def W(u):
     e = math.sqrt(max(0.0, 1 - (max(0.0, (0.07 - u) / 0.07)) ** 2)) * math.sqrt(max(0.0, 1 - (max(0.0, (u - 0.88) / 0.12)) ** 2))
     return crs(WTAB, u) * e
-spring = lambda u: 0.020 * max(0.0, (u - 0.72) / 0.28) ** 2 + 0.004 * max(0.0, (0.10 - u) / 0.10) ** 2
+spring = lambda u: 0.015 * max(0.0, (u - 0.72) / 0.28) ** 2 + 0.004 * max(0.0, (0.10 - u) / 0.10) ** 2
 zm = lambda u: 0.040 - 0.014 * u          # midsole top
 cosu = lambda n, a=0.004, b=0.996: [a + (b - a) * (1 - math.cos(math.pi * i / (n - 1))) / 2 for i in range(n)]
 
@@ -165,7 +165,7 @@ def sect(u, phi, scale=1.0, lift=0.0):
     zb = zm(u) - 0.004; ht = (crs(HTAB, u) - zb) * scale + lift
     s, c = math.sin(phi), math.cos(phi)
     z = zb + ht * abs(c) ** (2 / NEXP)
-    w = W(u) * scale * (1 - 0.22 * (z - zb) / max(ht, 1e-4))
+    w = W(u) * scale * (1 - 0.30 * ((z - zb) / max(ht, 1e-4)) ** 1.5)
     y = -w * math.copysign(abs(s) ** (2 / NEXP), s)
     return (u * L, y, z + spring(u))
 
@@ -304,32 +304,51 @@ def backfacing(T): return T.n("ShaderNodeNewGeometry").outputs["Backfacing"]
 def gauss(T, x, w): d = T.m("DIVIDE", x, w); return T.m("EXPONENT", T.m("MULTIPLY", T.m("MULTIPLY", d, d), -1.0))
 def inside(T, sd, w=0.0003): return T.m("SUBTRACT", 0.5, T.m("DIVIDE", sd, w), clamp=True)
 
+# signature design: a glossy black overlay that DRIPS down from the collar and eyestay over white knit (the slime, set solid)
+DRIP_DESIGN = [(0.008, 0.006, 0.012), (0.024, 0.008, 0.021), (0.046, 0.006, 0.011), (0.064, 0.009, 0.017), (0.086, 0.006, 0.014),
+               (0.101, 0.005, 0.007), (0.172, 0.006, 0.009), (0.188, 0.008, 0.010)]          # (x centre, half width, length) in m
+def topline_z(u):
+    a = crs(open_tab, u); return sect(max(u, 0.02), a)[2] if a > 0.02 else sect(u, 0.0)[2]
+def curve_node(T, sx, fn, n=24):
+    """float curve of fn(u) (heights in m) along the shoe, sampled at n points"""
+    fc = T.n("ShaderNodeFloatCurve"); cur = fc.mapping.curves[0]
+    pts = [(i / (n - 1), (fn(i / (n - 1)) - 0.02) / 0.13) for i in range(n)]
+    while len(cur.points) < len(pts): cur.points.new(0.5, 0.5)
+    for pt, (x, y) in zip(cur.points, pts): pt.location = (x, y)
+    fc.mapping.update(); T.link(T.m("DIVIDE", sx, L, clamp=True), fc.inputs["Value"])
+    return T.m("ADD", T.m("MULTIPLY", fc.outputs[0], 0.13), 0.02)
+
 @shader
 def upper_shader(T, sx, sy, sz):
-    ht = htop_node(T, sx)
-    zline = T.m("ADD", T.m("ADD", 0.043, T.m("MULTIPLY", T.m("EXPONENT", T.m("MULTIPLY", sx, -6.0)), 0.030)),
-                T.m("MULTIPLY", T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, 30.0), 0.6)), 0.010))
-    sd_a = T.m("MAXIMUM", T.m("SUBTRACT", sz, zline), T.m("MULTIPLY", T.m("SUBTRACT", sx, 0.235), 0.6))         # suede mudguard
-    sd_b = T.m("MAXIMUM", T.m("MAXIMUM", T.m("SUBTRACT", T.m("SUBTRACT", ht, 0.017), sz), T.m("SUBTRACT", sx, 0.198)), T.m("SUBTRACT", 0.115, sx))  # eyestay (u 0.38-0.66: the lace area only)
-    sd_c = T.m("SUBTRACT", T.m("ADD", 0.268, T.m("MULTIPLY", T.m("MAXIMUM", 0.0, T.m("SUBTRACT", sz, 0.032)), 0.25)), sx)  # toe cap
-    sd_l = T.m("MINIMUM", sd_b, sd_c); sd = T.m("MINIMUM", sd_a, sd_l)
-    mask = inside(T, sd); lmask = inside(T, sd_l); suede = T.m("MULTIPLY", inside(T, sd_a), T.m("SUBTRACT", 1.0, lmask))
-    raised = T.m("DIVIDE", T.m("MULTIPLY", sd, -1.0), 0.0007, clamp=True)
+    base = curve_node(T, sx, lambda u: topline_z(min(u, 0.75)) - (0.012 if u < 0.36 else 0.016))
+    drop = None
+    for c, w, ln in DRIP_DESIGN:
+        t = T.m("DIVIDE", T.m("SUBTRACT", sx, c), w)
+        d = T.m("MULTIPLY", T.m("SQRT", T.m("SUBTRACT", 1.0, T.m("MULTIPLY", t, t), clamp=True)), ln)
+        drop = d if drop is None else T.m("MAXIMUM", drop, d)
+    dripline = T.m("SUBTRACT", base, drop)
+    sd_d = T.m("MAXIMUM", T.m("SUBTRACT", dripline, sz), T.m("SUBTRACT", T.m("SUBTRACT", sx, 0.200), T.m("MULTIPLY", T.m("SUBTRACT", sz, 0.070), 0.8)))
+    zline = T.m("ADD", T.m("ADD", 0.040, T.m("MULTIPLY", T.m("EXPONENT", T.m("MULTIPLY", sx, -8.0)), 0.010)),
+                T.m("MULTIPLY", T.m("DIVIDE", T.m("SUBTRACT", sx, 0.255), 0.045, clamp=True), 0.009))   # rises round the toe
+    sd_a = T.m("SUBTRACT", sz, zline)                                                                  # suede bumper all round
+    sd = T.m("MINIMUM", sd_a, sd_d)
+    mask = inside(T, sd); gloss = inside(T, sd_d); suede = T.m("MULTIPLY", inside(T, sd_a), T.m("SUBTRACT", 1.0, gloss))
+    raised = T.m("DIVIDE", T.m("MULTIPLY", sd, -1.0), 0.0008, clamp=True)
     dash = T.m("GREATER_THAN", T.m("SINE", T.m("MULTIPLY", T.m("ADD", T.m("MULTIPLY", sx, 0.8), sz), 2600.0)), 0.15)
-    stitch = T.m("MULTIPLY", T.m("ADD", gauss(T, T.m("ADD", sd, 0.0012), 0.0002), gauss(T, T.m("ADD", sd, 0.0023), 0.0002)), dash)
-    paint = T.m("MULTIPLY", gauss(T, T.m("ADD", sd, 0.00022), 0.00016), lmask)          # painted leather edge
-    zone = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", sx, 0.195), T.m("LESS_THAN", sx, 0.262)), T.m("GREATER_THAN", sz, 0.040))
+    stitch = T.m("MULTIPLY", T.m("MULTIPLY", T.m("ADD", gauss(T, T.m("ADD", sd_a, 0.0012), 0.0002), gauss(T, T.m("ADD", sd_a, 0.0024), 0.0002)), dash),
+                 T.m("SUBTRACT", 1.0, gloss))
+    zone = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", sx, 0.205), T.m("LESS_THAN", sx, 0.262)), T.m("GREATER_THAN", sz, 0.046))
     holes = T.m("MULTIPLY", T.m("LESS_THAN", vor(T, sx, sy, sz, 650.0), 0.2), T.m("MULTIPLY", zone, T.m("SUBTRACT", 1.0, mask)))
-    cz = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", sx, 0.18), T.m("LESS_THAN", sx, 0.25)), T.m("GREATER_THAN", sz, 0.036))
+    cz = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", sx, 0.19), T.m("LESS_THAN", sx, 0.25)), T.m("GREATER_THAN", sz, 0.042))
     crease = T.m("MULTIPLY", T.m("POWER", T.m("ABSOLUTE", T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, 420.0),
                  T.m("MULTIPLY", nse(T, sx, T.m("MULTIPLY", sy, 3.0), sz, 40.0, 2), 9.0)))), 8.0), cz)
     mhole, mh = breathable(T, sx, sy, sz)
-    logo = logo_alpha(T, sx, sy, sz, 0.110, 0.0515, 0.0175)
-    grain = vor(T, sx, sy, sz, 1800.0); fuzz = nse(T, sx, sy, sz, 2600.0, 2)
+    logo = T.m("MULTIPLY", logo_alpha(T, sx, sy, sz, 0.113, 0.0478, 0.0138), T.m("SUBTRACT", 1.0, mask))
+    fuzz = nse(T, sx, sy, sz, 2600.0, 2); orange = nse(T, sx, sy, sz, 900.0, 3)
     DISP["h"] = T.m("ADD", T.m("ADD", T.m("MULTIPLY", raised, 0.0011), T.m("MULTIPLY", logo, 0.00022)),
-                    T.m("ADD", T.m("MULTIPLY", T.m("MULTIPLY", mh, 0.00030), T.m("SUBTRACT", 1.0, mask)),
+                    T.m("ADD", T.m("MULTIPLY", T.m("MULTIPLY", mh, 0.00032), T.m("SUBTRACT", 1.0, mask)),
                         T.m("ADD", T.m("MULTIPLY", holes, -0.00035), T.m("ADD", T.m("MULTIPLY", stitch, -0.00012), T.m("MULTIPLY", crease, -0.00025)))))
-    micro = T.m("ADD", T.m("ADD", T.m("MULTIPLY", grain, T.m("MULTIPLY", lmask, 0.35)), T.m("MULTIPLY", fuzz, T.m("MULTIPLY", suede, 0.5))),
+    micro = T.m("ADD", T.m("ADD", T.m("MULTIPLY", orange, T.m("MULTIPLY", gloss, 0.06)), T.m("MULTIPLY", fuzz, T.m("MULTIPLY", suede, 0.5))),
                 T.m("MULTIPLY", knit(T, sx, sy, sz, 5200.0), T.m("MULTIPLY", T.m("SUBTRACT", 1.0, mask), 0.05)))
     nrm = bump(T, micro, 0.5, 0.00015)
     var = T.m("ADD", 0.90, T.m("MULTIPLY", nse(T, sx, sy, sz, 300.0), 0.10))
@@ -337,12 +356,11 @@ def upper_shader(T, sx, sy, sz):
     white = ao(T, mulc(T, (0.86, 0.85, 0.82, 1), T.m("MULTIPLY", T.m("MULTIPLY", var, under), T.m("SUBTRACT", 1.0, T.m("MULTIPLY", holes, 0.75)))), 0.6)
     knit_b = bsdf(T, white, 0.85, Sheen_Weight=1.0, Sheen_Roughness=0.6, Normal=nrm)
     thread = (0.80, 0.80, 0.78, 1)
-    scol = ao(T, T.mixc(stitch, T.mixc(fuzz, (0.010, 0.010, 0.011, 1), (0.030, 0.030, 0.032, 1)), thread), 0.4)
-    suede_b = bsdf(T, scol, 0.95, Sheen_Weight=1.0, Sheen_Roughness=0.3, Normal=nrm)
-    lcol = ao(T, T.mixc(stitch, T.mixc(paint, (0.006, 0.006, 0.007, 1), (0.05, 0.05, 0.052, 1)), thread), 0.4)
-    leather_b = bsdf(T, lcol, T.m("ADD", 0.34, T.m("MULTIPLY", grain, 0.14)), Coat_Weight=0.12, Coat_Roughness=0.35, Normal=nrm)
+    scol = ao(T, T.mixc(stitch, T.mixc(fuzz, (0.005, 0.005, 0.006, 1), (0.014, 0.014, 0.015, 1)), thread), 0.4)
+    suede_b = bsdf(T, scol, 0.95, Sheen_Weight=0.35, Sheen_Roughness=0.3, Normal=nrm)
+    patent = bsdf(T, ao(T, (0.004, 0.004, 0.005, 1), 0.3), 0.45, Specular_IOR_Level=0.03, Sheen_Weight=0.25, Sheen_Roughness=0.4, Normal=nrm)   # satin black drips (low reflectance so it stays black under the softbox)
     printed = bsdf(T, (0.008, 0.008, 0.009, 1), 0.28, Coat_Weight=0.3, Coat_Roughness=0.2, Normal=nrm)
-    sh = T.mixs(mask, knit_b, T.mixs(suede, leather_b, suede_b))
+    sh = T.mixs(mask, knit_b, T.mixs(suede, patent, suede_b))
     return T.mixs(backfacing(T), T.mixs(logo, sh, printed), lining(T, sx, sy, sz))
 
 @shader
@@ -387,7 +405,7 @@ def outsole_shader(T, sx, sy, sz):
 @shader
 def heel_shader(T, sx, sy, sz):
     peb = vor(T, sx, sy, sz, 1300.0)
-    logo = logo_alpha(T, sx, sy, sz, 0.012, 0.045, 0.013)
+    logo = logo_alpha(T, sx, sy, sz, 0.005, 0.0495, 0.0090)
     nrm = bump(T, T.m("ADD", T.m("MULTIPLY", peb, 0.3), T.m("MULTIPLY", logo, 0.6)), 0.6, 0.0004)
     leather = bsdf(T, ao(T, C["black"]), T.m("ADD", 0.32, T.m("MULTIPLY", peb, 0.15)), Coat_Weight=0.25, Coat_Roughness=0.25, Normal=nrm)
     DISP["h"] = T.m("MULTIPLY", logo, 0.00022)
@@ -403,7 +421,7 @@ def lace_shader(T, sx, sy, sz):
     b1 = T.m("SINE", T.m("MULTIPLY", T.m("ADD", T.m("ADD", sx, sy), sz), 4200.0))
     b2 = T.m("SINE", T.m("MULTIPLY", T.m("SUBTRACT", T.m("ADD", sx, sz), sy), 4200.0))
     nrm = bump(T, T.m("MULTIPLY", b1, b2), 0.6, 0.0003)
-    return bsdf(T, ao(T, (0.016, 0.016, 0.017, 1)), 0.78, Sheen_Weight=0.8, Sheen_Roughness=0.4, Normal=nrm)
+    return bsdf(T, ao(T, (0.80, 0.80, 0.78, 1), 0.5), 0.78, Sheen_Weight=0.8, Sheen_Roughness=0.4, Normal=nrm)   # white laces over the black overlay
 
 @shader
 def eyelet_shader(T, sx, sy, sz):
@@ -418,7 +436,7 @@ o = slab("midsole", lambda u: W(u) + 0.005, [(0.0085, 0.002), (0.010, 0.0), (lam
 parts["midsole"] = o
 NU, NV = 80, 52
 U_UP = cosu(NU, 0.003, 0.997); PH = [-math.pi / 2 + math.pi * j / (NV - 1) for j in range(NV)]
-open_tab = [(0.0, 0.0), (0.015, 0.55), (0.08, 0.80), (0.30, 0.80), (0.38, 0.50), (0.42, 0.24), (0.62, 0.20), (0.66, 0.0), (1.0, 0.0)]
+open_tab = [(0.0, 0.0), (0.015, 0.62), (0.08, 0.98), (0.28, 0.98), (0.38, 0.52), (0.42, 0.24), (0.62, 0.20), (0.66, 0.0), (1.0, 0.0)]
 def up_keep(i, j):
     u = lerp(U_UP[int(i)], U_UP[min(int(i) + 1, NU - 1)], 0.5); ph = lerp(PH[int(j)], PH[min(int(j) + 1, NV - 1)], 0.5)
     return not (0.012 < u < 0.66 and abs(ph) < crs(open_tab, u))
@@ -434,10 +452,10 @@ U_T = cosu(22, 0.33, 0.70); PT = [-0.42 + 0.84 * j / 11 for j in range(12)]
 bm = grid("tongue", lambda i, j: (lambda p: (p[0], p[1], p[2] + 0.014 * max(0.0, (0.42 - U_T[i]) / 0.09)))(sect(U_T[i], PT[j], 0.975)), 22, 12, None)
 parts["tongue"] = obj_from_bm("tongue", bm); add_mods(parts["tongue"], 0.004)
 # heel counter: two side strips from the sole up to a sweeping top line, slightly proud of the upper
-U_H = cosu(18, 0.002, 0.30)
+U_H = cosu(18, 0.002, 0.18)
 def heel_pt(i, j, side):
     u = U_H[i]; zb = zm(u) - 0.004; ht = crs(HTAB, u) - zb
-    frac = max(0.06, 0.66 * (1 - (u / 0.30) ** 1.4)); ph0 = math.acos(min(1.0, frac ** (NEXP / 2)))
+    frac = max(0.06, 0.70 * (1 - (u / 0.18) ** 2.2)); ph0 = math.acos(min(1.0, frac ** (NEXP / 2)))
     ph = side * (ph0 + (math.pi / 2 - ph0) * j / 7)
     return sect(u, ph, 1.035)
 bmh = bmesh.new()
@@ -711,7 +729,7 @@ els[0].position, els[0].color = 0.0, (1.0, 0.08, 0.45, 1); els[1].position, els[
 for pos_, col_ in [(0.28, (1.0, 0.30, 0.08, 1)), (0.52, (1.0, 0.78, 0.25, 1)), (0.78, (0.35, 0.85, 1.0, 1))]:
     e = els.new(pos_); e.color = col_
 T.link(grad, r.inputs["Fac"])
-em = T.n("ShaderNodeEmission"); T.link(r.outputs["Color"], em.inputs["Color"]); em.inputs["Strength"].default_value = CFG.get("softbox_strength", 11.0)
+em = T.n("ShaderNodeEmission"); T.link(r.outputs["Color"], em.inputs["Color"]); em.inputs["Strength"].default_value = CFG.get("softbox_strength", 13.0)
 out(T, em.outputs[0])
 bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=0.5)
 for v in bm.verts: v.co.x *= 0.50; v.co.y *= 0.36
@@ -720,6 +738,8 @@ sbox = obj_from_bm("softbox", bm, sbm, smooth_shade=False, centre=False); sbox.l
 sbox.visible_camera = False; sbox.visible_shadow = False
 od = bpy.data.lights.new("omni", "POINT"); od.energy = 0.22; od.shadow_soft_size = 0.008; od.color = (1.0, 0.9, 0.8)
 oo = link_obj("omni", od); oo.location = (0.25, -0.13, 0.12); oo.visible_camera = False
+# a faint cool rim from behind so the black slime and the finished silhouette separate from the dark set
+rl = area("rim", (0.10, 0.50, 0.22), (0.15, 0.0, 0.05), 0.35, CFG.get("rim_power", 1.6), (0.70, 0.82, 1.0), size_y=0.12)
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True
 wd.node_tree.nodes["Background"].inputs[0].default_value = (0.010, 0.010, 0.012, 1); wd.node_tree.nodes["Background"].inputs[1].default_value = 1.0
 
@@ -777,7 +797,7 @@ if MODE == "preview":    # lean settings for local previews only (the farm file 
         for md in o.modifiers:
             if md.type == "SUBSURF": md.render_levels = min(md.render_levels, 1)
 cy.caustics_reflective = False; cy.caustics_refractive = False; cy.volume_step_rate = 8.0 if MODE == "preview" else 1.0
-cy.use_light_tree = True; cy.sample_clamp_indirect = 8.0
+cy.use_light_tree = True; cy.use_animated_seed = True; cy.sample_clamp_indirect = 8.0
 sc.view_settings.view_transform = "AgX"
 try: sc.view_settings.look = "AgX - Medium High Contrast"
 except TypeError: pass

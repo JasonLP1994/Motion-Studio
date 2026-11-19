@@ -18,7 +18,7 @@ t_of = lambda f: (f - 1) / FPS
 WAVE1, MELT, BURST = (4, 40), (40, 62), (62, 76)
 SNAPS = [71, 73, 75, 77]
 LANDS = {"outsole": (80, 106), "midsole": (84, 112), "upper": (126, 156), "heel": (170, 199), "tongue": (210, 236), "laces": (220, 248)}
-WAVE2, SET, SWEEP = (256, 282), 285, (293, 326)
+WAVE2, SET, SWEEP = (256, 282), 285, (290, 318)
 CUTS = [77, 117, 162, 207, 252]
 
 L = int(DUR * SR) + SR
