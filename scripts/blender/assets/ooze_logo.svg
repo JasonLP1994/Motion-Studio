@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520">
+  <!-- OOZE: an original made-up brand for the slime-shoe ident. A slime drop with a highlight cut-out + a heavy italic wordmark. -->
+  <g fill="#fff">
+    <path d="M250 40 C250 40 95 230 95 330 C95 420 165 490 250 490 C335 490 405 420 405 330 C405 230 250 40 250 40 Z
+             M205 300 C175 330 172 380 195 410 C160 395 145 345 170 300 C180 285 195 282 205 300 Z" fill-rule="evenodd"/>
+    <text x="460" y="420" font-family="Inter" font-weight="800" font-style="italic" font-size="400" letter-spacing="-18">OOZE</text>
+  </g>
+</svg>

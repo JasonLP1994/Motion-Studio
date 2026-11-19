@@ -34,7 +34,7 @@ CFG = {
         "wide":  (1, 76, (0.44, -0.44, 0.16), (0.39, -0.38, 0.135), (0.14, 0, 0.055), (0.14, 0, 0.060), 45, 9.0),
         "sole":  (77, 116, (0.37, -0.16, 0.036), (0.33, -0.13, 0.030), (0.18, 0, 0.022), (0.17, 0, 0.026), 40, 11.0),
         "toe":   (117, 161, (0.43, -0.17, 0.090), (0.38, -0.13, 0.080), (0.24, 0, 0.050), (0.24, 0, 0.052), 40, 11.0),
-        "heel":  (162, 206, (-0.19, -0.17, 0.170), (-0.15, -0.135, 0.150), (0.06, 0, 0.070), (0.06, 0, 0.068), 35, 11.0),
+        "heel":  (162, 206, (-0.17, -0.15, 0.215), (-0.135, -0.12, 0.195), (0.06, 0, 0.060), (0.06, 0, 0.058), 35, 11.0),
         "laces": (207, 251, (0.36, -0.10, 0.255), (0.32, -0.075, 0.235), (0.15, 0, 0.090), (0.15, 0, 0.092), 35, 11.0),
     },
     # hero orbit around the shoe (cylindrical: frame, angle deg, radius m, height m, look-at height m); -90 = side view
@@ -230,10 +230,11 @@ def skin(name, centroid, design, rough, design_bump=None):
     slime = bsdf(T, C["slime"], 0.03, Coat_Weight=1.0, Coat_Roughness=0.01, Specular_IOR_Level=0.7,
                  Normal=bump(T, nz.outputs["Fac"], 0.22, 0.002))
     solid = bsdf(T, C["solid"], 0.30, Coat_Weight=0.35, Coat_Roughness=0.12)
-    if isinstance(design, tuple): dcol = design
-    else: dcol = design(T, sx, sy, sz)
-    dkw = {"Normal": design_bump(T, sx, sy, sz)} if design_bump else {}
-    des = bsdf(T, dcol, rough, **dkw)
+    if callable(design) and getattr(design, "shader", False): des = design(T, sx, sy, sz)
+    else:
+        dcol = design if isinstance(design, tuple) else design(T, sx, sy, sz)
+        dkw = {"Normal": design_bump(T, sx, sy, sz)} if design_bump else {}
+        des = bsdf(T, dcol, rough, **dkw)
     s1 = T.mixs(T.keyed(f"{name}_solid", SOLID), slime, solid)
     sw = T.keyed(f"{name}_sweep", SWEEP)
     mask = T.m("MULTIPLY", T.m("SUBTRACT", sw, sx), 200.0, clamp=True)
@@ -244,33 +245,137 @@ def skin(name, centroid, design, rough, design_bump=None):
     add = T.n("ShaderNodeAddShader"); T.link(s2, add.inputs[0]); T.link(em.outputs[0], add.inputs[1])
     out(T, add.outputs[0]); return m
 
-def tread_bump(T, sx, sy, sz):
-    wv = T.n("ShaderNodeTexWave", wave_type="BANDS"); T.link(T.combine(sx, T.m("MULTIPLY", sy, 0.6), 0.0), wv.inputs["Vector"])
-    wv.inputs["Scale"].default_value = 140; wv.inputs["Distortion"].default_value = 2.0
-    return bump(T, wv.outputs["Fac"], 0.5, 0.0015)
-def groove_bump(T, sx, sy, sz):
-    return bump(T, T.m("SINE", T.m("MULTIPLY", sz, 700.0)), 0.25, 0.0004)
-def leather_bump(T, sx, sy, sz):
-    vo = T.n("ShaderNodeTexVoronoi"); T.link(T.combine(sx, sy, sz), vo.inputs["Vector"]); vo.inputs["Scale"].default_value = 1400
-    return bump(T, vo.outputs["Distance"], 0.12, 0.0003)
+def shader(fn): fn.shader = True; return fn
+def mulc(T, col, fac):
+    node = T.n("ShaderNodeMix", data_type="RGBA", blend_type="MULTIPLY"); node.inputs[0].default_value = 1.0
+    T._in(node, 6, col); T._in(node, 7, fac); return node.outputs[2]
+def ao(T, col, amt=0.45):
+    a = T.n("ShaderNodeAmbientOcclusion"); a.samples = 8; a.inputs["Distance"].default_value = 0.012
+    return mulc(T, col, T.m("ADD", 1.0 - amt, T.m("MULTIPLY", a.outputs["AO"], amt)))
+def vor(T, sx, sy, sz, scale, feature="F1"):
+    v = T.n("ShaderNodeTexVoronoi", feature=feature); T.link(T.combine(sx, sy, sz), v.inputs["Vector"]); v.inputs["Scale"].default_value = scale
+    return v.outputs["Distance"]
+def nse(T, sx, sy, sz, scale, detail=4):
+    n = T.n("ShaderNodeTexNoise"); T.link(T.combine(sx, sy, sz), n.inputs["Vector"]); n.inputs["Scale"].default_value = scale; n.inputs["Detail"].default_value = detail
+    return n.outputs["Fac"]
+def knit(T, sx, sy, sz, f=2600.0):
+    """engineered knit: wavy wales x courses"""
+    a = T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, f), T.m("MULTIPLY", T.m("SINE", T.m("MULTIPLY", sz, f)), 1.3)))
+    b = T.m("SINE", T.m("MULTIPLY", T.m("ADD", sz, T.m("MULTIPLY", sy, 0.6)), f * 0.5))
+    return T.m("MULTIPLY", T.m("ADD", a, 1.0), T.m("ADD", b, 1.4))
+def smoothstep_n(T, x, w):   # 0..1 ramp of x over width w (x>0 -> 1)
+    return T.m("DIVIDE", T.m("ADD", x, 0.0), w, clamp=True)
+def htop_node(T, sx):
+    fc = T.n("ShaderNodeFloatCurve"); cur = fc.mapping.curves[0]
+    pts = [(i / 12, (crs(HTAB, i / 12) + spring(i / 12) - 0.02) / 0.13) for i in range(13)]
+    while len(cur.points) < len(pts): cur.points.new(0.5, 0.5)
+    for pt, (x, y) in zip(cur.points, pts): pt.location = (x, y)
+    fc.mapping.update(); T.link(T.m("DIVIDE", sx, L, clamp=True), fc.inputs["Value"])
+    return T.m("ADD", T.m("MULTIPLY", fc.outputs[0], 0.13), 0.02)
 
-def upper_design(T, sx, sy, sz):
-    """white upper with black flowing wave overlays (original) and a black toe bumper"""
-    zl = T.m("ADD", 0.040, T.m("MULTIPLY", T.m("ADD", 0.040, T.m("MULTIPLY", T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, 26.0), 0.9)), 0.014)),
-                                 T.m("SUBTRACT", 1.0, T.m("MULTIPLY", sx, 1.5))))
-    wdt = T.m("ADD", 0.004, T.m("MULTIPLY", T.m("SUBTRACT", L, sx), 0.040))
-    s1 = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", sz, zl)), wdt)
-    zl2 = T.m("ADD", zl, T.m("ADD", 0.020, T.m("MULTIPLY", T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, 34.0), 2.2)), 0.006)))
-    s2 = T.m("LESS_THAN", T.m("ABSOLUTE", T.m("SUBTRACT", sz, zl2)), T.m("MULTIPLY", wdt, 0.35))
-    toe = T.m("MULTIPLY", T.m("GREATER_THAN", sx, 0.262), T.m("LESS_THAN", sz, T.m("ADD", 0.040, T.m("MULTIPLY", T.m("SUBTRACT", sx, 0.262), 0.25))))
-    collar = T.m("MULTIPLY", T.m("LESS_THAN", sx, 0.13), T.m("GREATER_THAN", sz, 0.106))
-    mask = T.m("MINIMUM", 1.0, T.m("ADD", T.m("ADD", s1, s2), T.m("ADD", toe, collar)))
-    upper_design.mask = mask
-    return T.mixc(mask, C["white"], C["black"])
-def upper_bump(T, sx, sy, sz):
-    return bump(T, upper_design.mask, 0.6, 0.0006, normal=leather_bump(T, sx, sy, sz))
-def tongue_design(T, sx, sy, sz):
-    return T.mixc(T.m("GREATER_THAN", sz, 0.112), C["white"], C["black"])
+LOGO = os.path.join(HERE, "assets", "ooze_logo.png")   # original made-up brand mark (assets/ooze_logo.svg)
+LOGO_IMG = bpy.data.images.load(LOGO); LOGO_ASPECT = 1600 / 520
+def logo_alpha(T, sx, sy, sz, x0, z0, h):
+    """planar side print of the logo (read correctly on both sides of the shoe)"""
+    w = h * LOGO_ASPECT; u = T.m("DIVIDE", T.m("SUBTRACT", sx, x0), w); v = T.m("DIVIDE", T.m("SUBTRACT", sz, z0), h)
+    side = T.m("GREATER_THAN", sy, 0.0)
+    u = T.m("ADD", u, T.m("MULTIPLY", side, T.m("SUBTRACT", 1.0, T.m("MULTIPLY", u, 2.0))))
+    tex = T.n("ShaderNodeTexImage"); tex.image = LOGO_IMG; tex.extension = "CLIP"; tex.interpolation = "Cubic"
+    T.link(T.combine(u, v, 0.0), tex.inputs["Vector"])
+    return T.m("MULTIPLY", tex.outputs["Alpha"], T.m("GREATER_THAN", T.m("ABSOLUTE", sy), 0.022))
+def breathable(T, sx, sy, sz, scale=380.0):
+    """runner mesh: yarn ridges around open cells that show a grey underlay; returns (hole 0..1, height)"""
+    v = T.n("ShaderNodeTexVoronoi", feature="DISTANCE_TO_EDGE"); T.link(T.combine(sx, sy, T.m("MULTIPLY", sz, 1.4)), v.inputs["Vector"])
+    v.inputs["Scale"].default_value = scale
+    hole = T.m("DIVIDE", T.m("SUBTRACT", v.outputs["Distance"], 0.15), 0.07, clamp=True)
+    return hole, T.m("ADD", T.m("MULTIPLY", T.m("SUBTRACT", 1.0, hole), 0.8), T.m("MULTIPLY", knit(T, sx, sy, sz, 3200.0), 0.05))
+
+@shader
+def upper_shader(T, sx, sy, sz):
+    """white engineered-knit base; raised black leather overlays (flowing mudguard, eyestay, toe cap) with white stitching; perforated toe box"""
+    ht = htop_node(T, sx)
+    zline = T.m("ADD", T.m("ADD", 0.043, T.m("MULTIPLY", T.m("EXPONENT", T.m("MULTIPLY", sx, -6.0)), 0.030)),
+                T.m("MULTIPLY", T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, 30.0), 0.6)), 0.010))
+    sd_a = T.m("MAXIMUM", T.m("SUBTRACT", sz, zline), T.m("MULTIPLY", T.m("SUBTRACT", sx, 0.235), 0.6))
+    sd_b = T.m("MAXIMUM", T.m("MAXIMUM", T.m("SUBTRACT", T.m("SUBTRACT", ht, 0.017), sz), T.m("SUBTRACT", sx, 0.64)), T.m("SUBTRACT", 0.12, sx))
+    sd_c = T.m("SUBTRACT", T.m("ADD", 0.268, T.m("MULTIPLY", T.m("MAXIMUM", 0.0, T.m("SUBTRACT", sz, 0.032)), 0.25)), sx)
+    sd = T.m("MINIMUM", T.m("MINIMUM", sd_a, sd_b), sd_c)
+    mask = T.m("SUBTRACT", 0.5, T.m("DIVIDE", sd, 0.0003), clamp=True)
+    raised = T.m("DIVIDE", T.m("MULTIPLY", sd, -1.0), 0.0009, clamp=True)
+    sd2 = T.m("DIVIDE", T.m("ADD", sd, 0.0017), 0.00024)
+    dash = T.m("GREATER_THAN", T.m("SINE", T.m("MULTIPLY", T.m("ADD", T.m("MULTIPLY", sx, 0.8), sz), 2600.0)), 0.1)
+    stitch = T.m("MULTIPLY", T.m("EXPONENT", T.m("MULTIPLY", T.m("MULTIPLY", sd2, sd2), -1.0)), dash)
+    zone = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", sx, 0.195), T.m("LESS_THAN", sx, 0.262)), T.m("GREATER_THAN", sz, 0.040))
+    holes = T.m("MULTIPLY", T.m("LESS_THAN", vor(T, sx, sy, sz, 650.0), 0.2), T.m("MULTIPLY", zone, T.m("SUBTRACT", 1.0, mask)))
+    mhole, mh = breathable(T, sx, sy, sz)
+    logo = logo_alpha(T, sx, sy, sz, 0.110, 0.0515, 0.0175)
+    peb = vor(T, sx, sy, sz, 1500.0)
+    h = T.m("ADD", T.m("ADD", T.m("ADD", raised, T.m("MULTIPLY", logo, 0.6)), T.m("MULTIPLY", T.m("MULTIPLY", mh, 0.35), T.m("SUBTRACT", 1.0, mask))),
+            T.m("ADD", T.m("MULTIPLY", holes, -0.5), T.m("ADD", T.m("MULTIPLY", stitch, -0.3), T.m("MULTIPLY", peb, T.m("MULTIPLY", mask, 0.06)))))
+    nrm = bump(T, h, 1.0, 0.0006)
+    var = T.m("ADD", 0.90, T.m("MULTIPLY", nse(T, sx, sy, sz, 300.0), 0.10))
+    under = T.m("SUBTRACT", 1.0, T.m("MULTIPLY", mhole, 0.62))           # grey underlay seen through the mesh cells
+    white = ao(T, mulc(T, C["white"], T.m("MULTIPLY", T.m("MULTIPLY", var, under), T.m("SUBTRACT", 1.0, T.m("MULTIPLY", holes, 0.75)))), 0.55)
+    knit_b = bsdf(T, white, 0.82, Sheen_Weight=1.0, Sheen_Roughness=0.5, Normal=nrm)
+    lcol = ao(T, T.mixc(stitch, C["black"], (0.82, 0.82, 0.80, 1)), 0.3)
+    leather = bsdf(T, lcol, T.m("ADD", 0.36, T.m("MULTIPLY", peb, 0.12)), Coat_Weight=0.18, Coat_Roughness=0.3, Normal=nrm)
+    printed = bsdf(T, (0.008, 0.008, 0.009, 1), 0.28, Coat_Weight=0.3, Coat_Roughness=0.2, Normal=nrm)   # raised glossy print
+    return T.mixs(logo, T.mixs(mask, knit_b, leather), printed)
+
+@shader
+def collar_shader(T, sx, sy, sz):
+    nrm = bump(T, knit(T, sx, sy, sz, 3400.0), 0.35, 0.0003)
+    return bsdf(T, ao(T, (0.012, 0.012, 0.013, 1)), 0.85, Sheen_Weight=1.0, Sheen_Roughness=0.35, Normal=nrm)
+
+@shader
+def tongue_shader(T, sx, sy, sz):
+    band = T.m("GREATER_THAN", sz, 0.118)
+    hole, mh = breathable(T, sx, sy, sz, 460.0)
+    nrm = bump(T, T.m("ADD", T.m("MULTIPLY", mh, 0.3), band), 0.8, 0.0005)
+    k = bsdf(T, ao(T, mulc(T, C["white"], T.m("SUBTRACT", 1.0, T.m("MULTIPLY", hole, 0.6)))), 0.82, Sheen_Weight=1.0, Sheen_Roughness=0.5, Normal=nrm)
+    l = bsdf(T, ao(T, C["black"]), 0.4, Coat_Weight=0.2, Coat_Roughness=0.3, Normal=nrm)
+    return T.mixs(band, k, l)
+
+@shader
+def midsole_shader(T, sx, sy, sz):
+    """moulded foam: fine pores, flowing sculpted ribs, a sharper rib at the heel"""
+    rib = T.m("SINE", T.m("ADD", T.m("MULTIPLY", sz, 620.0), T.m("MULTIPLY", T.m("SINE", T.m("MULTIPLY", sx, 22.0)), 2.2)))
+    rib = T.m("MULTIPLY", T.m("POWER", T.m("ABSOLUTE", rib), 0.35), T.m("SUBTRACT", 1.0, T.m("DIVIDE", sx, 0.4, clamp=True)))
+    pores = vor(T, sx, sy, sz, 5000.0)
+    nrm = bump(T, T.m("ADD", T.m("MULTIPLY", rib, 0.6), T.m("MULTIPLY", pores, 0.08)), 0.7, 0.0008)
+    col = ao(T, mulc(T, (0.80, 0.79, 0.76, 1), T.m("ADD", 0.94, T.m("MULTIPLY", nse(T, sx, sy, sz, 120.0), 0.06))), 0.5)
+    return bsdf(T, col, 0.62, Sheen_Weight=0.15, Normal=nrm)
+
+@shader
+def outsole_shader(T, sx, sy, sz):
+    lugs = T.m("LESS_THAN", vor(T, sx, sy, T.m("MULTIPLY", sz, 0.2), 230.0, "DISTANCE_TO_EDGE"), 0.06)
+    side = T.m("GREATER_THAN", T.m("SINE", T.m("MULTIPLY", T.m("ADD", sx, T.m("MULTIPLY", sz, 0.4)), 520.0)), 0.55)
+    nrm = bump(T, T.m("ADD", T.m("MULTIPLY", lugs, -1.0), T.m("MULTIPLY", side, -0.6)), 0.9, 0.0012)
+    return bsdf(T, ao(T, (0.010, 0.010, 0.011, 1), 0.5), T.m("ADD", 0.72, T.m("MULTIPLY", nse(T, sx, sy, sz, 400.0), 0.15)), Sheen_Weight=0.2, Normal=nrm)
+
+@shader
+def heel_shader(T, sx, sy, sz):
+    peb = vor(T, sx, sy, sz, 1300.0)
+    logo = logo_alpha(T, sx, sy, sz, 0.012, 0.045, 0.013)
+    nrm = bump(T, T.m("ADD", T.m("MULTIPLY", peb, 0.3), T.m("MULTIPLY", logo, 0.6)), 0.6, 0.0004)
+    leather = bsdf(T, ao(T, C["black"]), T.m("ADD", 0.32, T.m("MULTIPLY", peb, 0.15)), Coat_Weight=0.25, Coat_Roughness=0.25, Normal=nrm)
+    return T.mixs(logo, leather, bsdf(T, (0.80, 0.80, 0.78, 1), 0.35, Coat_Weight=0.3, Normal=nrm))
+
+@shader
+def tab_shader(T, sx, sy, sz):
+    nrm = bump(T, T.m("SINE", T.m("MULTIPLY", T.m("ADD", sx, sz), 2800.0)), 0.5, 0.0003)
+    return bsdf(T, ao(T, (0.02, 0.02, 0.022, 1)), 0.7, Sheen_Weight=0.8, Normal=nrm)
+
+@shader
+def lace_shader(T, sx, sy, sz):
+    b1 = T.m("SINE", T.m("MULTIPLY", T.m("ADD", T.m("ADD", sx, sy), sz), 4200.0))
+    b2 = T.m("SINE", T.m("MULTIPLY", T.m("SUBTRACT", T.m("ADD", sx, sz), sy), 4200.0))
+    nrm = bump(T, T.m("MULTIPLY", b1, b2), 0.6, 0.0003)
+    return bsdf(T, ao(T, (0.016, 0.016, 0.017, 1)), 0.78, Sheen_Weight=0.8, Sheen_Roughness=0.4, Normal=nrm)
+
+@shader
+def eyelet_shader(T, sx, sy, sz):
+    return bsdf(T, (0.30, 0.30, 0.32, 1), 0.26, Metallic=1.0)
 
 # ---------------- build the parts ----------------
 parts = {}
@@ -286,6 +391,12 @@ def up_keep(i, j):
     u = lerp(U_UP[int(i)], U_UP[min(int(i) + 1, NU - 1)], 0.5); ph = lerp(PH[int(j)], PH[min(int(j) + 1, NV - 1)], 0.5)
     return not (0.012 < u < 0.66 and abs(ph) < crs(open_tab, u))
 bm = grid("upper", lambda i, j: sect(U_UP[i], PH[j]), NU, NV, None, keep=up_keep)
+before = set(bm.faces)
+cpath = [sect(u, -crs(open_tab, u) * 0.96) for u in [0.40 - 0.385 * k / 24 for k in range(25)]] + \
+        [sect(u, crs(open_tab, u) * 0.96) for u in [0.015 + 0.385 * k / 24 for k in range(1, 25)]]
+tube(bm, [(x, y, z + 0.0012) for x, y, z in cpath], 0.0055, 12)        # padded collar
+for f in bm.faces:
+    if f not in before: f.material_index = 1
 parts["upper"] = obj_from_bm("upper", bm); add_mods(parts["upper"], 0.0028)
 U_T = cosu(22, 0.33, 0.70); PT = [-0.42 + 0.84 * j / 11 for j in range(12)]
 bm = grid("tongue", lambda i, j: (lambda p: (p[0], p[1], p[2] + 0.014 * max(0.0, (0.42 - U_T[i]) / 0.09)))(sect(U_T[i], PT[j], 0.975)), 22, 12, None)
@@ -302,10 +413,17 @@ for side in (-1, 1):
     vs = [[bmh.verts.new(heel_pt(i, j, side)) for j in range(8)] for i in range(18)]
     for i in range(17):
         for j in range(7): bmh.faces.new((vs[i][j], vs[i + 1][j], vs[i + 1][j + 1], vs[i][j + 1]))
-tab = bmesh.ops.create_cube(bmh, size=1.0)["verts"]
-for v in tab: v.co = Vector((v.co.x * 0.009 - 0.006 - 0.10 * (v.co.z + 0.5) * 0.04, v.co.y * 0.026, v.co.z * 0.042 + crs(HTAB, 0) + 0.008 + spring(0)))
+bf, bv = set(bmh.faces), set(bmh.verts); h0 = crs(HTAB, 0) + spring(0)
+loop = [(-0.002 + 0.0075 * math.cos(math.radians(a)) - 0.25 * (0.013 * math.sin(math.radians(a))), 0.0,
+         h0 + 0.006 + 0.013 * math.sin(math.radians(a))) for a in range(-80, 265, 15)]
+loop = [(loop[0][0], 0.0, h0 - 0.012)] + loop + [(loop[-1][0], 0.0, h0 - 0.012)]
+tube(bmh, loop, 0.0021, 8)
+for v in bmh.verts:
+    if v not in bv: v.co.y *= 3.2          # flatten the cord into a strap
+for f in bmh.faces:
+    if f not in bf: f.material_index = 1
 bmesh.ops.recalc_face_normals(bmh, faces=bmh.faces[:])
-parts["heel"] = obj_from_bm("heel", bmh); add_mods(parts["heel"], 0.003)
+parts["heel"] = obj_from_bm("heel", bmh); add_mods(parts["heel"], 0.003); parts["heel"].modifiers["Solid"].use_even_offset = False  # even offset spikes the thin strap
 # laces: five criss-crossing cords over the tongue
 bml = bmesh.new()
 for k in range(5):
@@ -316,14 +434,25 @@ for k in range(5):
         t = s / 10; ph = lerp(-0.30, 0.30, t); u = lerp(ua, ub, t)
         x, y, z = sect(u, ph, 1.0); pts.append((x, y, z + 0.0045 + 0.0025 * math.sin(math.pi * t)))
     tube(bml, pts, 0.0019)
+bf = set(bml.faces)
+for k in range(5):
+    for u in (0.44 + 0.047 * k, 0.44 + 0.047 * k + 0.03):
+        for ph in (-0.30, 0.30):
+            c = Vector(sect(u, ph)); du = Vector(sect(u + 0.004, ph)) - Vector(sect(u - 0.004, ph))
+            dp = Vector(sect(u, ph + 0.02)) - Vector(sect(u, ph - 0.02)); n = du.cross(dp).normalized()
+            if n.z < 0: n = -n
+            a = du.normalized(); b2 = n.cross(a)
+            ring = [tuple(c + n * 0.0009 + 0.0027 * (math.cos(2 * math.pi * i / 14) * a + math.sin(2 * math.pi * i / 14) * b2)) for i in range(15)]
+            tube(bml, ring, 0.0007, 6)
+for f in bml.faces:
+    if f not in bf: f.material_index = 1
 parts["laces"] = obj_from_bm("laces", bml); add_mods(parts["laces"], 0.0, 1)
 for nm in ("outsole", "midsole"): add_mods(parts[nm], 0.0)
 
-DESIGN = {"outsole": (C["black"], 0.6, tread_bump), "midsole": (C["white"], 0.42, groove_bump),
-          "upper": (upper_design, 0.5, upper_bump), "heel": (C["black"], 0.45, leather_bump),
-          "tongue": (tongue_design, 0.55, leather_bump), "laces": (C["black"], 0.6, None)}
+DESIGN = {"outsole": [outsole_shader], "midsole": [midsole_shader], "upper": [upper_shader, collar_shader],
+          "heel": [heel_shader, tab_shader], "tongue": [tongue_shader], "laces": [lace_shader, eyelet_shader]}
 for nm, o in parts.items():
-    d, r, b = DESIGN[nm]; o.data.materials.append(skin(f"skin_{nm}", o.location, d, r, b))
+    for k, d in enumerate(DESIGN[nm]): o.data.materials.append(skin(f"skin_{nm}{k}", o.location, d, 0.5))
 
 # ---------------- the C4D-style warp: one geometry-nodes group on every slime object ----------------
 ng = bpy.data.node_groups.new("SlimeWarp", "GeometryNodeTree")
@@ -478,9 +607,13 @@ cm, T = new_mat("cyc")
 co = T.n("ShaderNodeTexCoord").outputs["Object"]; cx, cy, cz = T.sep(co)
 isfloor = T.m("SUBTRACT", 1.0, T.m("DIVIDE", cz, 0.45), clamp=True)
 nzf = T.n("ShaderNodeTexNoise"); T.link(co, nzf.inputs["Vector"]); nzf.inputs["Scale"].default_value = 14
-rough = T.m("ADD", 0.12, T.m("MULTIPLY", nzf.outputs["Fac"], 0.16))
-floor = bsdf(T, C["floor"], rough, Specular_IOR_Level=0.6)
-wall = bsdf(T, C["cyc"], 0.8)
+rough = T.m("ADD", 0.18, T.m("MULTIPLY", nzf.outputs["Fac"], 0.20))
+mott = T.n("ShaderNodeTexNoise"); T.link(co, mott.inputs["Vector"]); mott.inputs["Scale"].default_value = 3.0; mott.inputs["Detail"].default_value = 8
+fine = T.n("ShaderNodeTexNoise"); T.link(co, fine.inputs["Vector"]); fine.inputs["Scale"].default_value = 160; fine.inputs["Detail"].default_value = 6
+fcol = T.mixc(T.m("MULTIPLY", mott.outputs["Fac"], 1.0), (0.004, 0.004, 0.005, 1), (0.016, 0.016, 0.018, 1))
+floor = bsdf(T, fcol, rough, Specular_IOR_Level=0.6, Normal=bump(T, fine.outputs["Fac"], 0.08, 0.002))
+wcol = T.mixc(mott.outputs["Fac"], (0.016, 0.016, 0.018, 1), (0.034, 0.034, 0.038, 1))
+wall = bsdf(T, wcol, 0.85, Normal=bump(T, fine.outputs["Fac"], 0.2, 0.004))
 out(T, T.mixs(isfloor, wall, floor))
 cyc = obj_from_bm("cyclorama", bm, cm, centre=False)
 for p in cyc.data.polygons: p.use_smooth = True
@@ -490,11 +623,43 @@ vm, T = new_mat("haze")
 co = T.n("ShaderNodeTexCoord").outputs["Object"]
 nzv = T.n("ShaderNodeTexNoise", noise_dimensions="4D"); T.link(T.v("SCALE", co, scale=2.2), nzv.inputs["Vector"])
 T.link(T.keyed("haze_t", [t * 0.08 for t in TIME]), nzv.inputs["W"]); nzv.inputs["Detail"].default_value = 3
-dens = T.m("ADD", 0.010, T.m("MULTIPLY", T.m("POWER", nzv.outputs["Fac"], 4.0), 0.6))
+dens = T.m("ADD", 0.006, T.m("MULTIPLY", T.m("POWER", nzv.outputs["Fac"], 4.0), 0.5))
 vol = T.n("ShaderNodeVolumePrincipled"); T.link(dens, vol.inputs["Density"]); vol.inputs["Color"].default_value = (0.8, 0.8, 0.82, 1)
 out(T, None, vol.outputs[0])
 bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
 hz = obj_from_bm("haze", bm, vm, smooth_shade=False, centre=False); hz.scale = (3.0, 3.4, 1.4); hz.location = (0.15, 0.4, 0.6)
+# ground mist: drifting smoke hugging the floor around the shoe, thinning with height
+gm, T = new_mat("mist")
+co = T.n("ShaderNodeTexCoord").outputs["Object"]; mx_, my_, mz_ = T.sep(co)
+wn = T.n("ShaderNodeTexNoise", noise_dimensions="4D"); T.link(T.v("SCALE", co, scale=3.0), wn.inputs["Vector"])
+T.link(T.keyed("mist_t", [0.3 + t * 0.05 for t in TIME]), wn.inputs["W"]); wn.inputs["Detail"].default_value = 2
+nzm = T.n("ShaderNodeTexNoise", noise_dimensions="4D")
+T.link(T.v("ADD", T.v("MULTIPLY", T.v("ADD", co, T.combine(T.keyed("mist_dx", [t * 0.035 for t in TIME]), 0.0, 0.0)), (5.0, 7.0, 3.0)),
+           T.v("SCALE", wn.outputs["Color"], scale=1.6)), nzm.inputs["Vector"])
+T.link(T.keyed("mist_w", [t * 0.06 for t in TIME]), nzm.inputs["W"]); nzm.inputs["Detail"].default_value = 4
+fall = T.m("POWER", T.m("SUBTRACT", 0.5, mz_, clamp=True), 2.0)
+mdens = T.m("MULTIPLY", T.m("MULTIPLY", T.m("POWER", T.m("SUBTRACT", nzm.outputs["Fac"], 0.48, clamp=True), 1.8), 6.0), fall)
+mvol = T.n("ShaderNodeVolumePrincipled"); T.link(mdens, mvol.inputs["Density"]); mvol.inputs["Color"].default_value = (0.85, 0.85, 0.87, 1)
+out(T, None, mvol.outputs[0])
+bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
+mist = obj_from_bm("mist", bm, gm, smooth_shade=False, centre=False); mist.scale = (1.6, 1.2, 0.10); mist.location = (0.15, 0.25, 0.05)
+# dust: tiny specks drifting slowly through the light
+dm, T = new_mat("dust"); out(T, bsdf(T, (0.8, 0.8, 0.8, 1), 0.5, Emission_Color=(1, 0.95, 0.9, 1), Emission_Strength=0.6))
+me = bpy.data.meshes.new("dust_pts"); rd = random.Random(4)
+me.from_pydata([(rd.uniform(-0.25, 0.55), rd.uniform(-0.40, 0.55), rd.uniform(0.005, 0.32)) for _ in range(500)], [], [])
+dust = link_obj("dust", me)
+dg = bpy.data.node_groups.new("Dust", "GeometryNodeTree")
+dg.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry"); dg.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+D = NT(dg); di = D.n("NodeGroupInput"); do = D.n("NodeGroupOutput")
+dpos = D.n("GeometryNodeInputPosition").outputs[0]; dsec = D.n("GeometryNodeInputSceneTime").outputs["Seconds"]
+dn = D.n("ShaderNodeTexNoise", noise_dimensions="4D"); D.link(D.v("SCALE", dpos, scale=6.0), dn.inputs["Vector"]); D.link(D.m("MULTIPLY", dsec, 0.05), dn.inputs["W"])
+doff = D.v("ADD", D.v("SCALE", D.v("SUBTRACT", dn.outputs["Color"], (0.5, 0.5, 0.5)), scale=0.05), D.combine(0.0, 0.0, D.m("MULTIPLY", dsec, 0.004)))
+dsp = D.n("GeometryNodeSetPosition"); D.link(di.outputs[0], dsp.inputs["Geometry"]); D.link(doff, dsp.inputs["Offset"])
+ico = D.n("GeometryNodeMeshIcoSphere"); ico.inputs["Radius"].default_value = 0.00035; ico.inputs["Subdivisions"].default_value = 1
+iop = D.n("GeometryNodeInstanceOnPoints"); D.link(dsp.outputs[0], iop.inputs["Points"]); D.link(ico.outputs[0], iop.inputs["Instance"])
+rv = D.n("FunctionNodeRandomValue"); rv.inputs[2].default_value = 0.4; rv.inputs[3].default_value = 1.6; D.link(rv.outputs[1], iop.inputs["Scale"])
+sm = D.n("GeometryNodeSetMaterial"); sm.inputs["Material"].default_value = dm; D.link(iop.outputs[0], sm.inputs["Geometry"]); D.link(sm.outputs[0], do.inputs[0])
+dust.modifiers.new("Dust", "NODES").node_group = dg
 
 def area(name, loc, target, size, power, colour=(1, 1, 1), shape="RECTANGLE", size_y=None, glossy=True):
     ld = bpy.data.lights.new(name, "AREA"); ld.shape = shape; ld.size = size; ld.size_y = size_y or size; ld.energy = power; ld.color = colour
@@ -504,12 +669,25 @@ def area(name, loc, target, size, power, colour=(1, 1, 1), shape="RECTANGLE", si
     if not glossy: lo.visible_glossy = False
     return lo
 CEN = (0.15, 0.0, 0.06); rim = C["rim"][:3]
-area("key", (-0.02, -0.40, 0.44), CEN, 0.22, 9.0, (1.0, 0.97, 0.94), size_y=0.10)
-area("top_strip", (0.15, 0.02, 0.36), (0.15, 0.0, 0.0), 0.50, 5.0, size_y=0.035)
-area("rim_l", (-0.24, 0.26, 0.20), CEN, 0.03, 6.0, rim, size_y=0.26)
-area("rim_r", (0.54, 0.26, 0.20), CEN, 0.03, 6.0, rim, size_y=0.26)
-area("kick", (0.25, -0.50, 0.03), CEN, 0.12, 1.4, (0.85, 0.9, 1.0), size_y=0.03)
-area("wall_glow", (0.15, 1.0, 0.25), (0.15, 2.2, 1.0), 1.2, 70.0, (0.95, 0.95, 1.0), glossy=False)
+# lighting (user reference): ONE colour-gradient softbox right above the shoe (magenta -> orange -> yellow -> cyan),
+# casting a coloured pool and the shoe's shadow on the floor and rainbow reflections in the slime, plus ONE very dim omni
+sbm, T = new_mat("softbox")
+g = T.n("ShaderNodeTexCoord").outputs["Generated"]; gx, gy, gz = T.sep(g)
+grad = T.m("ADD", T.m("MULTIPLY", gx, 0.85), T.m("MULTIPLY", gy, 0.15))
+r = T.n("ShaderNodeValToRGB"); els = r.color_ramp.elements
+els[0].position, els[0].color = 0.0, (1.0, 0.08, 0.45, 1); els[1].position, els[1].color = 1.0, (0.25, 0.40, 1.0, 1)
+for pos_, col_ in [(0.28, (1.0, 0.30, 0.08, 1)), (0.52, (1.0, 0.78, 0.25, 1)), (0.78, (0.35, 0.85, 1.0, 1))]:
+    e = els.new(pos_); e.color = col_
+T.link(grad, r.inputs["Fac"])
+em = T.n("ShaderNodeEmission"); T.link(r.outputs["Color"], em.inputs["Color"]); em.inputs["Strength"].default_value = CFG.get("softbox_strength", 11.0)
+out(T, em.outputs[0])
+bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=0.5)
+for v in bm.verts: v.co.x *= 0.50; v.co.y *= 0.36
+bmesh.ops.reverse_faces(bm, faces=bm.faces[:])          # emit downwards
+sbox = obj_from_bm("softbox", bm, sbm, smooth_shade=False, centre=False); sbox.location = (0.15, -0.03, 0.26)
+sbox.visible_camera = False; sbox.visible_shadow = False
+od = bpy.data.lights.new("omni", "POINT"); od.energy = 0.22; od.shadow_soft_size = 0.008; od.color = (1.0, 0.9, 0.8)
+oo = link_obj("omni", od); oo.location = (0.25, -0.13, 0.12); oo.visible_camera = False
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True
 wd.node_tree.nodes["Background"].inputs[0].default_value = (0.010, 0.010, 0.012, 1); wd.node_tree.nodes["Background"].inputs[1].default_value = 1.0
 
