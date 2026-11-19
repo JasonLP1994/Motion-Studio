@@ -6,6 +6,7 @@
 # Plan: notes/shoe-slime/plan.md. Grammar from references/shoe-slime/ (no reference brands or logos).
 import bpy, bmesh, math, random, os, sys
 from mathutils import Vector, Euler
+from mathutils.bvhtree import BVHTree
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import farm_prep
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -32,13 +33,13 @@ CFG = {
     # shot cameras: (first, last, pos start, pos end, look start, look end, lens mm, f-stop)
     "cams": {
         "wide":  (1, 76, (0.44, -0.44, 0.16), (0.39, -0.38, 0.135), (0.14, 0, 0.055), (0.14, 0, 0.060), 45, 9.0),
-        "sole":  (77, 116, (0.37, -0.16, 0.036), (0.33, -0.13, 0.030), (0.18, 0, 0.022), (0.17, 0, 0.026), 40, 11.0),
-        "toe":   (117, 161, (0.43, -0.17, 0.090), (0.38, -0.13, 0.080), (0.24, 0, 0.050), (0.24, 0, 0.052), 40, 11.0),
-        "heel":  (162, 206, (-0.17, -0.15, 0.215), (-0.135, -0.12, 0.195), (0.06, 0, 0.060), (0.06, 0, 0.058), 35, 11.0),
-        "laces": (207, 251, (0.38, -0.21, 0.205), (0.345, -0.18, 0.190), (0.155, 0, 0.082), (0.15, 0, 0.084), 40, 11.0),
+        "sole":  (77, 116, (0.37, -0.16, 0.036), (0.33, -0.13, 0.030), (0.18, 0, 0.022), (0.17, 0, 0.026), 40, 7.1),
+        "toe":   (117, 161, (0.43, -0.17, 0.090), (0.38, -0.13, 0.080), (0.24, 0, 0.050), (0.24, 0, 0.052), 40, 7.1),
+        "heel":  (162, 206, (-0.17, -0.15, 0.215), (-0.135, -0.12, 0.195), (0.06, 0, 0.060), (0.06, 0, 0.058), 35, 7.1),
+        "laces": (207, 251, (0.38, -0.21, 0.205), (0.345, -0.18, 0.190), (0.155, 0, 0.082), (0.15, 0, 0.084), 40, 7.1),
     },
     # hero orbit around the shoe (cylindrical: frame, angle deg, radius m, height m, look-at height m); -90 = side view
-    "hero": [(252, -142, 0.54, 0.135, 0.055), (285, -128, 0.52, 0.125, 0.055), (318, -84, 0.50, 0.110, 0.055), (360, -58, 0.47, 0.118, 0.066)],
+    "hero": [(252, -150, 0.54, 0.120, 0.055), (285, -122, 0.50, 0.100, 0.055), (318, -74, 0.46, 0.080, 0.052), (360, -40, 0.50, 0.072, 0.060)],
 }
 FPS, N = CFG["fps"], CFG["frames"]
 rnd = random.Random(11)
@@ -351,12 +352,16 @@ def upper_shader(T, sx, sy, sz):
     cz = T.m("MULTIPLY", T.m("MULTIPLY", T.m("GREATER_THAN", sx, 0.19), T.m("LESS_THAN", sx, 0.25)), T.m("GREATER_THAN", sz, 0.042))
     crease = T.m("MULTIPLY", T.m("POWER", T.m("ABSOLUTE", T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, 420.0),
                  T.m("MULTIPLY", nse(T, sx, T.m("MULTIPLY", sy, 3.0), sz, 40.0, 2), 9.0)))), 8.0), cz)
+    sds = T.m("SUBTRACT", sx, T.m("ADD", 0.232, T.m("MULTIPLY", T.m("SUBTRACT", sz, 0.05), 0.35)))         # vamp seam: groove + two stitch rows
+    dash2 = T.m("GREATER_THAN", T.m("SINE", T.m("MULTIPLY", sz, 2600.0)), 0.1)
+    seam = T.m("MULTIPLY", T.m("ADD", gauss(T, sds, 0.00035), T.m("MULTIPLY", gauss(T, T.m("SUBTRACT", T.m("ABSOLUTE", sds), 0.0013), 0.00018), dash2)),
+                T.m("MULTIPLY", T.m("SUBTRACT", 1.0, mask), T.m("GREATER_THAN", sz, 0.044)))
     mhole, mh = breathable(T, sx, sy, sz)
     logo = T.m("MULTIPLY", logo_alpha(T, sx, sy, sz, 0.113, 0.0478, 0.0138), T.m("SUBTRACT", 1.0, mask))
     fuzz = nse(T, sx, sy, sz, 2600.0, 2); orange = nse(T, sx, sy, sz, 900.0, 3)
     DISP["h"] = T.m("ADD", T.m("ADD", T.m("MULTIPLY", raised, 0.0011), T.m("MULTIPLY", logo, 0.00050)),
                     T.m("ADD", T.m("MULTIPLY", T.m("MULTIPLY", mh, 0.00032), T.m("SUBTRACT", 1.0, mask)),
-                        T.m("ADD", T.m("MULTIPLY", holes, -0.00035), T.m("ADD", T.m("MULTIPLY", stitch, -0.00012), T.m("MULTIPLY", crease, -0.00025)))))
+                        T.m("ADD", T.m("MULTIPLY", holes, -0.00035), T.m("ADD", T.m("MULTIPLY", stitch, -0.00012), T.m("ADD", T.m("MULTIPLY", crease, -0.0006), T.m("MULTIPLY", seam, -0.00045))))))
     micro = T.m("ADD", T.m("ADD", T.m("MULTIPLY", orange, T.m("MULTIPLY", gloss, 0.06)), T.m("MULTIPLY", fuzz, T.m("MULTIPLY", suede, 0.5))),
                 T.m("MULTIPLY", knit(T, sx, sy, sz, 5200.0), T.m("MULTIPLY", T.m("SUBTRACT", 1.0, mask), 0.05)))
     nrm = bump(T, micro, 0.5, 0.00015)
@@ -458,7 +463,7 @@ bm = grid("upper", lambda i, j: sect(U_UP[i], PH[j]), NU, NV, None, keep=up_keep
 before = set(bm.faces)
 cpath = [sect(u, -crs(open_tab, u) * 0.96) for u in [0.40 - 0.385 * k / 24 for k in range(25)]] + \
         [sect(u, crs(open_tab, u) * 0.96) for u in [0.015 + 0.385 * k / 24 for k in range(1, 25)]]
-tube(bm, [(x, y, z + 0.0012) for x, y, z in cpath], 0.0055, 12)        # padded collar
+tube(bm, [(x, y, z + 0.0016) for x, y, z in cpath], 0.0068, 12)        # padded collar (puffy)
 for f in bm.faces:
     if f not in before: f.material_index = 1
 parts["upper"] = obj_from_bm("upper", bm); add_mods(parts["upper"], 0.0028)
@@ -569,6 +574,7 @@ FIELD = [lerp(-0.06, L + 0.06, ease_io(win(f, W10, W11))) if f <= W11 + 5 else l
 WAVEA = [0.011 * math.sin(math.pi * win(f, W10, W11)) ** 0.5 + 0.008 * math.sin(math.pi * win(f, W20, W21)) ** 0.5 for f in F]
 SAG = [0.55 * ease_in(win(f, M0, M1)) * (1 - ease_out(win(f, B0, B0 + 9))) for f in F]
 XF = {}   # per part, per frame: (loc, rot)
+AMPS, SEEDS = {}, {}
 
 for idx, (nm, o) in enumerate(parts.items()):
     home = tuple(o.location); off, rot = SCATTER[nm]; a0, a1 = CFG["assemble"][nm]
@@ -600,7 +606,7 @@ for idx, (nm, o) in enumerate(parts.items()):
     md = warp(o, seed=idx * 3.7, home_centroid=home)
     keys(o, f'modifiers["Warp"]["{IDS["Amp"]}"]', amps); keys(o, f'modifiers["Warp"]["{IDS["Sag"]}"]', SAG)
     keys(o, f'modifiers["Warp"]["{IDS["Wave"]}"]', WAVEA); keys(o, f'modifiers["Warp"]["{IDS["Field"]}"]', FIELD)
-    XF[nm] = (locs, rots, home)
+    XF[nm] = (locs, rots, home); AMPS[nm] = amps; SEEDS[nm] = idx * 3.7
 
 # ---------------- slime extras: puddle, drips, tendrils ----------------
 slime_mat = skin("skin_slime", (0, 0, 0), C["black"], 0.5)
@@ -656,6 +662,8 @@ def strand(name, nm, local, f_on, f_off, target, r0, snap=None, K=9, beads=0):
         thick = r0 * min(1.6, (0.03 / max(ln, 0.004)) ** 0.5) * on
         for i in range(K):
             s = i / (K - 1); P = T.lerp(A, s)
+            sd_ = (A - T).cross(Vector((0, 0, 1))); sd_ = sd_.normalized() if sd_.length > 1e-6 else Vector((1, 0, 0))
+            P += sd_ * 0.10 * ln * math.sin(math.pi * s) * math.sin(s * math.pi * 2.5 + f * 0.22 + (hash(name) % 100) * 0.1) * on   # writhes like a tentacle
             P.z -= 0.25 * ln * math.sin(math.pi * s) * (0.6 + 1.2 * sn)
             neck = 0.35 + 0.65 * abs(2 * s - 1) ** 1.4
             r = thick * neck * (1 - sn * (1 - abs(2 * s - 1) ** 0.4))
@@ -698,6 +706,89 @@ for nm, o in parts.items():
                 locs.append((P0.x, P0.y, 0.0006)); scs.append((max(0.001, spread * fade), max(0.001, spread * fade), max(0.001, 0.22 * fade)))
         keys(d, "location", locs, 3); keys(d, "scale", scs, 3)
 
+# ---------------- VENOM: a web of thin, glossy, branching veins (grammar of the classic "venom effect") ----------------
+# floor veins surge in from the dark and climb the shoe; a vein web covers every part (and melts / flies with it);
+# at the drain the veins slide back down off the shoe and retreat into the floor.
+vm_, T = new_mat("venom")
+vco = T.n("ShaderNodeTexCoord").outputs["Object"]; vn = T.n("ShaderNodeTexNoise"); T.link(vco, vn.inputs["Vector"]); vn.inputs["Scale"].default_value = 900.0
+out(T, bsdf(T, (0.002, 0.0025, 0.005, 1), 0.06, Coat_Weight=1.0, Coat_Roughness=0.008, Specular_IOR_Level=0.25, Normal=bump(T, vn.outputs["Fac"], 0.25, 0.0002)))
+VEIN_R = 0.0016
+def vein_curve(name, splines, depth, parent=None):
+    cu = bpy.data.curves.new(name, "CURVE"); cu.dimensions = "3D"; cu.bevel_depth = depth; cu.bevel_resolution = 2
+    cu.use_fill_caps = True; cu.bevel_factor_mapping_end = "SPLINE"; cu.bevel_factor_mapping_start = "SPLINE"
+    for pts in splines:
+        sp = cu.splines.new("POLY"); sp.points.add(len(pts) - 1); sp.use_smooth = True
+        for p_, (co_, r_) in zip(sp.points, pts): p_.co = (co_.x, co_.y, co_.z, 1.0); p_.radius = max(0.05, r_)
+    o = link_obj(name, cu); cu.materials.append(vm_)
+    if parent is not None: o.parent = parent
+    return o
+
+def surface_veins(part, count, steps, step, climb, seed):
+    me = part.data; vs = [v.co.copy() for v in me.vertices]
+    bvh = BVHTree.FromPolygons(vs, [tuple(p_.vertices) for p_ in me.polygons])
+    zl = sorted(c.z for c in vs)[len(vs) // 5]; lows = [c for c in vs if c.z <= zl]
+    rg = random.Random(seed); splines = []
+    def walk(p, d, n, r0, depth=0):
+        pts = []
+        for i in range(n):
+            loc, nrm, _, _ = bvh.find_nearest(p)
+            if loc is None: break
+            nrm = nrm.normalized(); pts.append((loc + nrm * 0.0008, r0 * (1 - 0.85 * i / max(1, n - 1))))
+            t = d - nrm * d.dot(nrm); t = t.normalized() if t.length > 1e-6 else nrm.orthogonal().normalized()
+            side = nrm.cross(t)
+            d = (t + side * rg.uniform(-0.6, 0.6) + Vector((0, 0, climb))).normalized(); p = loc + d * step
+            if depth < 2 and i > 2 and n - i > 5 and rg.random() < 0.14:
+                walk(loc, (d + side * rg.choice((-1, 1)) * 1.1).normalized(), int((n - i) * 0.65), pts[-1][1] * 0.75, depth + 1)
+        if len(pts) >= 3: splines.append(pts)
+    for k in range(count):
+        st0 = rg.choice(lows) if rg.random() < 0.75 else rg.choice(vs)
+        walk(st0, Vector((rg.uniform(-1, 1), rg.uniform(-1, 1), 0.5)).normalized(), steps, 1.0)
+    return splines
+
+def floor_veins(count, seed):
+    rg = random.Random(seed); splines = []
+    def trail(p, tgt, r_out, r_in, wob=0.5):
+        pts = []; head = (tgt - p).normalized(); n0 = max(4, int((tgt - p).length / 0.007))
+        for i in range(n0 * 3):
+            to = tgt - p
+            if to.length < 0.006: break
+            head = head * 0.72 + to.normalized() * 0.28 + Vector((rg.uniform(-1, 1), rg.uniform(-1, 1), 0)) * wob * 0.5
+            head.z = 0; head.normalize(); r = lerp(r_out, r_in, min(1.0, i / n0))
+            pts.append((Vector((p.x, p.y, VEIN_R * 1.4 * r * 0.8)), r)); p = p + head * 0.007
+        pts.append((Vector((tgt.x, tgt.y, VEIN_R * 1.4 * r_in * 0.8)), r_in)); return pts
+    for k in range(count):
+        u = rg.uniform(0.03, 0.97); side = rg.choice((-1, 1)); tgt = Vector((u * L, side * (W(u) + 0.006), 0.0))
+        ang = math.atan2(side * 1.0, (u - 0.5) * 1.6) + rg.uniform(-0.7, 0.7); dist = rg.uniform(0.14, 0.60)
+        start = tgt + Vector((math.cos(ang), math.sin(ang), 0)) * dist
+        trunk = trail(start, tgt, 0.25, 1.0)
+        trunk.append((Vector((tgt.x, tgt.y - side * 0.003, 0.010 + spring(u))), 0.7))      # climbs onto the sole
+        splines.append(trunk)
+        for b in range(rg.randint(1, 3)):                                                     # branches feeding into the trunk
+            j = rg.randint(len(trunk) // 4, max(len(trunk) // 4 + 1, len(trunk) - 4)); jp = trunk[j][0]
+            a2 = ang + rg.choice((-1, 1)) * rg.uniform(0.5, 1.3); bs = Vector((jp.x, jp.y, 0)) + Vector((math.cos(a2), math.sin(a2), 0)) * rg.uniform(0.04, 0.14)
+            splines.append(trail(bs, Vector((jp.x, jp.y, 0)), 0.15, trunk[j][1] * 0.6, 0.8))
+    return splines
+
+def warp_like(o, nm):
+    md = warp(o, SEEDS[nm], XF[nm][2])
+    keys(o, f'modifiers["Warp"]["{IDS["Amp"]}"]', AMPS[nm]); keys(o, f'modifiers["Warp"]["{IDS["Sag"]}"]', SAG)
+    keys(o, f'modifiers["Warp"]["{IDS["Wave"]}"]', WAVEA); keys(o, f'modifiers["Warp"]["{IDS["Field"]}"]', FIELD)
+
+VEINS = {"upper": (78, 30, 0.0042, 0.22), "midsole": (40, 24, 0.0040, 0.12), "outsole": (22, 18, 0.0040, 0.1),
+         "heel": (18, 18, 0.0035, 0.3), "tongue": (16, 18, 0.0035, 0.5)}
+for gi_, (nm, (cnt, stp, sz_, clb)) in enumerate(VEINS.items()):
+    spl = surface_veins(parts[nm], cnt, stp, sz_, clb, 100 + gi_)
+    for h in range(2):
+        o = vein_curve(f"veins_{nm}{h}", spl[h::2], VEIN_R, parts[nm]); warp_like(o, nm)
+        g0 = 10 + 8 * h + 3 * gi_
+        keys(o.data, "bevel_factor_end", [ease_out(win(f, g0, g0 + 30)) * (1 - ease_in(win(f, SW0 - 4 + 3 * h, SW0 + 16 + 3 * h))) for f in F])
+fl = floor_veins(110, 7)
+for h in range(3):
+    o = vein_curve(f"veins_floor{h}", fl[h::3], VEIN_R * 1.4)
+    md = warp(o, 40.0 + h, (0, 0, 0)); md[IDS["Freq"]] = 22.0; md[IDS["Amp"]] = 0.0010     # slow writhing
+    g0 = 1 + 4 * h
+    keys(o.data, "bevel_factor_end", [ease_out(win(f, g0, g0 + 24)) * (1 - ease_io(win(f, SW0 + 2 + 2 * h, SW1 + 4))) for f in F])
+
 # ---------------- set: dark charcoal cyclorama, glossy floor, haze, hidden lights ----------------
 bm = bmesh.new(); prof = [(-4.0, 0.0), (1.0, 0.0)] + [(1.0 + 1.2 * math.sin(a), 1.2 - 1.2 * math.cos(a)) for a in [math.pi / 2 * k / 10 for k in range(1, 11)]] + [(2.2, 3.0)]
 rowA = [bm.verts.new((-4.0, y, z)) for y, z in prof]; rowB = [bm.verts.new((4.0, y, z)) for y, z in prof]
@@ -706,7 +797,7 @@ cm, T = new_mat("cyc")
 co = T.n("ShaderNodeTexCoord").outputs["Object"]; cx, cy, cz = T.sep(co)
 isfloor = T.m("SUBTRACT", 1.0, T.m("DIVIDE", cz, 0.45), clamp=True)
 nzf = T.n("ShaderNodeTexNoise"); T.link(co, nzf.inputs["Vector"]); nzf.inputs["Scale"].default_value = 14
-rough = T.m("ADD", 0.13, T.m("MULTIPLY", nzf.outputs["Fac"], 0.12))
+rough = T.m("ADD", 0.17, T.m("MULTIPLY", nzf.outputs["Fac"], 0.12))
 far = T.m("DIVIDE", T.m("SUBTRACT", T.v("LENGTH", T.v("SUBTRACT", T.combine(cx, cy, 0.0), (0.15, 0.0, 0.0))), 0.20), 0.25, clamp=True)
 rough = T.m("ADD", rough, T.m("MULTIPLY", far, 0.35))   # glossy right under the shoe, softer further out   # semi-polished: a soft reflection under the shoe, no hard softbox blotches
 mott = T.n("ShaderNodeTexNoise"); T.link(co, mott.inputs["Vector"]); mott.inputs["Scale"].default_value = 3.0; mott.inputs["Detail"].default_value = 8
@@ -739,7 +830,7 @@ T.link(T.v("ADD", T.v("MULTIPLY", T.v("ADD", co, T.combine(T.keyed("mist_dx", [t
            T.v("SCALE", wn.outputs["Color"], scale=1.6)), nzm.inputs["Vector"])
 T.link(T.keyed("mist_w", [t * 0.06 for t in TIME]), nzm.inputs["W"]); nzm.inputs["Detail"].default_value = 4
 fall = T.m("POWER", T.m("SUBTRACT", 0.5, mz_, clamp=True), 2.0)
-mdens = T.m("MULTIPLY", T.m("MULTIPLY", T.m("POWER", T.m("SUBTRACT", nzm.outputs["Fac"], 0.48, clamp=True), 1.8), 6.0), fall)
+mdens = T.m("MULTIPLY", T.m("MULTIPLY", T.m("POWER", T.m("SUBTRACT", nzm.outputs["Fac"], 0.47, clamp=True), 1.8), 8.0), fall)
 mvol = T.n("ShaderNodeVolumePrincipled"); T.link(mdens, mvol.inputs["Density"]); mvol.inputs["Color"].default_value = (0.85, 0.85, 0.87, 1)
 out(T, None, mvol.outputs[0])
 bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
@@ -806,6 +897,10 @@ SET_OBJS = {"cyclorama", "haze", "mist", "dust", "softbox"}
 shoe_objs = [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and o_.name not in SET_OBJS]
 st.light_linking.receiver_collection = recv("strip_receivers", shoe_objs)
 bg.light_linking.receiver_collection = recv("glow_receivers", [cyc])
+ht = area("heat", (0.15, 0.10, 0.07), (0.15, 0.32, 0.0), 0.34, 2.6, (1.0, 0.33, 0.07), size_y=0.12); ht.visible_glossy = False
+ht.light_linking.receiver_collection = bg.light_linking.receiver_collection
+# veins stay inky: the big softbox doesn't light or reflect in them (only rim/strip/omni give thin highlights)
+sbox.light_linking.receiver_collection = recv("softbox_receivers", [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and not o_.name.startswith("veins_") and o_.name != "softbox"])
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True
 wd.node_tree.nodes["Background"].inputs[0].default_value = (0.010, 0.010, 0.012, 1); wd.node_tree.nodes["Background"].inputs[1].default_value = 1.0
 
@@ -832,7 +927,8 @@ for name, (f0, f1, p0, p1, l0, l1, lens, fs) in CFG["cams"].items():
         P.append(p); Lk.append(l)
     keys(co, "location", P, 3); keys(tg, "location", Lk, 3)
     co.data.dof.focus_object = None
-    keys(co.data, "dof.focus_distance", [(Vector(p) - Vector(l)).length - 0.035 for p, l in zip(P, Lk)])
+    rack = (lambda f: 1.0) if name == "wide" else (lambda f: 0.70 + 0.30 * smooth(win(f, f0 + 4, f0 + 20)))   # rack focus: threads -> part
+    keys(co.data, "dof.focus_distance", [(Vector(p) - Vector(l)).length * rack(f) - 0.035 for f, p, l in zip(F, P, Lk)])
 
 co, tg = make_cam("hero", 45, 6.3)
 hk = CFG["hero"]; P, Lk = [], []
