@@ -37,3 +37,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: keep product-set lighting dim and moody: low key light, the set falling into shadow, highlights only on edges. DON'T over-light so blacks turn grey and the haze goes milky. User: "we need dimmer lights not so bright".
 - DO give product models real proportions (low collar, tapered toe, rounded cross-section) and a bold, on-concept design graphic; a plain boxy shape with flat panels "doesn't look good".
 - DON'T let a bright softbox reflect off black design panels (they turn beige/gold): keep finished black materials low-reflectance; keep the rainbow reflections for the wet/slime phase.
+- DO make "venom" slime a web of thin, dark, glossy, branching veins that crawl over the object and across the floor (the classic Blender venom-effect grammar), not just a smooth glossy coat; keep the veins inky (no big softbox reflections on them).
