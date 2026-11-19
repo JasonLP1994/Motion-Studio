@@ -17,8 +17,8 @@ MODE = argv[1] if len(argv) > 1 else "preview"
 # ---------------- config: every colour and timing ----------------
 CFG = {
     "fps": 30, "frames": 360, "res": (1920, 1080),
-    "col": {"slime": "#030306", "solid": "#09090B", "white": "#EDECE8", "black": "#060607", "glow": "#FF6A12",
-            "floor": "#141416", "cyc": "#2A2B2F", "rim": "#FF6A14"},
+    "col": {"slime": "#030306", "solid": "#09090B", "white": "#EDECE8", "black": "#060607", "glow": "#3FB6FF",
+            "floor": "#141416", "cyc": "#2A2B2F", "rim": "#7FC8FF"},
     "wave1": (4, 40),            # displacer field sweeps heel -> toe through the slime shoe
     "melt": (40, 62),            # the shoe sags and liquifies into a puddle
     "burst": (62, 76),           # the parts burst up and apart (slow motion), strands snap
@@ -836,7 +836,7 @@ out(T, None, mvol.outputs[0])
 bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
 mist = obj_from_bm("mist", bm, gm, smooth_shade=False, centre=False); mist.scale = (1.6, 1.2, 0.10); mist.location = (0.15, 0.25, 0.05)
 # dust: tiny specks drifting slowly through the light
-dm, T = new_mat("dust"); out(T, bsdf(T, (0.8, 0.8, 0.8, 1), 0.5, Emission_Color=(1, 0.95, 0.9, 1), Emission_Strength=0.6))
+dm, T = new_mat("dust"); out(T, bsdf(T, (0.8, 0.8, 0.8, 1), 0.5, Emission_Color=(0.75, 0.88, 1.0, 1), Emission_Strength=0.6))
 me = bpy.data.meshes.new("dust_pts"); rd = random.Random(4)
 me.from_pydata([(rd.uniform(-0.25, 0.55), rd.uniform(-0.40, 0.55), rd.uniform(0.005, 0.32)) for _ in range(500)], [], [])
 dust = link_obj("dust", me)
@@ -867,26 +867,26 @@ sbm, T = new_mat("softbox")
 g = T.n("ShaderNodeTexCoord").outputs["Generated"]; gx, gy, gz = T.sep(g)
 grad = T.m("ADD", T.m("MULTIPLY", gx, 0.85), T.m("MULTIPLY", gy, 0.15))
 r = T.n("ShaderNodeValToRGB"); els = r.color_ramp.elements
-els[0].position, els[0].color = 0.0, (1.0, 0.08, 0.45, 1); els[1].position, els[1].color = 1.0, (0.25, 0.40, 1.0, 1)
-for pos_, col_ in [(0.28, (1.0, 0.30, 0.08, 1)), (0.52, (1.0, 0.78, 0.25, 1)), (0.78, (0.35, 0.85, 1.0, 1))]:
+els[0].position, els[0].color = 0.0, (0.010, 0.030, 0.38, 1); els[1].position, els[1].color = 1.0, (0.62, 0.88, 1.0, 1)   # dark blue -> light blue
+for pos_, col_ in [(0.35, (0.03, 0.14, 0.85, 1)), (0.68, (0.20, 0.55, 1.0, 1))]:
     e = els.new(pos_); e.color = col_
 T.link(grad, r.inputs["Fac"])
-em = T.n("ShaderNodeEmission"); T.link(r.outputs["Color"], em.inputs["Color"]); em.inputs["Strength"].default_value = CFG.get("softbox_strength", 13.0)
+em = T.n("ShaderNodeEmission"); T.link(r.outputs["Color"], em.inputs["Color"]); em.inputs["Strength"].default_value = CFG.get("softbox_strength", 16.0)
 out(T, em.outputs[0])
 bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=0.5)
 for v in bm.verts: v.co.x *= 0.50; v.co.y *= 0.36
 bmesh.ops.reverse_faces(bm, faces=bm.faces[:])          # emit downwards
 sbox = obj_from_bm("softbox", bm, sbm, smooth_shade=False, centre=False); sbox.location = (0.15, -0.03, 0.26)
 sbox.visible_camera = False; sbox.visible_shadow = False
-od = bpy.data.lights.new("omni", "POINT"); od.energy = 0.22; od.shadow_soft_size = 0.008; od.color = (1.0, 0.9, 0.8)
+od = bpy.data.lights.new("omni", "POINT"); od.energy = 0.22; od.shadow_soft_size = 0.008; od.color = (0.75, 0.88, 1.0)
 oo = link_obj("omni", od); oo.location = (0.25, -0.13, 0.12); oo.visible_camera = False
 # a faint cool rim from behind so the black slime and the finished silhouette separate from the dark set
-rl = area("rim", (0.10, 0.50, 0.22), (0.15, 0.0, 0.05), 0.35, CFG.get("rim_power", 3.0), (0.70, 0.82, 1.0), size_y=0.12)
+rl = area("rim", (0.10, 0.50, 0.22), (0.15, 0.0, 0.05), 0.35, CFG.get("rim_power", 3.0), (0.45, 0.75, 1.0), size_y=0.12)
 # product-shoot strip: a long thin highlight running along the side (reflection only, adds no light to the set)
-st = area("strip", (0.15, -0.42, 0.16), (0.15, 0.0, 0.05), 0.70, 7.0, (1.0, 0.97, 0.93), size_y=0.025)
+st = area("strip", (0.15, -0.42, 0.16), (0.15, 0.0, 0.05), 0.70, 7.0, (0.85, 0.93, 1.0), size_y=0.025)
 st.visible_diffuse = False; st.visible_volume_scatter = False
 # a warm glow pooled on the backdrop far behind the shoe (like the orange reference), never on the shoe
-bg = area("wall_glow", (0.15, 0.75, 0.02), (0.15, 1.6, 0.55), 0.6, 9.0, (1.0, 0.42, 0.12), size_y=0.3)
+bg = area("wall_glow", (0.15, 0.75, 0.02), (0.15, 1.6, 0.55), 0.6, 12.0, (0.04, 0.16, 1.0), size_y=0.3)
 bg.visible_glossy = False; bg.visible_volume_scatter = False
 # light linking: the strip only lights the shoe and its slime (no floor blotches); the glow only lights the wall
 def recv(name, objs):
@@ -897,7 +897,7 @@ SET_OBJS = {"cyclorama", "haze", "mist", "dust", "softbox"}
 shoe_objs = [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and o_.name not in SET_OBJS]
 st.light_linking.receiver_collection = recv("strip_receivers", shoe_objs)
 bg.light_linking.receiver_collection = recv("glow_receivers", [cyc])
-ht = area("heat", (0.15, 0.10, 0.07), (0.15, 0.32, 0.0), 0.34, 2.6, (1.0, 0.33, 0.07), size_y=0.12); ht.visible_glossy = False
+ht = area("heat", (0.15, 0.10, 0.07), (0.15, 0.32, 0.0), 0.34, 2.6, (0.35, 0.70, 1.0), size_y=0.12); ht.visible_glossy = False
 ht.light_linking.receiver_collection = bg.light_linking.receiver_collection
 # veins stay inky: the big softbox doesn't light or reflect in them (only rim/strip/omni give thin highlights)
 sbox.light_linking.receiver_collection = recv("softbox_receivers", [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and not o_.name.startswith("veins_") and o_.name != "softbox"])
