@@ -26,7 +26,7 @@ CFG = {
                  "tongue": (210, 236), "laces": (220, 248)},
     "wave2": (256, 282),         # one last wave through the whole slime shoe
     "set": 285,                  # it SETS: wet slime -> hard satin solid (hit + camera jolt)
-    "sweep": (290, 318),         # glowing wipe heel -> toe colours it black and white
+    "sweep": (290, 318),         # the wet slime DRAINS down off the set shoe (glowing curing edge) and stays only as the printed drips
     # edit: timeline markers bound to cameras
     "cuts": [(1, "wide"), (77, "sole"), (117, "toe"), (162, "heel"), (207, "laces"), (252, "hero")],
     # shot cameras: (first, last, pos start, pos end, look start, look end, lens mm, f-stop)
@@ -38,7 +38,7 @@ CFG = {
         "laces": (207, 251, (0.38, -0.21, 0.205), (0.345, -0.18, 0.190), (0.155, 0, 0.082), (0.15, 0, 0.084), 40, 11.0),
     },
     # hero orbit around the shoe (cylindrical: frame, angle deg, radius m, height m, look-at height m); -90 = side view
-    "hero": [(252, -142, 0.54, 0.135, 0.055), (285, -128, 0.52, 0.125, 0.055), (318, -84, 0.50, 0.110, 0.052), (360, -58, 0.47, 0.115, 0.050)],
+    "hero": [(252, -142, 0.54, 0.135, 0.055), (285, -128, 0.52, 0.125, 0.055), (318, -84, 0.50, 0.110, 0.055), (360, -58, 0.47, 0.118, 0.066)],
 }
 FPS, N = CFG["fps"], CFG["frames"]
 rnd = random.Random(11)
@@ -151,12 +151,12 @@ def obj_from_bm(name, bm, mat=None, smooth_shade=True, centre=True):
 
 # ---------------- the shoe shape (an original chunky runner) ----------------
 WTAB = [(0, 0.030), (0.12, 0.035), (0.35, 0.037), (0.55, 0.043), (0.72, 0.049), (0.86, 0.046), (0.95, 0.038), (1.0, 0.030)]
-HTAB = [(0, 0.104), (0.06, 0.112), (0.20, 0.113), (0.36, 0.104), (0.55, 0.083), (0.70, 0.065), (0.85, 0.050), (0.95, 0.041), (1.0, 0.035)]
+HTAB = [(0, 0.104), (0.06, 0.112), (0.20, 0.113), (0.36, 0.104), (0.55, 0.083), (0.70, 0.065), (0.85, 0.050), (0.95, 0.039), (1.0, 0.031)]
 NEXP = 2.35
 def W(u):
-    e = math.sqrt(max(0.0, 1 - (max(0.0, (0.07 - u) / 0.07)) ** 2)) * math.sqrt(max(0.0, 1 - (max(0.0, (u - 0.88) / 0.12)) ** 2))
+    e = math.sqrt(max(0.0, 1 - (max(0.0, (0.07 - u) / 0.07)) ** 2)) * math.sqrt(max(0.0, 1 - (max(0.0, (u - 0.80) / 0.20)) ** 2.4))
     return crs(WTAB, u) * e
-spring = lambda u: 0.015 * max(0.0, (u - 0.72) / 0.28) ** 2 + 0.004 * max(0.0, (0.10 - u) / 0.10) ** 2
+spring = lambda u: 0.021 * max(0.0, (u - 0.70) / 0.30) ** 2 + 0.004 * max(0.0, (0.10 - u) / 0.10) ** 2
 zm = lambda u: 0.040 - 0.014 * u          # midsole top
 cosu = lambda n, a=0.004, b=0.996: [a + (b - a) * (1 - math.cos(math.pi * i / (n - 1))) / 2 for i in range(n)]
 
@@ -215,7 +215,7 @@ def add_mods(o, solid=0.0, subd=2):
 # ---------------- keyed shader values shared by every shoe material ----------------
 SET, (SW0, SW1) = CFG["set"], CFG["sweep"]
 SOLID = [smooth(win(f, SET - 1, SET + 3)) for f in F]
-SWEEP = [lerp(-0.03, L + 0.03, ease_io(win(f, SW0, SW1))) for f in F]
+SWEEP = [lerp(0.16, -0.02, 0.5 * smooth(win(f, SW0, SW1)) + 0.5 * win(f, SW0, SW1)) for f in F]     # drain level (m): top of the shoe -> below the sole
 GLOW = [smooth(win(f, SW0 - 2, SW0 + 3)) * (1 - smooth(win(f, SW1 - 3, SW1 + 2))) for f in F]
 TIME = [f / FPS for f in F]
 
@@ -236,13 +236,15 @@ def skin(name, centroid, design, rough, design_bump=None):
         dcol = design if isinstance(design, tuple) else design(T, sx, sy, sz)
         dkw = {"Normal": design_bump(T, sx, sy, sz)} if design_bump else {}
         des = bsdf(T, dcol, rough, **dkw)
-    s1 = T.mixs(T.keyed(f"{name}_solid", SOLID), slime, solid)
+    s1 = T.mixs(T.m("MULTIPLY", T.keyed(f"{name}_solid", SOLID), 0.25), slime, solid)   # stays wet-looking after it sets
     sw = T.keyed(f"{name}_sweep", SWEEP)
-    mask = T.m("MULTIPLY", T.m("SUBTRACT", sw, sx), 200.0, clamp=True)
+    stn = T.n("ShaderNodeTexNoise"); T.link(T.combine(sx, sy, 0.0), stn.inputs["Vector"]); stn.inputs["Scale"].default_value = 55.0; stn.inputs["Detail"].default_value = 2
+    front = T.m("ADD", sw, T.m("MULTIPLY", T.m("SUBTRACT", stn.outputs["Fac"], 0.5), 0.034))     # streaky front: slime lags in runs
+    mask = T.m("MULTIPLY", T.m("SUBTRACT", sz, front), 400.0, clamp=True)
     s2 = T.mixs(mask, s1, des)
-    d = T.m("DIVIDE", T.m("SUBTRACT", sx, sw), 0.004)
+    d = T.m("DIVIDE", T.m("SUBTRACT", sz, front), 0.0016)
     edge = T.m("MULTIPLY", T.m("EXPONENT", T.m("MULTIPLY", T.m("MULTIPLY", d, d), -1.0)), T.keyed(f"{name}_glow", GLOW))
-    em = T.n("ShaderNodeEmission"); em.inputs["Color"].default_value = C["glow"]; T.link(T.m("MULTIPLY", edge, 9.0), em.inputs["Strength"])
+    em = T.n("ShaderNodeEmission"); em.inputs["Color"].default_value = C["glow"]; T.link(T.m("MULTIPLY", edge, 7.0), em.inputs["Strength"])
     add = T.n("ShaderNodeAddShader"); T.link(s2, add.inputs[0]); T.link(em.outputs[0], add.inputs[1])
     o = T.n("ShaderNodeOutputMaterial"); T.link(add.outputs[0], o.inputs["Surface"])
     disp = DISP.pop("h", None)
@@ -292,11 +294,18 @@ def logo_alpha(T, sx, sy, sz, x0, z0, h):
     T.link(T.combine(u, v, 0.0), tex.inputs["Vector"])
     return T.m("MULTIPLY", tex.outputs["Alpha"], T.m("GREATER_THAN", T.m("ABSOLUTE", sy), 0.022))
 def breathable(T, sx, sy, sz, scale=380.0):
-    """runner mesh: yarn ridges around open cells that show a grey underlay; returns (hole 0..1, height)"""
-    v = T.n("ShaderNodeTexVoronoi", feature="DISTANCE_TO_EDGE"); T.link(T.combine(sx, sy, T.m("MULTIPLY", sz, 1.4)), v.inputs["Vector"])
-    v.inputs["Scale"].default_value = scale
-    hole = T.m("DIVIDE", T.m("SUBTRACT", v.outputs["Distance"], 0.19), 0.05, clamp=True)
-    return hole, T.m("ADD", T.m("MULTIPLY", T.m("SUBTRACT", 1.0, hole), 0.8), T.m("MULTIPLY", knit(T, sx, sy, sz, 3200.0), 0.05))
+    """engineered knit: V-stitch columns (chevron loops) with a brickwork grid of small open holes; returns (hole 0..1, height 0..1)"""
+    f = scale * 2.4
+    c = T.m("MULTIPLY", T.m("ADD", sx, T.m("MULTIPLY", sy, 0.35)), f)
+    x = T.m("SUBTRACT", T.m("FRACT", c), 0.5)
+    r = T.m("ADD", T.m("MULTIPLY", sz, f * 1.5), T.m("MULTIPLY", T.m("ABSOLUTE", x), 1.2))
+    loop = T.m("MULTIPLY", T.m("ADD", 0.5, T.m("MULTIPLY", T.m("COSINE", T.m("MULTIPLY", r, 6.2832)), 0.5)),
+               T.m("SQRT", T.m("SUBTRACT", 1.0, T.m("MULTIPLY", T.m("MULTIPLY", x, x), 4.0), clamp=True)))
+    hc = T.m("DIVIDE", c, 3.0); hr = T.m("ADD", T.m("DIVIDE", T.m("MULTIPLY", sz, f * 1.5), 4.0), T.m("MULTIPLY", T.m("FLOOR", hc), 0.5))
+    hx = T.m("SUBTRACT", T.m("FRACT", hc), 0.5); hy = T.m("SUBTRACT", T.m("FRACT", hr), 0.5)
+    hd = T.m("SQRT", T.m("ADD", T.m("MULTIPLY", hx, hx), T.m("MULTIPLY", T.m("MULTIPLY", hy, hy), 0.56)))
+    hole = T.m("SUBTRACT", 1.0, T.m("DIVIDE", T.m("SUBTRACT", hd, 0.15), 0.05, clamp=True))
+    return hole, T.m("MULTIPLY", loop, T.m("SUBTRACT", 1.0, hole))
 
 def lining(T, sx, sy, sz):
     return bsdf(T, (0.025, 0.025, 0.027, 1), 0.9, Sheen_Weight=0.6, Normal=bump(T, knit(T, sx, sy, sz, 3600.0), 0.3, 0.0002))
@@ -345,14 +354,14 @@ def upper_shader(T, sx, sy, sz):
     mhole, mh = breathable(T, sx, sy, sz)
     logo = T.m("MULTIPLY", logo_alpha(T, sx, sy, sz, 0.113, 0.0478, 0.0138), T.m("SUBTRACT", 1.0, mask))
     fuzz = nse(T, sx, sy, sz, 2600.0, 2); orange = nse(T, sx, sy, sz, 900.0, 3)
-    DISP["h"] = T.m("ADD", T.m("ADD", T.m("MULTIPLY", raised, 0.0011), T.m("MULTIPLY", logo, 0.00022)),
+    DISP["h"] = T.m("ADD", T.m("ADD", T.m("MULTIPLY", raised, 0.0011), T.m("MULTIPLY", logo, 0.00050)),
                     T.m("ADD", T.m("MULTIPLY", T.m("MULTIPLY", mh, 0.00032), T.m("SUBTRACT", 1.0, mask)),
                         T.m("ADD", T.m("MULTIPLY", holes, -0.00035), T.m("ADD", T.m("MULTIPLY", stitch, -0.00012), T.m("MULTIPLY", crease, -0.00025)))))
     micro = T.m("ADD", T.m("ADD", T.m("MULTIPLY", orange, T.m("MULTIPLY", gloss, 0.06)), T.m("MULTIPLY", fuzz, T.m("MULTIPLY", suede, 0.5))),
                 T.m("MULTIPLY", knit(T, sx, sy, sz, 5200.0), T.m("MULTIPLY", T.m("SUBTRACT", 1.0, mask), 0.05)))
     nrm = bump(T, micro, 0.5, 0.00015)
     var = T.m("ADD", 0.90, T.m("MULTIPLY", nse(T, sx, sy, sz, 300.0), 0.10))
-    under = T.m("SUBTRACT", 1.0, T.m("MULTIPLY", mhole, 0.62))
+    under = T.m("MULTIPLY", T.m("SUBTRACT", 1.0, T.m("MULTIPLY", mhole, 0.62)), T.m("ADD", 0.80, T.m("MULTIPLY", mh, 0.20)))   # yarn shading
     white = ao(T, mulc(T, (0.86, 0.85, 0.82, 1), T.m("MULTIPLY", T.m("MULTIPLY", var, under), T.m("SUBTRACT", 1.0, T.m("MULTIPLY", holes, 0.75)))), 0.6)
     knit_b = bsdf(T, white, 0.85, Sheen_Weight=1.0, Sheen_Roughness=0.6, Normal=nrm)
     thread = (0.80, 0.80, 0.78, 1)
@@ -360,7 +369,9 @@ def upper_shader(T, sx, sy, sz):
     suede_b = bsdf(T, scol, 0.95, Sheen_Weight=0.35, Sheen_Roughness=0.3, Normal=nrm)
     patent = bsdf(T, ao(T, (0.004, 0.004, 0.005, 1), 0.3), 0.45, Specular_IOR_Level=0.03, Sheen_Weight=0.25, Sheen_Roughness=0.4, Normal=nrm)   # satin black drips (low reflectance so it stays black under the softbox)
     printed = bsdf(T, (0.008, 0.008, 0.009, 1), 0.28, Coat_Weight=0.3, Coat_Roughness=0.2, Normal=nrm)
-    sh = T.mixs(mask, knit_b, T.mixs(suede, patent, suede_b))
+    rim = T.m("MULTIPLY", gauss(T, T.m("ADD", sd_d, 0.00045), 0.00030), gloss)          # a wet bead along every drip edge
+    wet = bsdf(T, (0.004, 0.004, 0.005, 1), 0.06, Coat_Weight=1.0, Coat_Roughness=0.02, Normal=nrm)
+    sh = T.mixs(mask, knit_b, T.mixs(suede, T.mixs(rim, patent, wet), suede_b))
     return T.mixs(backfacing(T), T.mixs(logo, sh, printed), lining(T, sx, sy, sz))
 
 @shader
@@ -385,8 +396,10 @@ def tongue_shader(T, sx, sy, sz):
 @shader
 def midsole_shader(T, sx, sy, sz):
     """moulded foam: fine pores, flowing sculpted ribs, a sharper rib at the heel"""
-    rib = T.m("SINE", T.m("ADD", T.m("MULTIPLY", sz, 620.0), T.m("MULTIPLY", T.m("SINE", T.m("MULTIPLY", sx, 22.0)), 2.2)))
-    rib = T.m("MULTIPLY", T.m("POWER", T.m("ABSOLUTE", rib), 0.35), T.m("SUBTRACT", 1.0, T.m("DIVIDE", sx, 0.4, clamp=True)))
+    zg = T.m("ADD", T.m("ADD", 0.0215, T.m("MULTIPLY", T.m("SINE", T.m("ADD", T.m("MULTIPLY", sx, 21.0), 0.9)), 0.0045)),
+             T.m("MULTIPLY", T.m("DIVIDE", T.m("SUBTRACT", sx, 0.22), 0.08, clamp=True), 0.010))          # one flowing sculpted groove
+    pod = T.m("MULTIPLY", gauss(T, T.m("SUBTRACT", sz, T.m("SUBTRACT", 0.031, T.m("MULTIPLY", sx, 0.05))), 0.0010), T.m("LESS_THAN", sx, 0.12))
+    rib = T.m("SUBTRACT", 1.0, T.m("ADD", gauss(T, T.m("SUBTRACT", sz, zg), 0.0013), T.m("MULTIPLY", pod, 0.6)))
     pores = vor(T, sx, sy, sz, 5000.0)
     nrm = bump(T, T.m("ADD", T.m("MULTIPLY", rib, 0.6), T.m("MULTIPLY", pores, 0.08)), 0.7, 0.0008)
     spk = nse(T, sx, sy, sz, 900.0, 0)
@@ -429,7 +442,8 @@ def eyelet_shader(T, sx, sy, sz):
 
 # ---------------- build the parts ----------------
 parts = {}
-o = slab("outsole", lambda u: W(u) + 0.004, [(0.0, 0.004), (0.0015, 0.001), (0.004, 0.0), (0.0085, 0.0), (0.0095, 0.0015)], None)
+wrap = lambda u: 0.0085 + 0.011 * max(0.0, (u - 0.86) / 0.14) ** 1.5 + 0.007 * max(0.0, (0.07 - u) / 0.07) ** 1.5
+o = slab("outsole", lambda u: W(u) + 0.0058, [(0.0, 0.004), (0.0015, 0.001), (0.004, 0.0), (wrap, 0.0), (lambda u: wrap(u) + 0.001, 0.0016)], None)
 parts["outsole"] = o
 o = slab("midsole", lambda u: W(u) + 0.005, [(0.0085, 0.002), (0.010, 0.0), (lambda u: 0.5 * (0.010 + zm(u)), -0.0018),
                                               (lambda u: zm(u) - 0.002, 0.0), (lambda u: zm(u), 0.002)], None)
@@ -464,12 +478,12 @@ for side in (-1, 1):
     for i in range(17):
         for j in range(7): bmh.faces.new((vs[i][j], vs[i + 1][j], vs[i + 1][j + 1], vs[i][j + 1]))
 bf, bv = set(bmh.faces), set(bmh.verts); h0 = crs(HTAB, 0) + spring(0)
-loop = [(-0.002 + 0.0075 * math.cos(math.radians(a)) - 0.25 * (0.013 * math.sin(math.radians(a))), 0.0,
-         h0 + 0.006 + 0.013 * math.sin(math.radians(a))) for a in range(-80, 265, 15)]
+loop = [(-0.0015 + 0.0050 * math.cos(math.radians(a)) - 0.25 * (0.009 * math.sin(math.radians(a))), 0.0,
+         h0 + 0.004 + 0.009 * math.sin(math.radians(a))) for a in range(-80, 265, 15)]
 loop = [(loop[0][0], 0.0, h0 - 0.012)] + loop + [(loop[-1][0], 0.0, h0 - 0.012)]
-tube(bmh, loop, 0.0021, 8)
+tube(bmh, loop, 0.0011, 8)
 for v in bmh.verts:
-    if v not in bv: v.co.y *= 3.2          # flatten the cord into a strap
+    if v not in bv: v.co.y *= 5.0          # flatten into a thin fabric tab
 for f in bmh.faces:
     if f not in bf: f.material_index = 1
 bmesh.ops.recalc_face_normals(bmh, faces=bmh.faces[:])
@@ -482,9 +496,18 @@ for k in range(5):
     pts = []
     for s in range(11):
         t = s / 10; ph = lerp(-0.30, 0.30, t); u = lerp(ua, ub, t)
-        x, y, z = sect(u, ph, 1.0); pts.append((x, y, z + 0.0034 + 0.0018 * math.sin(math.pi * t)))
+        x, y, z = sect(u, ph, 1.0); pts.append((x, y, z + 0.0006 + 0.0048 * math.sin(math.pi * t) ** 0.5))   # sinks into each eyelet
+    tube(bml, pts, 0.0027, 10, flat=0.38)
+for side in (-1, 1):                      # loose lace ends from the top eyelets, hanging over the side
+    c0 = Vector(sect(0.44, side * 0.30)); out_ = Vector((0, side * 1.0, 0)); pts = []
+    for s_ in range(12):
+        t = s_ / 11; pts.append(tuple(c0 + Vector((-0.012 * t + 0.004 * math.sin(3 * t), 0, 0.0035 * math.sin(math.pi * min(1, t * 1.6)) - 0.040 * t ** 1.6)) + out_ * (0.008 + 0.030 * t ** 0.6)))
     tube(bml, pts, 0.0027, 10, flat=0.38)
 bf = set(bml.faces)
+for side in (-1, 1):                      # plastic aglets on the lace ends (metal slot)
+    c0 = Vector(sect(0.44, side * 0.30)); out_ = Vector((0, side * 1.0, 0))
+    e = [tuple(c0 + Vector((-0.012 * t + 0.004 * math.sin(3 * t), 0, 0.0035 * math.sin(math.pi * min(1, t * 1.6)) - 0.040 * t ** 1.6)) + out_ * (0.008 + 0.030 * t ** 0.6)) for t in (0.93, 1.0, 1.06)]
+    tube(bml, e, 0.0016, 10)
 for k in range(5):
     for u in (0.44 + 0.047 * k, 0.44 + 0.047 * k + 0.03):
         for ph in (-0.30, 0.30):
@@ -609,19 +632,20 @@ for k, (nm, u, side) in enumerate(DRIPS):
     dr = obj_from_bm(f"drip{k}", teardrop(), slime_mat, centre=False); dr.parent = par; dr.location = p - home
     ph = rnd.uniform(0, 6); L0 = rnd.uniform(0.010, 0.022)
     vals = []
+    lnf = lambda f: L0 * (0.55 + 0.45 * math.sin(f * 0.12 + ph)) * (1 + 0.6 * smooth(win(f, M0, M1)))
     for f in F:
-        ln = L0 * (0.55 + 0.45 * math.sin(f * 0.12 + ph)) * (1 + 0.6 * smooth(win(f, M0, M1)))
-        if f >= SET: ln *= 1 - smooth(win(f, SET + 3, SET + 12))   # frozen at the hit, then retracts into the shell
+        ln = lnf(f)
+        if f >= SET: ln = lnf(SET) * (1 + 0.5 * smooth(win(f, SW0, SW1 - 6))) * (1 - smooth(win(f, SW1 - 5, SW1 + 3)))   # frozen at the hit, stretch as the slime drains, then let go
         vals.append((1, 1, max(0.02, ln / 0.01) if ln > 1e-4 else 0.001))
     keys(dr, "scale", vals, 3)
 
 def world_pt(nm, f, local):
     locs, rots, home = XF[nm]; return Vector(locs[f - 1]) + Euler(rots[f - 1]).to_matrix() @ Vector(local)
 
-def strand(name, nm, local, f_on, f_off, target, r0, snap=None):
+def strand(name, nm, local, f_on, f_off, target, r0, snap=None, K=9, beads=0):
     """a slime tendril from a point on a part (moving) to a fixed target; necks in the middle; snaps or merges"""
     cu = bpy.data.curves.new(name, "CURVE"); cu.dimensions = "3D"; cu.bevel_depth = 0.001; cu.bevel_resolution = 3; cu.use_fill_caps = True
-    K = 9; sp = cu.splines.new("NURBS"); sp.points.add(K - 1); sp.order_u = 4; sp.use_endpoint_u = True
+    sp = cu.splines.new("NURBS"); sp.points.add(K - 1); sp.order_u = 4; sp.use_endpoint_u = True
     o = link_obj(name, cu); o.data.materials.append(slime_mat)
     cos = [[] for _ in range(K)]; rads = [[] for _ in range(K)]
     T = Vector(target)
@@ -635,6 +659,7 @@ def strand(name, nm, local, f_on, f_off, target, r0, snap=None):
             P.z -= 0.25 * ln * math.sin(math.pi * s) * (0.6 + 1.2 * sn)
             neck = 0.35 + 0.65 * abs(2 * s - 1) ** 1.4
             r = thick * neck * (1 - sn * (1 - abs(2 * s - 1) ** 0.4))
+            if beads: r *= 1 + 1.1 * max(0.0, math.sin(math.pi * s * beads * 2 + f * 0.05)) ** 8 * (0.2 < s < 0.8)   # slime beading
             cos[i].append((P.x, P.y, P.z, 1.0)); rads[i].append(max(0.0, r))
     for i in range(K):
         keys(cu, f"splines[0].points[{i}].co", cos[i], 4); keys(cu, f"splines[0].points[{i}].radius", rads[i])
@@ -648,6 +673,30 @@ for nm, o in parts.items():
         tgt = home + lp
         strand(f"burst_{nm}{k}", nm, lp, B0 + 1, B1 + 8, tgt + Vector((0, 0, -0.004)), 2.4, snap=B0 + 9 + k * 2)
         strand(f"pull_{nm}{k}", nm, lp, a0 - 6, a1, tgt, 2.8)
+    for k, lp in enumerate(rnd.sample(verts, 5)):                       # extra thin, beaded threads
+        strand(f"thread_{nm}{k}", nm, lp, a0 - 4 + k, a1 - 1, home + lp + Vector((rnd.uniform(-0.01, 0.01), 0, -0.002)), 1.1, K=17, beads=3)
+# drops falling off the parts as they fly in, splashing flat on the floor
+bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=10, radius=0.0024)
+drop_me = bpy.data.meshes.new("drop"); bm.to_mesh(drop_me); bm.free()
+for p_ in drop_me.polygons: p_.use_smooth = True
+drop_me.materials.append(slime_mat)
+for nm, o in parts.items():
+    a0, a1 = CFG["assemble"][nm]; verts = [v.co.copy() for v in o.data.vertices]
+    low = sorted(verts, key=lambda c: c.z)[: max(8, len(verts) // 6)]
+    for k in range(3):
+        rel = int(a0 + (a1 - a0) * (0.15 + 0.25 * k)); P0 = world_pt(nm, rel, rnd.choice(low))
+        if P0.z < 0.02: continue
+        d = link_obj(f"drop_{nm}{k}", drop_me); g = 2.6; t_hit = math.sqrt(2 * (P0.z - 0.0012) / g) * FPS
+        locs, scs = [], []
+        for f in F:
+            t = (f - rel) / FPS
+            if f < rel: locs.append(tuple(P0)); scs.append((0.001,) * 3)
+            elif f - rel < t_hit:
+                locs.append((P0.x, P0.y, P0.z - 0.5 * g * t * t)); st_ = 1 + 0.5 * min(1, t * 3); scs.append((1 / st_ ** 0.5, 1 / st_ ** 0.5, st_))
+            else:
+                k2 = f - rel - t_hit; spread = 1 + 2.6 * (1 - math.exp(-k2 / 2.0)); fade = 1 - smooth(win(k2, 6, 16))
+                locs.append((P0.x, P0.y, 0.0006)); scs.append((max(0.001, spread * fade), max(0.001, spread * fade), max(0.001, 0.22 * fade)))
+        keys(d, "location", locs, 3); keys(d, "scale", scs, 3)
 
 # ---------------- set: dark charcoal cyclorama, glossy floor, haze, hidden lights ----------------
 bm = bmesh.new(); prof = [(-4.0, 0.0), (1.0, 0.0)] + [(1.0 + 1.2 * math.sin(a), 1.2 - 1.2 * math.cos(a)) for a in [math.pi / 2 * k / 10 for k in range(1, 11)]] + [(2.2, 3.0)]
@@ -657,7 +706,9 @@ cm, T = new_mat("cyc")
 co = T.n("ShaderNodeTexCoord").outputs["Object"]; cx, cy, cz = T.sep(co)
 isfloor = T.m("SUBTRACT", 1.0, T.m("DIVIDE", cz, 0.45), clamp=True)
 nzf = T.n("ShaderNodeTexNoise"); T.link(co, nzf.inputs["Vector"]); nzf.inputs["Scale"].default_value = 14
-rough = T.m("ADD", 0.18, T.m("MULTIPLY", nzf.outputs["Fac"], 0.20))
+rough = T.m("ADD", 0.13, T.m("MULTIPLY", nzf.outputs["Fac"], 0.12))
+far = T.m("DIVIDE", T.m("SUBTRACT", T.v("LENGTH", T.v("SUBTRACT", T.combine(cx, cy, 0.0), (0.15, 0.0, 0.0))), 0.20), 0.25, clamp=True)
+rough = T.m("ADD", rough, T.m("MULTIPLY", far, 0.35))   # glossy right under the shoe, softer further out   # semi-polished: a soft reflection under the shoe, no hard softbox blotches
 mott = T.n("ShaderNodeTexNoise"); T.link(co, mott.inputs["Vector"]); mott.inputs["Scale"].default_value = 3.0; mott.inputs["Detail"].default_value = 8
 fine = T.n("ShaderNodeTexNoise"); T.link(co, fine.inputs["Vector"]); fine.inputs["Scale"].default_value = 160; fine.inputs["Detail"].default_value = 6
 fcol = T.mixc(T.m("MULTIPLY", mott.outputs["Fac"], 1.0), (0.004, 0.004, 0.005, 1), (0.016, 0.016, 0.018, 1))
@@ -739,7 +790,22 @@ sbox.visible_camera = False; sbox.visible_shadow = False
 od = bpy.data.lights.new("omni", "POINT"); od.energy = 0.22; od.shadow_soft_size = 0.008; od.color = (1.0, 0.9, 0.8)
 oo = link_obj("omni", od); oo.location = (0.25, -0.13, 0.12); oo.visible_camera = False
 # a faint cool rim from behind so the black slime and the finished silhouette separate from the dark set
-rl = area("rim", (0.10, 0.50, 0.22), (0.15, 0.0, 0.05), 0.35, CFG.get("rim_power", 1.6), (0.70, 0.82, 1.0), size_y=0.12)
+rl = area("rim", (0.10, 0.50, 0.22), (0.15, 0.0, 0.05), 0.35, CFG.get("rim_power", 3.0), (0.70, 0.82, 1.0), size_y=0.12)
+# product-shoot strip: a long thin highlight running along the side (reflection only, adds no light to the set)
+st = area("strip", (0.15, -0.42, 0.16), (0.15, 0.0, 0.05), 0.70, 7.0, (1.0, 0.97, 0.93), size_y=0.025)
+st.visible_diffuse = False; st.visible_volume_scatter = False
+# a warm glow pooled on the backdrop far behind the shoe (like the orange reference), never on the shoe
+bg = area("wall_glow", (0.15, 0.75, 0.02), (0.15, 1.6, 0.55), 0.6, 9.0, (1.0, 0.42, 0.12), size_y=0.3)
+bg.visible_glossy = False; bg.visible_volume_scatter = False
+# light linking: the strip only lights the shoe and its slime (no floor blotches); the glow only lights the wall
+def recv(name, objs):
+    col = bpy.data.collections.new(name)
+    for o_ in objs: col.objects.link(o_)
+    return col
+SET_OBJS = {"cyclorama", "haze", "mist", "dust", "softbox"}
+shoe_objs = [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and o_.name not in SET_OBJS]
+st.light_linking.receiver_collection = recv("strip_receivers", shoe_objs)
+bg.light_linking.receiver_collection = recv("glow_receivers", [cyc])
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True
 wd.node_tree.nodes["Background"].inputs[0].default_value = (0.010, 0.010, 0.012, 1); wd.node_tree.nodes["Background"].inputs[1].default_value = 1.0
 
@@ -768,7 +834,7 @@ for name, (f0, f1, p0, p1, l0, l1, lens, fs) in CFG["cams"].items():
     co.data.dof.focus_object = None
     keys(co.data, "dof.focus_distance", [(Vector(p) - Vector(l)).length - 0.035 for p, l in zip(P, Lk)])
 
-co, tg = make_cam("hero", 45, 9.0)
+co, tg = make_cam("hero", 45, 6.3)
 hk = CFG["hero"]; P, Lk = [], []
 def hero_at(f):
     for (fa, *a), (fb, *b) in zip(hk, hk[1:]):
@@ -798,6 +864,11 @@ if MODE == "preview":    # lean settings for local previews only (the farm file 
             if md.type == "SUBSURF": md.render_levels = min(md.render_levels, 1)
 cy.caustics_reflective = False; cy.caustics_refractive = False; cy.volume_step_rate = 8.0 if MODE == "preview" else 1.0
 cy.use_light_tree = True; cy.use_animated_seed = True; cy.sample_clamp_indirect = 8.0
+sc.use_nodes = True; cnt = sc.node_tree; cnt.nodes.clear()
+rl_ = cnt.nodes.new("CompositorNodeRLayers"); gl = cnt.nodes.new("CompositorNodeGlare"); cmp_ = cnt.nodes.new("CompositorNodeComposite")
+gl.glare_type = "FOG_GLOW"; gl.quality = "MEDIUM"; gl.threshold = 1.2; gl.size = 7; gl.mix = -0.75
+cnt.links.new(rl_.outputs["Image"], gl.inputs["Image"]); cnt.links.new(gl.outputs["Image"], cmp_.inputs["Image"])
+sc.render.use_compositing = True
 sc.view_settings.view_transform = "AgX"
 try: sc.view_settings.look = "AgX - Medium High Contrast"
 except TypeError: pass

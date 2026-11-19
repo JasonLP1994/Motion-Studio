@@ -112,13 +112,16 @@ n = int(0.5 * SR); t = np.arange(n) / SR
 add(band(rng.standard_normal(n), 1500, 9000) * np.exp(-t * 40) + np.sin(2 * np.pi * 55 * t) * np.exp(-t * 6) * 0.8, t_of(SET), 0.55)  # crack + sub
 for k in range(5): add(snap(), t_of(SET + 4 + k * 1.6), 0.2, rng.uniform(-0.5, 0.5))         # drips snapping back
 
-# ---- 9.8-10.9 s: the glowing wipe: rising sizzle + glassy shimmer ----
+# ---- 9.6-10.6 s: the slime drains off (curing glow edge): sizzle, slide, shimmer ----
 a, b = t_of(SWEEP[0]), t_of(SWEEP[1]); n = int((b - a + 0.4) * SR); t = np.arange(n) / SR
 siz = formant(rng.standard_normal(n), 2500 + 4500 * np.clip(t / (b - a), 0, 1), 0.3) * np.sin(np.pi * np.clip(t / (b - a + 0.4), 0, 1)) ** 0.8
 shim = sum(np.sin(2 * np.pi * f0 * t) * np.exp(-t * 2.2) for f0 in (1320, 1980, 2640, 3520)) * 0.08
 add(siz + shim, a, 0.35, 0.0)
 add(load("transition/fs-786514-swoosh-v2.ogg", 1.1), a - 0.05, 0.3)
 add(load("ding/kenney-interface-glass-002.ogg", 0.8), b, 0.25)
+add(squelch(b - a, 900, 160), a, 0.40)                                                       # the slime sliding down off the shoe
+for k in range(6): add(glorp(rng.uniform(0.10, 0.18), rng.uniform(260, 420), rng.uniform(80, 130)), b - 0.15 + k * 0.05, 0.22, rng.uniform(-0.5, 0.5))  # drips letting go
+add(load("whoosh/fs-683101-quick-woosh.ogg", 0.7), t_of(330) - 0.1, 0.18)                    # end logo in
 
 mix = mix[: int(DUR * SR)]
 fade = int(0.6 * SR); mix[-fade:] *= np.linspace(1, 0, fade)[:, None]
