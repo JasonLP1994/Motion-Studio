@@ -439,7 +439,7 @@ def heel_shader(T, sx, sy, sz):
     peb = vor(T, sx, sy, sz, 1300.0)
     logo = logo_alpha(T, sx, sy, sz, 0.005, 0.0495, 0.0090)
     nrm = bump(T, T.m("ADD", T.m("MULTIPLY", peb, 0.3), T.m("MULTIPLY", logo, 0.6)), 0.6, 0.0004)
-    leather = bsdf(T, ao(T, C["black"]), T.m("ADD", 0.32, T.m("MULTIPLY", peb, 0.15)), Coat_Weight=0.25, Coat_Roughness=0.25, Normal=nrm)
+    leather = bsdf(T, ao(T, (0.0035, 0.0045, 0.0075, 1)), T.m("ADD", 0.40, T.m("MULTIPLY", peb, 0.15)), Specular_IOR_Level=0.25, Coat_Weight=0.12, Coat_Roughness=0.3, Normal=nrm)   # cool near-black so it never reads brown under the strip light
     DISP["h"] = T.m("MULTIPLY", logo, 0.00022)
     return T.mixs(backfacing(T), T.mixs(logo, leather, bsdf(T, (0.80, 0.80, 0.78, 1), 0.35, Coat_Weight=0.3, Normal=nrm)), lining(T, sx, sy, sz))
 
@@ -922,7 +922,7 @@ gli = area("glint", (0.5, -0.30, 0.13), (0.15, 0.0, 0.05), 0.030, 0.0, (0.55, 0.
 gli.visible_volume_scatter = False
 gli.light_linking.receiver_collection = recv("glint_receivers", [parts[n_] for n_ in parts])
 keys(gli, "location", [(lerp(0.55, -0.25, ease_io(win(f, GL0, GL1))), -0.30, 0.13) for f in F], 3)
-keys(gli.data, "energy", [3.5 * math.sin(math.pi * win(f, GL0, GL1)) ** 0.6 for f in F])
+keys(gli.data, "energy", [2.0 * math.sin(math.pi * win(f, GL0, GL1)) ** 0.6 for f in F])
 ht = area("heat", (0.15, 0.10, 0.07), (0.15, 0.32, 0.0), 0.34, 2.6, (0.35, 0.70, 1.0), size_y=0.12); ht.visible_glossy = False
 ht.light_linking.receiver_collection = bg.light_linking.receiver_collection
 # veins stay inky: the big softbox doesn't light or reflect in them (only rim/strip/omni give thin highlights)

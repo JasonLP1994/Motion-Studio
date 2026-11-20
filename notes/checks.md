@@ -41,3 +41,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO light the slime shoe ident in dark blue and light blue (navy-to-ice softbox, deep blue backdrop glow, icy drain edge, cool grade); no rainbow or orange.
 - DO start the slime shoe all white (triple white); the black-and-white design only appears once the slime drains off.
 - DON'T hide Cycles noise with ffmpeg median/nlmeans smoothing (it smears, darkens and erases fine detail like veins). DO denoise with scripts/denoise/oidn_render.py (Intel OIDN with albedo + normal passes).
+- DO keep dark leather parts a cool near-black (slight blue) under the blue lighting; neutral black read as brown/tan at the heel.
