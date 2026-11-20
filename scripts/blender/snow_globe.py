@@ -2,7 +2,7 @@
 # Usage: blender -b --factory-startup -P scripts/blender/snow_globe.py -- <out.blend> [preview|farm]
 # A connected clay-toy mini town (flush rounded tiles, a winding icy path, a town square with the tree, three houses)
 # in ONE blue colour family with a single warm accent, inside a glass snow globe on a soft snow mound. Snow drifts
-# down, the lights twinkle, the camera sways. Everything loops seamlessly. Infinite soft pastel-blue backdrop.
+# down, the lights twinkle, the camera orbits the globe once. Everything loops seamlessly. Infinite soft pastel-blue backdrop.
 # Plan: notes/snow-globe/plan.md. Style grammar from references/snow-globe/ (no copied content).
 # Props: Kenney Holiday Kit (CC0) from inputs/models/kenney-holiday-kit/ (local only), rounded off and recoloured.
 import bpy, bmesh, math, random, os, sys, colorsys
@@ -65,8 +65,9 @@ CFG = {
     "view": ("Standard", "None"),
     "light": {"key": 2300, "fill": 700, "back": 700, "world": 0.55},
     "snow": {"count": 700, "size": (0.014, 0.032), "swirl": 0.10},
-    # camera: orbit around the globe (azimuth deg, sway deg, elevation deg, lens mm, target z, distance)
-    "cam": {"az": -62.0, "sway": 10.0, "el": 33.0, "lens": 70.0, "target_z": 1.1, "dist": 14.0, "fstop": 8.0}   # close like the reference: the town fills ~60% of the width,
+    # camera: a full orbit around the globe each loop (start azimuth deg, orbit deg per loop, elevation deg, lens mm,
+    # target z, distance). Framed close like the reference: the town fills ~60% of the width.
+    "cam": {"az": -62.0, "orbit": 360.0, "el": 33.0, "lens": 40.0, "target_z": 1.1, "dist": 8.0, "fstop": 8.0}   # close like the reference: the town fills ~60% of the width,
 }
 FPS, N = CFG["fps"], CFG["frames"]
 C = CFG["col"]
@@ -274,6 +275,14 @@ def house(k, tile, off, size, roof_h, ci, face, steeple):
         parts.append(rbox(f"h{k}_wf{s}", (0.14, 0.03, 0.14), (x + wx, fy - 0.004, z + h * 0.58), clay(C["roof_snow"], 0.6), r=0.02))
         parts.append(rbox(f"h{k}_w{s}", (0.10, 0.03, 0.10), (x + wx, fy - 0.012, z + h * 0.58), glow, r=0.015))
     parts.append(rbox(f"h{k}_gw", (0.075, 0.03, 0.075), (x, fy - 0.07, z + h + roof_h * 0.32), glow, r=0.033))
+    by = y + d / 2                       # windows on the back and sides too: the camera orbits all the way round
+    for s, wx in enumerate((-w * 0.30, w * 0.30)):
+        parts.append(rbox(f"h{k}_bwf{s}", (0.14, 0.03, 0.14), (x + wx, by + 0.004, z + h * 0.58), clay(C["roof_snow"], 0.6), r=0.02))
+        parts.append(rbox(f"h{k}_bw{s}", (0.10, 0.03, 0.10), (x + wx, by + 0.012, z + h * 0.58), glow, r=0.015))
+    for s, sx in enumerate((-1, 1)):
+        parts.append(rbox(f"h{k}_swf{s}", (0.03, 0.14, 0.14), (x + sx * (w / 2 + 0.004), y, z + h * 0.58), clay(C["roof_snow"], 0.6), r=0.02))
+        parts.append(rbox(f"h{k}_sw{s}", (0.03, 0.10, 0.10), (x + sx * (w / 2 + 0.012), y, z + h * 0.58), glow, r=0.015))
+    parts.append(rbox(f"h{k}_bgw", (0.075, 0.03, 0.075), (x, by + 0.07, z + h + roof_h * 0.32), glow, r=0.033))
     if steeple:
         sw = 0.20
         parts.append(rbox(f"h{k}_tower", (sw, sw, 0.30), (x, fy + 0.02, z + h + roof_h * 0.5 + 0.12), clay(C["house"][ci]), r=0.03))
@@ -426,19 +435,36 @@ keys(bpy.data.materials["window_glow"].node_tree, 'nodes["Emission"].inputs[1].d
 keys(MATS["clay_attr"].node_tree, 'nodes["gold_glow"].outputs[0].default_value',
      [1.2 + 1.0 * max(0.0, math.sin(2 * math.pi * 2 * T_OF(f))) ** 4 for f in F])
 
-# ---------------- set: infinite soft pastel-blue backdrop (a huge sweep with a gentle curve), soft studio light ----------------
-bm = bmesh.new(); W_, D_, Hh, Rc = 260.0, 120.0, 120.0, 45.0
-prof = [(-D_, 0.0)] + [(Rc * math.sin(a), Rc - Rc * math.cos(a)) for a in [i * (math.pi / 2) / 24 for i in range(25)]] + [(Rc, Hh)]
-rows = [[bm.verts.new((xx, py + 14.0, pz + GROUND)) for (py, pz) in prof] for xx in (-W_ / 2, W_ / 2)]
-for k in range(len(prof) - 1): bm.faces.new([rows[0][k], rows[1][k], rows[1][k + 1], rows[0][k + 1]])
-cyc = obj_from_bm("cyclorama", bm, clay(C["backdrop"], 0.95))
-cyc.rotation_euler.z = AZ + math.pi / 2           # the sweep curves up behind the globe as seen from the camera
+# ---------------- set: infinite soft pastel-blue backdrop all the way round (a huge bowl), soft studio light ----------------
+# floor out to RF, a quarter-circle cove of radius RCV, then a wall: no edge or corner from any orbit angle
+bm = bmesh.new(); RF, RCV, HW, SEGB = 30.0, 35.0, 160.0, 128
+prof = [(0.0, 0.0)] + [(RF * k / 6, 0.0) for k in range(1, 7)] + \
+       [(RF + RCV * math.sin(a), RCV - RCV * math.cos(a)) for a in [i * (math.pi / 2) / 24 for i in range(1, 25)]] + [(RF + RCV, HW)]
+ringsB = []
+for (rr, zz) in prof:
+    if rr == 0.0: ringsB.append([bm.verts.new((0, 0, GROUND))]); continue
+    ringsB.append([bm.verts.new((rr * math.cos(2 * math.pi * k / SEGB), rr * math.sin(2 * math.pi * k / SEGB), zz + GROUND)) for k in range(SEGB)])
+for k in range(SEGB): bm.faces.new([ringsB[0][0], ringsB[1][(k + 1) % SEGB], ringsB[1][k]])
+for r_ in range(1, len(ringsB) - 1):
+    A_, B_ = ringsB[r_], ringsB[r_ + 1]
+    for k in range(SEGB): bm.faces.new([A_[k], A_[(k + 1) % SEGB], B_[(k + 1) % SEGB], B_[k]])
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+cyc = obj_from_bm("backdrop_bowl", bm, clay(C["backdrop"], 0.95))
+for f_ in cyc.data.polygons: f_.use_smooth = True
+if cyc.data.polygons[0].normal.z < 0:      # face the inside (up / towards the globe)
+    bm2 = bmesh.new(); bm2.from_mesh(cyc.data); bmesh.ops.reverse_faces(bm2, faces=bm2.faces); bm2.to_mesh(cyc.data); bm2.free()
+
+# the camera rig: an empty at the globe's centre axis; it turns once per loop and carries the camera, the lights and
+# the glass highlight cards, so the approved lighting looks the same from every angle (like a turntable)
+rig = link_obj("cam_rig", None)
+keys(rig, "rotation_euler", [(0.0, 0.0, math.radians(CFG["cam"]["orbit"]) * T_OF(f)) for f in F], 3)
 
 def around(a_deg, r, z): a = AZ + math.radians(a_deg); return (r * math.cos(a), r * math.sin(a), z)
 def area(name, loc, size, energy, col=(1, 1, 1)):
     ld = bpy.data.lights.new(name, "AREA"); ld.size = size; ld.energy = energy; ld.color = col; ld.shape = "DISK"
     lo = link_obj(name, ld); lo.location = loc; lo.visible_camera = False; lo.visible_glossy = False; lo.visible_transmission = False
     lo.rotation_euler = (Vector((0, 0, GC * 0.5)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+    lo.parent = rig
     return lo
 area("key", around(-45, 13, 15), 16.0, CFG["light"]["key"], (1.0, 0.98, 0.95))     # big soft top-left key: soft shadows like the reference
 area("fill", around(60, 15, 4), 18.0, CFG["light"]["fill"], (0.88, 0.93, 1.0))
@@ -461,6 +487,7 @@ def reflect_card(name, a_deg, el_deg, dist, w, h, strength):
     ob.location = (dist * math.cos(el) * math.cos(a), dist * math.cos(el) * math.sin(a), GC + dist * math.sin(el))
     ob.rotation_euler = (Vector((0, 0, GC)) - ob.location).to_track_quat("Z", "Y").to_euler()
     for k_ in ("visible_camera", "visible_diffuse", "visible_shadow", "visible_transmission", "visible_volume_scatter"): setattr(ob, k_, False)
+    ob.parent = rig
     return ob
 reflect_card("glass_card_top", -20, 80, 11, 6.0, 6.0, CFG["glass_card"])
 reflect_card("glass_card_rim", 150, 25, 11, 5.0, 9.0, CFG["glass_card"] * 0.4)
@@ -468,18 +495,16 @@ reflect_card("glass_card_rim", 150, 25, 11, 5.0, 9.0, CFG["glass_card"] * 0.4)
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True
 bgn = wd.node_tree.nodes["Background"]; bgn.inputs[0].default_value = hexc(C["world"]); bgn.inputs[1].default_value = CFG["light"]["world"]
 
-# ---------------- camera: gentle sway around the globe (one sine cycle per loop) ----------------
+# ---------------- camera: rides the rig on a circle just outside the globe (one full orbit per loop) ----------------
 cc = CFG["cam"]
 cd = bpy.data.cameras.new("cam"); cd.lens = cc["lens"]; cd.sensor_width = 36; cd.clip_start = 0.1; cd.clip_end = 600
 cam = link_obj("cam", cd); sc.camera = cam
 tgt = link_obj("cam_target", None); tgt.location = (0, 0, cc["target_z"])
 tr_ = cam.constraints.new("TRACK_TO"); tr_.target = tgt; tr_.track_axis = "TRACK_NEGATIVE_Z"; tr_.up_axis = "UP_Y"
 cd.dof.use_dof = True; cd.dof.focus_object = tgt; cd.dof.aperture_fstop = cc["fstop"]
-pos = []
-for f in F:
-    a = math.radians(cc["az"] + cc["sway"] * math.sin(2 * math.pi * T_OF(f))); el = math.radians(cc["el"])
-    pos.append((cc["dist"] * math.cos(el) * math.cos(a), cc["dist"] * math.cos(el) * math.sin(a), cc["target_z"] + cc["dist"] * math.sin(el)))
-keys(cam, "location", pos, 3)
+el = math.radians(cc["el"])
+cam.parent = rig
+cam.location = (cc["dist"] * math.cos(el) * math.cos(AZ), cc["dist"] * math.cos(el) * math.sin(AZ), cc["target_z"] + cc["dist"] * math.sin(el))
 
 # ---------------- render settings ----------------
 sc.render.engine = "CYCLES"; cy = sc.cycles
