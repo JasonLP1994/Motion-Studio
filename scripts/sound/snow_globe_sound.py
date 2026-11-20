@@ -1,13 +1,13 @@
-"""Snow globe soundtrack: an original music-box tune + sparkle chimes, a seamless 10 s loop.
-96 BPM -> 16 beats = exactly 10 s, so the loop repeats on the bar. Tails that run past 10 s wrap round to the
+"""Snow globe soundtrack: an original music-box waltz + sparkle chimes, a seamless 15 s loop.
+3/4 time at 96 BPM -> 8 bars = 24 beats = exactly 15 s, so the loop repeats on the bar. Tails that run past 10 s wrap round to the
 start (circular mix), so the join is inaudible. Synthesised here, no samples, no paid music.
 Usage: python3 scripts/sound/snow_globe_sound.py <out.wav>   (then loudness-normalise, see the notes)
 """
 import sys, wave
 import numpy as np
 
-SR, BPM, BEATS = 48000, 96, 16
-BEAT = 60.0 / BPM; DUR = BEAT * BEATS                      # 10.0 s
+SR, BPM, BEATS, BAR = 48000, 96, 24, 3
+BEAT = 60.0 / BPM; DUR = BEAT * BEATS                      # 15.0 s
 L = int(round(DUR * SR))
 mix = np.zeros((L, 2))
 rng = np.random.default_rng(11)
@@ -41,27 +41,35 @@ def chime(f, dur=2.8):
     s = sum(a * np.sin(2 * np.pi * f * m * t) * np.exp(-t * d) for m, a, d in ((1, 1, 1.6), (2.76, 0.45, 3.0), (5.40, 0.2, 5.0), (8.93, 0.08, 8.0)))
     return s * np.minimum(1, t / 0.004)
 
-# melody (beat, note, length in beats) - original tune in C major over C | Am | F | G
-MEL = [(0, "E5", 1), (1, "G5", 1), (2, "C6", 1.5), (3.5, "B5", .5),
-       (4, "A5", 1), (5, "E5", 1), (6, "G5", 2),
-       (8, "F5", 1), (9, "A5", 1), (10, "C6", 1), (11, "A5", 1),
-       (12, "G5", 1), (13, "D5", .5), (13.5, "E5", .5), (14, "G5", 1), (15, "B4", 1)]
+# melody (beat, note, length in beats) - original waltz in C major, 8 bars of 3/4:
+# C | Am | F | G | C | Am | Dm G | C
+MEL = [(0, "E5", 2), (2, "G5", 1),
+       (3, "C6", 2), (5, "B5", 1),
+       (6, "A5", 1.5), (7.5, "G5", .5), (8, "F5", 1),
+       (9, "D5", 2), (11, "G5", 1),
+       (12, "E5", 2), (14, "G5", 1),
+       (15, "C6", 1), (16, "E6", 1), (17, "D6", 1),
+       (18, "C6", 1), (19, "A5", 1), (20, "B5", 1),
+       (21, "C6", 3)]
 for b, n, ln in MEL:
     place(musicbox(hz(n), 1.6 + ln), b * BEAT + rng.uniform(0, 0.008), 0.55, rng.uniform(-0.15, 0.15))
 
-# soft accompaniment: broken chords in eighths, lower and quieter
-CHORDS = [["C4", "G4", "E4", "G4"], ["A3", "E4", "C4", "E4"], ["F3", "C4", "A3", "C4"], ["G3", "D4", "B3", "D4"]]
+# soft waltz accompaniment: low root on beat 1, two light chord notes on beats 2 and 3
+CHORDS = [["C3", "E4", "G4"], ["A2", "C4", "E4"], ["F2", "A3", "C4"], ["G2", "B3", "D4"],
+          ["C3", "E4", "G4"], ["A2", "C4", "E4"], ["D3", "F3", "B3"], ["C3", "E4", "G4"]]
 for bar, ch in enumerate(CHORDS):
-    for k in range(8):
-        n = ch[k % 4]
-        place(musicbox(hz(n), 1.8, 0.6), (bar * 4 + k * 0.5) * BEAT + rng.uniform(0, 0.006), 0.20 if k % 2 else 0.26, -0.25 + 0.5 * (k % 2))
-    place(musicbox(hz(ch[0][:-1] + str(int(ch[0][-1]) - 1)), 3.0, 0.4), bar * 4 * BEAT, 0.30, 0.0)   # low root on the bar
+    b0 = bar * BAR
+    place(musicbox(hz(ch[0]), 3.0, 0.4), b0 * BEAT, 0.32, 0.0)
+    for k, n in ((1, ch[1]), (2, ch[2])):
+        place(musicbox(hz(n), 1.6, 0.6), (b0 + k) * BEAT + rng.uniform(0, 0.006), 0.20, (-0.25, 0.25)[k - 1])
+    for k, n in ((1, ch[2]), (2, ch[1])):
+        place(musicbox(hz(n), 1.4, 0.5), (b0 + k) * BEAT + rng.uniform(0, 0.006), 0.10, (0.25, -0.25)[k - 1])
 
-# sparkle chimes on the gold twinkles (peaks at 1.25 s and 6.25 s) + a light shimmer through the loop
-for t0 in (1.25, 6.25):
+# sparkle chimes on the gold twinkles (they peak at 1/8 and 5/8 of the loop) + a light shimmer through the loop
+for t0 in (DUR * 0.125, DUR * 0.625):
     for k, n in enumerate(("E7", "G7", "C8")):
         place(chime(hz(n)), t0 + k * 0.07, 0.10, (-0.4, 0.0, 0.4)[k])
-for k in range(10):
+for k in range(14):
     place(chime(hz(rng.choice(["C7", "E7", "G7", "A7", "D7"])), 1.6), rng.uniform(0, DUR), 0.035, rng.uniform(-0.7, 0.7))
 
 # small room reverb, applied circularly so the tail also wraps round the loop

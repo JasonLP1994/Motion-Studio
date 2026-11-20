@@ -1,4 +1,4 @@
-# CHRISTMAS SNOW GLOBE (16:9, 1920x1080, 30 fps, 300 frames = a 10 s seamless loop) in Blender Cycles.
+# CHRISTMAS SNOW GLOBE (16:9, 1920x1080, 30 fps, 450 frames = a 15 s seamless loop) in Blender Cycles.
 # Usage: blender -b --factory-startup -P scripts/blender/snow_globe.py -- <out.blend> [preview|farm]
 # A connected clay-toy mini town (flush rounded tiles, a winding icy path, a town square with the tree, three houses)
 # in ONE blue colour family with a single warm accent, inside a glass snow globe on a soft snow mound. Snow drifts
@@ -17,7 +17,7 @@ KIT = os.path.join(ROOT, "inputs/models/kenney-holiday-kit/kit/Models/GLB format
 
 # ---------------- config: every colour, size, place and timing ----------------
 CFG = {
-    "fps": 30, "frames": 300, "res": (1920, 1080),
+    "fps": 30, "frames": 450, "res": (1920, 1080),
     "col": {   # one blue family + snow + ONE warm accent (glow/gold)
         "backdrop": "#C4DEF7", "world": "#DCEBFA",
         "tiles": ["#6FA9E6", "#86B8EC", "#5C99DD"], "tile_snow": "#EEF5FD", "path": "#7DB2EA", "plaza": "#94C1EE",
@@ -388,7 +388,7 @@ band = cyl("base_band", FR + 0.30, 0.20, (0, 0, -0.13 - BH * 0.5), clay(C["band"
 for ob in (lip, base, band): smooth_normals(ob, 40)
 GROUND = -0.13 - BH
 
-# ---------------- snow inside the globe (geometry nodes, loops every 10 s) ----------------
+# ---------------- snow inside the globe (geometry nodes, loops every 15 s) ----------------
 SNOWMAT, Tm = new_mat("snowflake")
 sb = clay_bsdf(Tm, hexc(C["snow"]), 0.6); sb.inputs["Subsurface Weight"].default_value = 0.4
 em = Tm.n("ShaderNodeEmission"); em.inputs["Color"].default_value = hexc(C["snow"]); em.inputs["Strength"].default_value = 0.35
