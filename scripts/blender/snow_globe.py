@@ -26,7 +26,7 @@ CFG = {
         "glow": "#FFC970", "gold": "#F2C14E", "snow": "#FFFFFF",
     },
     "blue_hue": 0.588, "blue_sat": 0.62,          # every prop colour is remapped onto this hue (HLS)
-    "tile": 1.05, "gap": 0.03, "tile_base_h": 0.42, "prop_scale": 1.2,   # prop_scale: every house and prop on the tiles
+    "tile": 1.05, "gap": 0.03, "tile_base_h": 0.42, "prop_scale": 1.2, "prop_round": {"bevel": 0.0, "subd": 3},   # prop_scale: every house and prop on the tiles
     "tile_dh": {(-1, 1): 0.10, (0, 1): 0.04, (1, 1): 0.12, (-1, 0): 0.06, (0, 0): 0.0, (1, 0): 0.03,
                 (-1, -1): 0.08, (0, -1): 0.0, (1, -1): 0.10},
     "snow_cap": 0.06,
@@ -62,8 +62,8 @@ CFG = {
     "floor_r": 2.45, "globe_r": 2.75, "glass": 0.035, "glass_card": 1.2,
     "mound": 0.20,                                   # snow mound height at the centre (m)
     "base_h": 1.25, "base_flare": 1.14,
-    "view": ("Standard", "None"),
-    "light": {"key": 2300, "fill": 700, "back": 700, "world": 0.55},
+    "view": ("Standard", "None"), "exposure": 0.2,
+    "light": {"key": 2600, "fill": 420, "back": 650, "world": 0.45},
     "snow": {"count": 700, "size": (0.014, 0.032), "swirl": 0.10},
     # camera: a full orbit around the globe each loop (start azimuth deg, orbit deg per loop, elevation deg, lens mm,
     # target z, distance). Framed close like the reference: the town fills ~60% of the width.
@@ -119,27 +119,28 @@ class NT:
 def new_mat(name):
     m = bpy.data.materials.new(name); m.use_nodes = True; m.node_tree.nodes.clear(); return m, NT(m.node_tree)
 
-def clay_bsdf(T, base, rough=0.55, sss=0.12):
-    """soft clay / vinyl toy: matte, faint sheen, a touch of subsurface glow"""
+def clay_bsdf(T, base, rough=0.40, sss=0.22):
+    """playdough / soft plastic toy (user: "they look more like clay playdough or plastic"): satin, a soft clear coat so
+    rounded corners catch a broad highlight, and subsurface glow so the shadow sides stay colourful, not grey"""
     b = T.n("ShaderNodeBsdfPrincipled")
     if isinstance(base, tuple): b.inputs["Base Color"].default_value = base
     else: T.link(base, b.inputs["Base Color"])
     b.inputs["Roughness"].default_value = rough
-    b.inputs["Specular IOR Level"].default_value = 0.35
+    b.inputs["Specular IOR Level"].default_value = 0.5
     b.inputs["Subsurface Weight"].default_value = sss
-    b.inputs["Subsurface Radius"].default_value = (0.08, 0.10, 0.14)
-    b.inputs["Subsurface Scale"].default_value = 0.05
-    b.inputs["Sheen Weight"].default_value = 0.25
+    b.inputs["Subsurface Radius"].default_value = (0.10, 0.14, 0.22)
+    b.inputs["Subsurface Scale"].default_value = 0.06
+    b.inputs["Sheen Weight"].default_value = 0.15
     b.inputs["Sheen Roughness"].default_value = 0.5
-    b.inputs["Coat Weight"].default_value = 0.08
-    b.inputs["Coat Roughness"].default_value = 0.35
+    b.inputs["Coat Weight"].default_value = 0.3
+    b.inputs["Coat Roughness"].default_value = 0.28
     return b
 
 def out(T, surf):
     o = T.n("ShaderNodeOutputMaterial"); T.link(surf, o.inputs["Surface"])
 
 MATS = {}
-def clay(hexcol, rough=0.55):
+def clay(hexcol, rough=0.40):
     key = (hexcol, rough)
     if key in MATS: return MATS[key]
     m, T = new_mat(f"clay_{hexcol}_{rough}")
@@ -149,7 +150,7 @@ def snow_mat():
     """soft powder snow: white, very matte, deep subsurface, fine grain bump"""
     if "snowmat" in MATS: return MATS["snowmat"]
     m, T = new_mat("snow_ground")
-    b = clay_bsdf(T, hexc(C["ground_snow"]), 0.85, sss=0.35); b.inputs["Subsurface Radius"].default_value = (0.2, 0.25, 0.35)
+    b = clay_bsdf(T, hexc(C["ground_snow"]), 0.6, sss=0.35); b.inputs["Coat Weight"].default_value = 0.12; b.inputs["Subsurface Radius"].default_value = (0.2, 0.25, 0.35)
     b.inputs["Sheen Weight"].default_value = 0.4
     nz = T.n("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 60.0; nz.inputs["Detail"].default_value = 3.0
     bp = T.n("ShaderNodeBump"); bp.inputs["Strength"].default_value = 0.12; bp.inputs["Distance"].default_value = 0.01
@@ -355,9 +356,13 @@ def kit(name, loc, rot, scale):
     bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4); bm.to_mesh(me); bm.free()
     for p in me.polygons: p.use_smooth = True       # weld the flat-shaded faces, then round every edge off (clay toy)
     me.materials.clear(); me.materials.append(attr_mat())
-    smooth_normals(o, 60)
-    bv = o.modifiers.new("round", "BEVEL"); bv.width = 0.035; bv.segments = 3; bv.limit_method = "ANGLE"; bv.angle_limit = math.radians(30); bv.profile = 0.6
-    sd = o.modifiers.new("soft", "SUBSURF"); sd.levels = 1; sd.render_levels = 2
+    # smooth clay (user: "make the props smoother"): no hard edges kept, wide rounded bevels, two smoothing passes.
+    # The bevel adds support loops so the subdivision rounds the low-poly facets without melting the shapes.
+    o.data.use_auto_smooth = False
+    R_ = CFG["prop_round"]
+    if R_["bevel"] > 0:
+        bv = o.modifiers.new("round", "BEVEL"); bv.width = R_["bevel"]; bv.segments = 2; bv.limit_method = "ANGLE"; bv.angle_limit = math.radians(25)
+    sd = o.modifiers.new("soft", "SUBSURF"); sd.levels = 2; sd.render_levels = R_["subd"]
     o.name = name; o.location = loc; o.rotation_euler.z = math.radians(rot); o.scale = (scale,) * 3
     return o
 
@@ -460,9 +465,11 @@ rig = link_obj("cam_rig", None)
 keys(rig, "rotation_euler", [(0.0, 0.0, math.radians(CFG["cam"]["orbit"]) * T_OF(f)) for f in F], 3)
 
 def around(a_deg, r, z): a = AZ + math.radians(a_deg); return (r * math.cos(a), r * math.sin(a), z)
+LIGHTS = []
 def area(name, loc, size, energy, col=(1, 1, 1)):
     ld = bpy.data.lights.new(name, "AREA"); ld.size = size; ld.energy = energy; ld.color = col; ld.shape = "DISK"
-    lo = link_obj(name, ld); lo.location = loc; lo.visible_camera = False; lo.visible_glossy = False; lo.visible_transmission = False
+    lo = link_obj(name, ld); lo.location = loc; lo.visible_camera = False; lo.visible_glossy = True; lo.visible_transmission = False
+    LIGHTS.append(lo)
     lo.rotation_euler = (Vector((0, 0, GC * 0.5)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
     lo.parent = rig
     return lo
@@ -506,6 +513,14 @@ el = math.radians(cc["el"])
 cam.parent = rig
 cam.location = (cc["dist"] * math.cos(el) * math.cos(AZ), cc["dist"] * math.cos(el) * math.sin(AZ), cc["target_z"] + cc["dist"] * math.sin(el))
 
+# ---------------- light linking: the studio lights shape the clay (corner highlights) but never show in the glass ----------------
+lit = bpy.data.collections.new("lit_by_studio")
+for ob in sc.objects:
+    if ob.type in ("MESH", "CURVE") and not ob.name.startswith(("glass_dome", "glass_card")): lit.objects.link(ob)
+for lo in LIGHTS:
+    try: lo.light_linking.receiver_collection = lit
+    except AttributeError: lo.visible_glossy = False        # older Blender: no light linking, keep lights out of reflections
+
 # ---------------- render settings ----------------
 sc.render.engine = "CYCLES"; cy = sc.cycles
 cy.max_bounces = 12; cy.diffuse_bounces = 4; cy.glossy_bounces = 6; cy.transmission_bounces = 10; cy.transparent_max_bounces = 16
@@ -514,6 +529,7 @@ cy.use_animated_seed = True
 if MODE == "preview":
     cy.max_bounces = 8; cy.diffuse_bounces = 2; cy.glossy_bounces = 3
 sc.view_settings.view_transform = CFG["view"][0]
+sc.view_settings.exposure = CFG.get("exposure", 0.0)
 try: sc.view_settings.look = CFG["view"][1]
 except TypeError: pass
 sc.render.film_transparent = False
