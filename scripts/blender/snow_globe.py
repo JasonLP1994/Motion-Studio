@@ -64,9 +64,9 @@ CFG = {
     "base_h": 1.25, "base_flare": 1.14,
     "view": ("Standard", "None"),
     "light": {"key": 2300, "fill": 700, "back": 700, "world": 0.55},
-    "snow": {"count": 650, "size": (0.02, 0.045), "swirl": 0.10},
+    "snow": {"count": 700, "size": (0.014, 0.032), "swirl": 0.10},
     # camera: orbit around the globe (azimuth deg, sway deg, elevation deg, lens mm, target z, distance)
-    "cam": {"az": -62.0, "sway": 12.0, "el": 28.0, "lens": 70.0, "target_z": 1.1, "dist": 23.5, "fstop": 5.6},
+    "cam": {"az": -62.0, "sway": 10.0, "el": 33.0, "lens": 70.0, "target_z": 1.1, "dist": 14.0, "fstop": 8.0}   # close like the reference: the town fills ~60% of the width,
 }
 FPS, N = CFG["fps"], CFG["frames"]
 C = CFG["col"]

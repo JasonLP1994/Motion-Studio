@@ -44,3 +44,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO keep dark leather parts a cool near-black (slight blue) under the blue lighting; neutral black read as brown/tan at the heel.
 - DO keep the slime/tentacle section dark and moody (low softbox/wall light, edge highlights only); the lights flicker as the tentacles let go, then come up bright for the reveal.
 - DO (snow globe / clay diorama): keep the whole scene in ONE colour family like the reference (blue: tiles, cabin, trees, base, backdrop), with snow white/icy and a single warm accent (window/lantern glow, small gold touches). User: "the same style on blue".
+- DO (clay diorama / snow globe): frame close like the reference: the little world fills ~60% of the frame width, camera ~33 deg down; DON'T show the whole object small in the middle (user: "more zoomed in ... it seems too far away").
