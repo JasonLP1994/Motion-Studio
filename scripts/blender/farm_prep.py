@@ -4,14 +4,15 @@
 # the denoiser on (their Blender builds include OpenImageDenoise), a relative output path and the frame range.
 import bpy, os
 
-def prepare(sc, path, samples=128, frames=(1, 1), name="render", fps=30, motion_blur=False):
+def prepare(sc, path, samples=128, frames=(1, 1), name="render", fps=30, motion_blur=False, adaptive_threshold=0.01, min_samples=0):
     cy = sc.cycles
     sc.render.engine = "CYCLES"
     cy.device = "GPU"                  # farms with GPUs use it; CPU farms fall back automatically
-    cy.samples = samples; cy.use_adaptive_sampling = True; cy.adaptive_threshold = 0.01
+    cy.samples = samples; cy.use_adaptive_sampling = True; cy.adaptive_threshold = adaptive_threshold; cy.adaptive_min_samples = min_samples
     cy.use_denoising = True
     try: cy.denoiser = "OPENIMAGEDENOISE"   # present in official/farm builds even if this local build lacks it
-    except TypeError: pass
+    except TypeError: cy["denoiser"] = 4    # 4 = OpenImageDenoise (stored directly when this local build lacks it)
+    cy.denoising_input_passes = "RGB_ALBEDO_NORMAL"; cy.denoising_prefilter = "ACCURATE"
     sc.render.use_motion_blur = motion_blur; sc.render.motion_blur_shutter = 0.5
     sc.frame_start, sc.frame_end = frames; sc.render.fps = fps
     sc.render.image_settings.file_format = "PNG"; sc.render.image_settings.color_depth = "16"

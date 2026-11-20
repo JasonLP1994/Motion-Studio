@@ -57,3 +57,9 @@ checked, so the farm's output stays silent.
 Claude estimates the cost from local test renders (see the chat for each job). For the PaintedStatue piece
 the estimate was about 310 GHz-hours for 600 frames: roughly $5 on RebusFarm and $7-22 on GarageFarm,
 depending on priority, so budget $10-30 including a re-render.
+
+## High-quality farm files (`farm-hq`)
+Scene builders that support it (e.g. `scripts/blender/shoe_slime.py -- <out.blend> farm-hq`) save a second farm file
+with 256 samples (adaptive 0.005, min 64), OpenImageDenoise locked in (albedo + normal, accurate prefilter), finer
+haze (volume step 0.5, 2 volume bounces) and rounder tentacle curves. Expect about 2x the normal farm cost. Render one
+dark test frame from both files on the farm to compare look and price before committing to the full range.

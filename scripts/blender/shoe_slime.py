@@ -1,5 +1,5 @@
 # SLIME SHOE ident (16:9, 1920x1080, 30 fps, 360 frames = 12 s) built procedurally in Blender Cycles.
-# Usage: blender -b --factory-startup -P scripts/blender/shoe_slime.py -- <out.blend> [preview|farm]
+# Usage: blender -b --factory-startup -P scripts/blender/shoe_slime.py -- <out.blend> [preview|farm|farm-hq]
 # Story: an original sneaker made of black "venom" slime warps and waves (a C4D-style displacer field sweeps through it),
 # liquifies and bursts apart -> close-ups of each part being pulled back together by slime tendrils -> whole -> it SETS
 # into a solid object -> a glowing wipe colours it into a black-and-white design -> hero orbit.
@@ -1003,12 +1003,17 @@ sc.camera = cams["wide"]
 # ---------------- render ----------------
 sc.render.resolution_x, sc.render.resolution_y = CFG["res"]; sc.render.resolution_percentage = 100
 cy = sc.cycles; cy.max_bounces = 12; cy.glossy_bounces = 8; cy.transmission_bounces = 4; cy.volume_bounces = 1
+HQ = MODE == "farm-hq"     # high-quality farm file: cleaner darks and haze, rounder tentacles (about 2x the farm cost)
+if HQ:
+    cy.volume_bounces = 2
+    for cu_ in bpy.data.curves:
+        if cu_.bevel_depth > 0: cu_.bevel_resolution = max(cu_.bevel_resolution, 5)
 if MODE == "preview":    # lean settings for local previews only (the farm file keeps full quality)
     cy.max_bounces = 6; cy.glossy_bounces = 4; cy.diffuse_bounces = 2; cy.transmission_bounces = 2; cy.volume_bounces = 0
     for o in bpy.data.objects:
         for md in o.modifiers:
             if md.type == "SUBSURF": md.render_levels = min(md.render_levels, 1)
-cy.caustics_reflective = False; cy.caustics_refractive = False; cy.volume_step_rate = 8.0 if MODE == "preview" else 1.0
+cy.caustics_reflective = False; cy.caustics_refractive = False; cy.volume_step_rate = 8.0 if MODE == "preview" else (0.5 if HQ else 1.0)
 cy.use_light_tree = True; cy.use_animated_seed = True; cy.sample_clamp_indirect = 8.0
 sc.use_nodes = True; cnt = sc.node_tree; cnt.nodes.clear()
 rl_ = cnt.nodes.new("CompositorNodeRLayers"); gl = cnt.nodes.new("CompositorNodeGlare"); cmp_ = cnt.nodes.new("CompositorNodeComposite")
@@ -1018,4 +1023,6 @@ sc.render.use_compositing = True
 sc.view_settings.view_transform = "AgX"
 try: sc.view_settings.look = "AgX - Medium High Contrast"
 except TypeError: pass
-farm_prep.prepare(sc, OUT, samples=128 if MODE == "farm" else 48, frames=(1, OUTN), name="shoe_slime", fps=FPS, motion_blur=(MODE == "farm"))
+FARM = MODE in ("farm", "farm-hq")
+farm_prep.prepare(sc, OUT, samples=256 if HQ else (128 if FARM else 48), frames=(1, OUTN), name="shoe_slime", fps=FPS,
+                  motion_blur=FARM, adaptive_threshold=0.005 if HQ else 0.01, min_samples=64 if HQ else 0)
