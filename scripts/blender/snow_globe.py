@@ -26,7 +26,7 @@ CFG = {
         "glow": "#FFC970", "gold": "#F2C14E", "snow": "#FFFFFF",
     },
     "blue_hue": 0.588, "blue_sat": 0.62,          # every prop colour is remapped onto this hue (HLS)
-    "tile": 1.0, "gap": 0.03, "tile_base_h": 0.42,
+    "tile": 1.05, "gap": 0.03, "tile_base_h": 0.42, "prop_scale": 1.2,   # prop_scale: every house and prop on the tiles
     "tile_dh": {(-1, 1): 0.10, (0, 1): 0.04, (1, 1): 0.12, (-1, 0): 0.06, (0, 0): 0.0, (1, 0): 0.03,
                 (-1, -1): 0.08, (0, -1): 0.0, (1, -1): 0.10},
     "snow_cap": 0.06,
@@ -264,7 +264,7 @@ for (i, j), spec in CFG["path"].items():
 # ---------------- houses (built in code, like the reference house) ----------------
 glow = glow_mat("window_glow", C["glow"], 6.0)
 def house(k, tile, off, size, roof_h, ci, face, steeple):
-    x0, y0, z = TOP[tile]; x, y = x0 + off[0], y0 + off[1]; w, d, h = size; parts = []
+    x0, y0, z = TOP[tile]; x, y = x0 + off[0] * CFG["tile"], y0 + off[1] * CFG["tile"]; w, d, h = size; parts = []
     parts.append(rbox(f"h{k}_body", (w, d, h), (x, y, z + h / 2), clay(C["house"][ci]), r=0.05))
     parts.append(prism(f"h{k}_roof", w + 0.18, d + 0.14, roof_h, (x, y, z + h - 0.02), clay(C["roof_snow"], 0.65), r=0.04))
     fy = y - d / 2
@@ -283,6 +283,9 @@ def house(k, tile, off, size, roof_h, ci, face, steeple):
     else:
         parts.append(rbox(f"h{k}_chim", (0.09, 0.09, 0.22), (x + w * 0.27, y + d * 0.15, z + h + 0.18), clay(C["house_dark"]), r=0.02))
         parts.append(rbox(f"h{k}_chimsnow", (0.12, 0.12, 0.035), (x + w * 0.27, y + d * 0.15, z + h + 0.30), clay(C["roof_snow"], 0.65), r=0.016))
+    k_ = CFG["prop_scale"]          # grow the whole house about its footprint
+    for p_ in parts:
+        p_.location = (x + (p_.location.x - x) * k_, y + (p_.location.y - y) * k_, z + (p_.location.z - z) * k_); p_.scale = (k_,) * 3
     group(parts, (x, y), face)
     return parts
 for k, hs in enumerate(CFG["houses"]): house(k, *hs)
@@ -351,7 +354,7 @@ def kit(name, loc, rot, scale):
 
 for name, tile, off, rot, s, absolute in CFG["props"]:
     x, y, z = TOP[tile]
-    kit(name, (x + off[0], y + off[1], z - 0.01), rot if absolute else rot + FACE, s)
+    kit(name, (x + off[0] * CFG["tile"], y + off[1] * CFG["tile"], z - 0.01), rot if absolute else rot + FACE, s * CFG["prop_scale"])
 
 # ---------------- glass dome: a thin shell; light, shadows and the back wall stay clean ----------------
 bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=128, v_segments=64, radius=GR)
