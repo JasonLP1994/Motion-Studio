@@ -1,0 +1,43 @@
+# Christmas snow globe: plan (v1, awaiting approval)
+
+Brief from the user: a mini Christmas diorama in the style of their reference (soft clay toy tiles), inside a
+snow globe, snow falling. Wide 16:9, 10 s seamless loop, no words, music box + sparkles. Blender Cycles; final
+on the farm (user's choice), previews here.
+
+## Style taken from the reference (grammar only, no copied content)
+- Chunky rounded square tiles (about 12% corner radius, small gaps), raised by different heights, 2x2 / 3x3 grid.
+- Soft clay / vinyl-toy material: matte, faint sheen, slight subsurface glow, no hard edges anywhere.
+- Big readable props, slightly oversized versus the tiles (a toy, not a real scene).
+- Isometric-ish three-quarter view, about 35 deg down, long lens (low perspective).
+- One pastel colour family per scene, a flat matching backdrop, soft shadows, no dark corners.
+
+## Christmas version
+- Palette (numbers): backdrop powder blue #CFE3F2; snow #F7F9FC; pine #4FA36B / #7BC48A; cabin red #E06B5B;
+  roof snow; warm window glow #FFC56B; accents candy red #E8505B, gold #F2C14E; base cream #F3E6D6 with a
+  red band. Values, roughness and colours live in one config block in the scene script.
+- Inside the globe on a 3x3 grid of rounded snow tiles (heights vary 0-12%):
+  log cabin with snowy roof, glowing windows and chimney; three snowy pines (one decorated); snowman;
+  presents; candy canes; lantern; a little train on a ring track round the tiles.
+- Models: Kenney Holiday Kit (CC0, inputs/models/kenney-holiday-kit/, local only), rounded off in Blender
+  (bevel + subdivision) and re-materialed with one shared clay shader. Tiles, globe, base, snow: built in code.
+- Globe: thin clear glass sphere (soft reflections, no caustics) on a rounded cream base with a red band.
+
+## The 10 s loop (300 frames at 30 fps; frame 301 = frame 1)
+| Time | What you see | Motion |
+|---|---|---|
+| 0-10 s | The globe fills ~70% of the frame height, centred slightly low; soft backdrop | Camera sways around the globe ±12 deg (one sine cycle in 10 s), so it loops |
+| 0-10 s | Snow drifts down inside the globe, slow and swirly | Each flake falls a whole number of globe-heights in 10 s and wraps, so the loop is seamless |
+| 0-10 s | The train goes once round the ring track | Exactly 1 lap in 10 s |
+| 0-10 s | Window glow and tree lights twinkle softly; chimney puff | Periods of 2.5 s / 5 s (divide 10 s) |
+| 0-10 s | A few sparkles glint on the glass | Timed to music-box notes |
+
+## Sound
+An original music-box melody synthesised in code (no paid music), 96 BPM = exactly 4 bars in 10 s, so it loops.
+Soft sparkle chimes on the glints, a quiet train chug. Mixed to about -14 LUFS, true peak below -1 dBTP.
+
+## Delivery
+3 stills for approval -> 2-3 s motion proof -> full 10 s preview (lower quality here) -> packed farm .blend
+(1920x1080, frames 1-300). Renders and models never go to GitHub.
+
+## Note
+The shoe HQ render is using this machine's CPU until about 22 Nov. Test stills for this project slow it a little.
