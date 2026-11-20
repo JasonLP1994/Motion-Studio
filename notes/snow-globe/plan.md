@@ -1,4 +1,4 @@
-# Christmas snow globe: plan (v1, awaiting approval)
+# Christmas snow globe: plan (v2: blue palette, building stills)
 
 Brief from the user: a mini Christmas diorama in the style of their reference (soft clay toy tiles), inside a
 snow globe, snow falling. Wide 16:9, 10 s seamless loop, no words, music box + sparkles. Blender Cycles; final
@@ -12,15 +12,18 @@ on the farm (user's choice), previews here.
 - One pastel colour family per scene, a flat matching backdrop, soft shadows, no dark corners.
 
 ## Christmas version
-- Palette (numbers): backdrop powder blue #CFE3F2; snow #F7F9FC; pine #4FA36B / #7BC48A; cabin red #E06B5B;
-  roof snow; warm window glow #FFC56B; accents candy red #E8505B, gold #F2C14E; base cream #F3E6D6 with a
-  red band. Values, roughness and colours live in one config block in the scene script.
+- Palette (user: "the same style in blue"): ONE blue family like the reference scenes are one colour each.
+  backdrop #BFD9F2 -> #D9E9F8 soft gradient; tiles #8DBDEB / #A9CFF2 / #6FA6DD (varied blues); cabin #5E93D1 with
+  white snowy roof; pines #3F78C2 / #5A92D6 / #7FB0E6; snowman, snow #F4F8FD with icy-blue shade #DCE9F7;
+  presents and train in blues and white; base #4A7FC4 with a white band. ONE warm accent only (like the yellow
+  tile / path in the references): window + lantern glow #FFD27A and a few small gold touches #F2C14E.
+  Colours, roughness and sizes live in one config block in the scene script.
 - Inside the globe on a 3x3 grid of rounded snow tiles (heights vary 0-12%):
   log cabin with snowy roof, glowing windows and chimney; three snowy pines (one decorated); snowman;
   presents; candy canes; lantern; a little train on a ring track round the tiles.
 - Models: Kenney Holiday Kit (CC0, inputs/models/kenney-holiday-kit/, local only), rounded off in Blender
   (bevel + subdivision) and re-materialed with one shared clay shader. Tiles, globe, base, snow: built in code.
-- Globe: thin clear glass sphere (soft reflections, no caustics) on a rounded cream base with a red band.
+- Globe: thin clear glass sphere (soft reflections, no caustics) on a rounded blue base with a white band.
 
 ## The 10 s loop (300 frames at 30 fps; frame 301 = frame 1)
 | Time | What you see | Motion |
