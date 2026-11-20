@@ -17,6 +17,7 @@ MODE = argv[1] if len(argv) > 1 else "preview"
 # ---------------- config: every colour and timing ----------------
 CFG = {
     "fps": 30, "frames": 360, "res": (1920, 1080),
+    "out_frames": 600,           # the 360-frame story is stretched evenly over this many frames (600 = 20 s): everything plays slower
     "col": {"slime": "#030306", "solid": "#09090B", "white": "#EDECE8", "black": "#060607", "glow": "#3FB6FF",
             "floor": "#141416", "cyc": "#2A2B2F", "rim": "#7FC8FF"},
     "wave1": (4, 40),            # displacer field sweeps heel -> toe through the slime shoe
@@ -44,13 +45,15 @@ CFG = {
     "hero": [(252, -150, 0.54, 0.120, 0.055), (285, -122, 0.50, 0.100, 0.055), (318, -74, 0.46, 0.080, 0.052), (360, -40, 0.50, 0.072, 0.060)],
 }
 FPS, N = CFG["fps"], CFG["frames"]
+OUTN = CFG.get("out_frames", N); K = (OUTN - 1) / (N - 1)      # story frame -> output frame
+OF = lambda f: 1 + (f - 1) * K
 rnd = random.Random(11)
 hexc = lambda h, a=1.0: tuple(pow(int(h[i:i + 2], 16) / 255, 2.2) for i in (1, 3, 5)) + (a,)
 C = {k: hexc(v) for k, v in CFG["col"].items()}
 L = 0.30   # shoe length (m): heel at x=0, toe at x=L, lateral side faces -Y (the camera side)
 
 for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
-sc = bpy.context.scene; sc.frame_start, sc.frame_end = 1, N; sc.render.fps = FPS
+sc = bpy.context.scene; sc.frame_start, sc.frame_end = 1, OUTN; sc.render.fps = FPS
 F = range(1, N + 1)
 
 # ---------------- helpers ----------------
@@ -60,7 +63,7 @@ def keys(id_data, path, values, count=1, interp="LINEAR"):
     for i in range(count):
         fc = ad.action.fcurves.find(path, index=i) or ad.action.fcurves.new(path, index=i)
         fc.keyframe_points.add(len(values)); co = []
-        for f, v in enumerate(values, 1): co += [f, float(v[i] if count > 1 else v)]
+        for f, v in enumerate(values, 1): co += [OF(f), float(v[i] if count > 1 else v)]
         fc.keyframe_points.foreach_set("co", co)
         for kp in fc.keyframe_points: kp.interpolation = interp
         fc.update()
@@ -561,7 +564,7 @@ secs = G.n("GeometryNodeInputSceneTime").outputs["Seconds"]
 X, Y, Z = G.sep(pos); xs, ys, zs = G.m("ADD", X, gi.outputs["Ox"]), G.m("ADD", Y, gi.outputs["Oy"]), G.m("ADD", Z, gi.outputs["Oz"])
 shoe_p = G.combine(xs, ys, zs)
 nz = G.n("ShaderNodeTexNoise", noise_dimensions="4D"); G.link(G.v("SCALE", shoe_p, scale=gi.outputs["Freq"]), nz.inputs["Vector"])
-G.link(G.m("MULTIPLY_ADD", secs, 0.9, gi.outputs["Seed"]), nz.inputs["W"]); nz.inputs["Scale"].default_value = 1.0; nz.inputs["Detail"].default_value = 1.5
+G.link(G.m("MULTIPLY_ADD", secs, 0.9 / K, gi.outputs["Seed"]), nz.inputs["W"]); nz.inputs["Scale"].default_value = 1.0; nz.inputs["Detail"].default_value = 1.5
 churn = G.v("SCALE", G.v("SUBTRACT", nz.outputs["Color"], (0.5, 0.5, 0.5)), scale=G.m("MULTIPLY", gi.outputs["Amp"], 2.0))
 d = G.m("DIVIDE", G.m("SUBTRACT", xs, gi.outputs["Field"]), 0.05)
 band = G.m("EXPONENT", G.m("MULTIPLY", G.m("MULTIPLY", d, d), -1.0))
@@ -941,7 +944,7 @@ def rekey(id_data, path, values):
     if ad and ad.action:
         fc = ad.action.fcurves.find(path)
         if fc: ad.action.fcurves.remove(fc)
-    keys(id_data, path, values)
+    keys(id_data, path, values, interp="CONSTANT")     # hard on/off flicker, even between stretched keys
 rekey(sbm.node_tree, f'nodes["{em.name}"].inputs[1].default_value', [CFG.get("softbox_strength", 16.0) * LV(f, DARK["softbox"]) for f in F])
 rekey(od, "energy", [(0.22 + 0.25 * smooth(win(f, SW1 - 6, SW1 + 10))) * LV(f, DARK["omni"]) for f in F])
 for lo_, nm_ in ((rl, "rim"), (st, "strip"), (bg, "wall_glow"), (ht, "heat")):
@@ -994,7 +997,7 @@ keys(co, "location", P, 3); keys(tg, "location", Lk, 3)
 co.data.dof.focus_object = None
 keys(co.data, "dof.focus_distance", [(Vector(p) - Vector(l)).length - 0.04 for p, l in zip(P, Lk)])
 for fr, name in CFG["cuts"]:
-    mk = sc.timeline_markers.new(f"cut_{name}_{fr}", frame=fr); mk.camera = cams[name]
+    mk = sc.timeline_markers.new(f"cut_{name}_{fr}", frame=round(OF(fr))); mk.camera = cams[name]
 sc.camera = cams["wide"]
 
 # ---------------- render ----------------
@@ -1015,4 +1018,4 @@ sc.render.use_compositing = True
 sc.view_settings.view_transform = "AgX"
 try: sc.view_settings.look = "AgX - Medium High Contrast"
 except TypeError: pass
-farm_prep.prepare(sc, OUT, samples=128 if MODE == "farm" else 48, frames=(1, N), name="shoe_slime", fps=FPS, motion_blur=(MODE == "farm"))
+farm_prep.prepare(sc, OUT, samples=128 if MODE == "farm" else 48, frames=(1, OUTN), name="shoe_slime", fps=FPS, motion_blur=(MODE == "farm"))

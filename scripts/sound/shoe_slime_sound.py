@@ -1,5 +1,5 @@
 """Sound design for the SLIME SHOE ident (360 frames at 30 fps), timed to CFG in scripts/blender/shoe_slime.py.
-Synthesised in numpy (wet churn, squelches, gloopy melt, strand stretches and snaps, splats, lace whips, shimmer)
+(Retimed to the 20 s cut via OUTN/K.) Synthesised in numpy (wet churn, squelches, gloopy melt, strand stretches and snaps, splats, lace whips, shimmer)
 plus CC0 hits/whooshes from the bundled library. Loudness-normalise afterwards to about -14 LUFS.
 
 Usage: python3 scripts/sound/shoe_slime_sound.py <out.wav>
@@ -8,11 +8,13 @@ import subprocess, sys, os, wave
 import numpy as np
 
 SR, FPS, N = 48000, 30, 360
-DUR = N / FPS
+OUTN = 600                                   # same as CFG["out_frames"]: the story plays over 20 s
+K = (OUTN - 1) / (N - 1)
+DUR = OUTN / FPS
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 LIB = os.path.join(ROOT, ".claude/skills/sound-effects/sfx")
 rng = np.random.default_rng(7)
-t_of = lambda f: (f - 1) / FPS
+t_of = lambda f: (f - 1) * K / FPS        # story frame -> seconds in the stretched cut
 
 # same keys as the scene
 WAVE1, MELT, BURST = (4, 40), (40, 62), (62, 76)
