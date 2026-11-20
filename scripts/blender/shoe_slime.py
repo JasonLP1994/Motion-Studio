@@ -28,6 +28,8 @@ CFG = {
     "wave2": (256, 282),         # one last wave through the whole slime shoe
     "set": 285,                  # it SETS: wet slime -> hard satin solid (hit + camera jolt)
     "sweep": (290, 318),         # the wet slime DRAINS down off the set shoe (glowing curing edge) and stays only as the printed drips
+    "dark": {"softbox": 0.10, "wall_glow": 0.12, "heat": 0.12, "omni": 0.15, "rim": 0.6, "strip": 0.5},   # light levels before the reveal (1 = full): dark, moody slime and tentacles, edge highlights only
+    "flicker": (292, 308),       # lights flicker like a striking fluorescent tube as the tentacles let go, then full bright
     # edit: timeline markers bound to cameras
     "cuts": [(1, "wide"), (77, "sole"), (117, "toe"), (162, "heel"), (207, "laces"), (252, "hero")],
     # shot cameras: (first, last, pos start, pos end, look start, look end, lens mm, f-stop)
@@ -925,6 +927,25 @@ keys(gli, "location", [(lerp(0.55, -0.25, ease_io(win(f, GL0, GL1))), -0.30, 0.1
 keys(gli.data, "energy", [2.0 * math.sin(math.pi * win(f, GL0, GL1)) ** 0.6 for f in F])
 ht = area("heat", (0.15, 0.10, 0.07), (0.15, 0.32, 0.0), 0.34, 2.6, (0.35, 0.70, 1.0), size_y=0.12); ht.visible_glossy = False
 ht.light_linking.receiver_collection = bg.light_linking.receiver_collection
+# mood (user): dark and atmospheric through the slime and tentacles; as the tentacles let go the lights
+# flicker like a striking fluorescent tube, then come up bright for the reveal (the glint and drain glow are separate)
+DARK, (FK0, FK1) = CFG["dark"], CFG["flicker"]
+FLICK = [0.0, 1.0, 0.0, 0.0, 0.75, 0.1, 0.0, 1.0, 1.0, 0.0, 0.5, 1.0, 0.3, 1.0, 1.0, 0.8, 1.0]   # 0 = blackout, 1 = full
+def LV(f, d):
+    if f < FK0: return d
+    if f > FK1: return 1.0
+    k = FLICK[int(round((f - FK0) / (FK1 - FK0) * (len(FLICK) - 1)))]
+    return d * 0.3 if k == 0 else lerp(d, 1.0, k)
+def rekey(id_data, path, values):
+    ad = id_data.animation_data
+    if ad and ad.action:
+        fc = ad.action.fcurves.find(path)
+        if fc: ad.action.fcurves.remove(fc)
+    keys(id_data, path, values)
+rekey(sbm.node_tree, f'nodes["{em.name}"].inputs[1].default_value', [CFG.get("softbox_strength", 16.0) * LV(f, DARK["softbox"]) for f in F])
+rekey(od, "energy", [(0.22 + 0.25 * smooth(win(f, SW1 - 6, SW1 + 10))) * LV(f, DARK["omni"]) for f in F])
+for lo_, nm_ in ((rl, "rim"), (st, "strip"), (bg, "wall_glow"), (ht, "heat")):
+    rekey(lo_.data, "energy", [lo_.data.energy * LV(f, DARK[nm_]) for f in F])
 # veins stay inky: the big softbox doesn't light or reflect in them (only rim/strip/omni give thin highlights)
 sbox.light_linking.receiver_collection = recv("softbox_receivers", [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and not o_.name.startswith("veins_") and o_.name != "softbox"])
 wd = bpy.data.worlds.new("w"); sc.world = wd; wd.use_nodes = True

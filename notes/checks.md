@@ -42,3 +42,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO start the slime shoe all white (triple white); the black-and-white design only appears once the slime drains off.
 - DON'T hide Cycles noise with ffmpeg median/nlmeans smoothing (it smears, darkens and erases fine detail like veins). DO denoise with scripts/denoise/oidn_render.py (Intel OIDN with albedo + normal passes).
 - DO keep dark leather parts a cool near-black (slight blue) under the blue lighting; neutral black read as brown/tan at the heel.
+- DO keep the slime/tentacle section dark and moody (low softbox/wall light, edge highlights only); the lights flicker as the tentacles let go, then come up bright for the reveal.
