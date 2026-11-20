@@ -1,8 +1,10 @@
 #!/bin/bash
 # Long local renders that survive interruptions: keeps calling oidn_render.py until every frame exists.
 # oidn_render.py skips frames already saved, so re-running this just carries on.
-# Usage (detached, logs to <out>/render.log):
-#   setsid nohup bash scripts/denoise/render_resume.sh <file.blend> <out_dir> <start> <end> <pct> <spp> >/dev/null 2>&1 &
+# Usage (logs to <out>/render.log):
+#   bash scripts/denoise/render_resume.sh <file.blend> <out_dir> <start> <end> <pct> <spp>
+# In a Claude cloud session run it as a TRACKED background task (max 2 h each, chain them). Don't detach it with
+# setsid/nohup: the session then looks idle and the cloud machine is shut down mid-render.
 cd "$(dirname "$0")/../.."
 BLEND=$1; OUT=$2; A=$3; B=$4; PCT=$5; SPP=$6
 mkdir -p "$OUT"
