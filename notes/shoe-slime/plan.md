@@ -48,3 +48,10 @@ solid object, then colours into a black-and-white shoe design. Backdrop like the
 - Shoe materials (procedural, texture depth faked with bump): breathable mesh vamp, perforations, grained leather toe cap and eyestay with double stitching, suede mudguard, speckled foam midsole, knit tongue with a woven label, metal eyelets, flat laces.
 - Logo: an original "OOZE" mark (scripts/blender/assets/ooze_logo.svg), printed on both sides, the heel and the tongue label.
 - Preview: 33% / 16 spp, denoised with ffmpeg nlmeans and scaled to 1080p. Farm build: 128 spp + OIDN + motion blur.
+
+## Revisions: venom, blue light, white start (latest)
+- Story: the shoe starts triple white. Venom veins (grammar from a Blender "venom effect" tutorial: branching inky veins growing over a surface) surge across the floor and climb the shoe as black slime takes it over. It warps, melts and bursts; close-ups show each part hauled back by writhing tentacles, beaded threads and falling drops.
+- After it SETS (f285), the slime drains down off the shoe (f290-318) with an icy-blue glowing edge, the veins retreat, and the black & white drip design is revealed underneath.
+- Lighting is now dark blue to light blue only (no rainbow, no orange): blue gradient softbox, blue wall glow, cool rim and strip light. A light-blue glint sweeps across the shoe at f332-352, then the OOZE logo fades in from f330.
+- Veins are excluded from the softbox (light linking) so they stay inky. No tagline: the user gave no words.
+- Farm build: renders/farm/shoe-slime-v2/shoe-slime.blend (local only, never GitHub).
