@@ -66,3 +66,6 @@ __pycache__/
 
 # IONADE sting: rendered frames and the user brand files stay local
 public/ionade/
+
+# Local tool binaries (e.g. OIDN denoiser, installed by scripts/denoise/setup_oidn.sh)
+tools/
