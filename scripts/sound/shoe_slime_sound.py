@@ -139,6 +139,33 @@ add(hiss(0.0, t_of(48)), 0.0, 0.10, -0.2)                                       
 add(hiss(t_of(SWEEP[0]) - 0.1, t_of(SWEEP[1]) + 0.3), t_of(SWEEP[0]) - 0.1, 0.08, 0.2)    # veins slide off
 add(load("transition/fs-786514-swoosh-v2.ogg", 1.4), t_of(332), 0.12)                     # the glint
 add(load("ding/kenney-interface-glass-002.ogg", 1.25), t_of(346), 0.14, 0.2)
+# ---- 9.7-10.3 s: the lights flicker like a striking fluorescent tube as the tentacles let go ----
+FK0, FK1 = 292, 308                                                                           # same as CFG["flicker"] in the scene
+FLICK = [0.0, 1.0, 0.0, 0.0, 0.75, 0.1, 0.0, 1.0, 1.0, 0.0, 0.5, 1.0, 0.3, 1.0, 1.0, 0.8, 1.0]  # same table as the scene
+def flick_k(f):
+    if f < FK0: return 0.0
+    if f > FK1: return 1.0
+    return FLICK[int(round((f - FK0) / (FK1 - FK0) * (len(FLICK) - 1)))]
+a = t_of(FK0); tail = 1.6; n = int((t_of(FK1) - a + tail) * SR); t = np.arange(n) / SR
+gate = np.zeros(n)
+for f in range(FK0, FK1 + 1):                                                                 # per-frame on/off gate
+    i0, i1 = int((t_of(f) - a) * SR), int((t_of(f + 1) - a) * SR); gate[i0:i1] = flick_k(f)
+gate[int((t_of(FK1 + 1) - a) * SR):] = 1.0
+r = int(0.003 * SR); gate = np.convolve(gate, np.ones(r) / r, mode="same")                  # 3 ms edges, no zipper clicks
+settle = 0.35 + 0.65 * np.exp(-np.clip(t - (t_of(FK1 + 1) - a), 0, None) * 2.5)             # hum settles once the tube is lit
+fadeout = np.clip((tail + t_of(FK1) - a - t) / 0.9, 0, 1)
+buzz = sum(np.sin(2 * np.pi * 120 * h * t + h * 0.7) / h for h in range(1, 14))             # mains buzz, rich harmonics
+crack = band(rng.standard_normal(n), 2000, 9000) * (rng.random(n) < 0.004).astype(float) * 6  # arc crackle specks
+crack = np.convolve(crack, np.exp(-np.arange(int(0.004 * SR)) / (0.0008 * SR)), mode="same")
+add((buzz * 0.5 + crack * 0.4) * gate * settle * fadeout, a, 0.38, -0.1)
+prev = 0.0
+for f in range(FK0, FK1 + 2):                                                                  # a ballast click every time it strikes on
+    k = flick_k(f)
+    if k > 0.2 and prev <= 0.2:
+        m = int(0.03 * SR); tt = np.arange(m) / SR
+        clk = band(rng.standard_normal(m), 1200, 7000) * np.exp(-tt * 260) + np.sin(2 * np.pi * 90 * tt) * np.exp(-tt * 90) * 0.6
+        add(clk, t_of(f), 0.75 * (0.6 + 0.4 * k), rng.uniform(-0.3, 0.3))
+    prev = k
 mix = mix[: int(DUR * SR)]
 fade = int(0.6 * SR); mix[-fade:] *= np.linspace(1, 0, fade)[:, None]
 mix /= max(1e-9, np.abs(mix).max()) / 0.8
