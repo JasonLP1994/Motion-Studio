@@ -28,7 +28,7 @@ CFG = {
                  "tongue": (210, 236), "laces": (220, 248)},
     "wave2": (256, 282),         # one last wave through the whole slime shoe
     "set": 285,                  # it SETS: wet slime -> hard satin solid (hit + camera jolt)
-    "sweep": (290, 318),         # the wet slime DRAINS down off the set shoe (glowing curing edge) and stays only as the printed drips
+    "sweep": (292, 330),         # the wet slime DRAINS (slowed: visible ~1.6 s in the 20 s cut) down off the set shoe (glowing curing edge) and stays only as the printed drips
     "dark": {"softbox": 0.10, "wall_glow": 0.12, "heat": 0.12, "omni": 0.15, "rim": 0.6, "strip": 0.5},   # light levels before the reveal (1 = full): dark, moody slime and tentacles, edge highlights only
     "flicker": (292, 308),       # lights flicker like a striking fluorescent tube as the tentacles let go, then full bright
     # edit: timeline markers bound to cameras
@@ -221,7 +221,7 @@ def add_mods(o, solid=0.0, subd=2):
 # ---------------- keyed shader values shared by every shoe material ----------------
 SET, (SW0, SW1) = CFG["set"], CFG["sweep"]
 SOLID = [smooth(win(f, SET - 1, SET + 3)) for f in F]
-SWEEP = [lerp(0.16, -0.02, 0.5 * smooth(win(f, SW0, SW1)) + 0.5 * win(f, SW0, SW1)) for f in F]     # drain level (m): top of the shoe -> below the sole
+SWEEP = [lerp(0.14, -0.02, 0.3 * smooth(win(f, SW0, SW1)) + 0.7 * win(f, SW0, SW1)) for f in F]     # drain level (m): top of the shoe -> below the sole
 GLOW = [smooth(win(f, SW0 - 2, SW0 + 3)) * (1 - smooth(win(f, SW1 - 3, SW1 + 2))) for f in F]
 TIME = [f / FPS for f in F]
 OPEN = [lerp(-0.03, 0.17, smooth(win(f, 8, 44))) for f in F]     # venom takes over: infection level climbs the clean shoe
@@ -922,7 +922,7 @@ SET_OBJS = {"cyclorama", "haze", "mist", "dust", "softbox"}
 shoe_objs = [o_ for o_ in sc.objects if o_.type in ("MESH", "CURVE") and o_.name not in SET_OBJS]
 st.light_linking.receiver_collection = recv("strip_receivers", shoe_objs)
 bg.light_linking.receiver_collection = recv("glow_receivers", [cyc])
-GL0, GL1 = 332, 352     # the glint: a light-blue bar of light sweeps toe -> heel across the finished shoe as the logo lands
+GL0, GL1 = 336, 354     # the glint: a light-blue bar of light sweeps toe -> heel across the finished shoe as the logo lands
 gli = area("glint", (0.5, -0.30, 0.13), (0.15, 0.0, 0.05), 0.030, 0.0, (0.55, 0.82, 1.0), size_y=0.40)
 gli.visible_volume_scatter = False
 gli.light_linking.receiver_collection = recv("glint_receivers", [parts[n_] for n_ in parts])

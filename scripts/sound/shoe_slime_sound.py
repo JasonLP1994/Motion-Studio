@@ -20,7 +20,7 @@ t_of = lambda f: (f - 1) * K / FPS        # story frame -> seconds in the stretc
 WAVE1, MELT, BURST = (4, 40), (40, 62), (62, 76)
 SNAPS = [71, 73, 75, 77]
 LANDS = {"outsole": (80, 106), "midsole": (84, 112), "upper": (126, 156), "heel": (170, 199), "tongue": (210, 236), "laces": (220, 248)}
-WAVE2, SET, SWEEP = (256, 282), 285, (290, 318)
+WAVE2, SET, SWEEP = (256, 282), 285, (292, 330)
 CUTS = [77, 117, 162, 207, 252]
 
 L = int(DUR * SR) + SR
@@ -114,7 +114,7 @@ n = int(0.5 * SR); t = np.arange(n) / SR
 add(band(rng.standard_normal(n), 1500, 9000) * np.exp(-t * 40) + np.sin(2 * np.pi * 55 * t) * np.exp(-t * 6) * 0.8, t_of(SET), 0.55)  # crack + sub
 for k in range(5): add(snap(), t_of(SET + 4 + k * 1.6), 0.2, rng.uniform(-0.5, 0.5))         # drips snapping back
 
-# ---- 9.6-10.6 s: the slime drains off (curing glow edge): sizzle, slide, shimmer ----
+# ---- ~16.2-18.1 s (story 292-330): the slime drains off (curing glow edge): sizzle, slide, shimmer ----
 a, b = t_of(SWEEP[0]), t_of(SWEEP[1]); n = int((b - a + 0.4) * SR); t = np.arange(n) / SR
 siz = formant(rng.standard_normal(n), 2500 + 4500 * np.clip(t / (b - a), 0, 1), 0.3) * np.sin(np.pi * np.clip(t / (b - a + 0.4), 0, 1)) ** 0.8
 shim = sum(np.sin(2 * np.pi * f0 * t) * np.exp(-t * 2.2) for f0 in (1320, 1980, 2640, 3520)) * 0.08
@@ -123,7 +123,7 @@ add(load("transition/fs-786514-swoosh-v2.ogg", 1.1), a - 0.05, 0.3)
 add(load("ding/kenney-interface-glass-002.ogg", 0.8), b, 0.25)
 add(squelch(b - a, 900, 160), a, 0.40)                                                       # the slime sliding down off the shoe
 for k in range(6): add(glorp(rng.uniform(0.10, 0.18), rng.uniform(260, 420), rng.uniform(80, 130)), b - 0.15 + k * 0.05, 0.22, rng.uniform(-0.5, 0.5))  # drips letting go
-add(load("whoosh/fs-683101-quick-woosh.ogg", 0.7), t_of(330) - 0.1, 0.18)                    # end logo in
+add(load("whoosh/fs-683101-quick-woosh.ogg", 0.7), t_of(335) - 0.1, 0.18)                    # end logo in
 
 # ---- cinematic bed: a dark bass pulse under everything (ducks at the hit), a wet hiss as the veins crawl ----
 n = int(DUR * SR); t = np.arange(n) / SR
@@ -139,7 +139,7 @@ def hiss(a0, a1, rise=True):
     return band(rng.standard_normal(m), 2500, 9000) * crawl * env
 add(hiss(0.0, t_of(48)), 0.0, 0.10, -0.2)                                                  # veins surge in and climb
 add(hiss(t_of(SWEEP[0]) - 0.1, t_of(SWEEP[1]) + 0.3), t_of(SWEEP[0]) - 0.1, 0.08, 0.2)    # veins slide off
-add(load("transition/fs-786514-swoosh-v2.ogg", 1.4), t_of(332), 0.12)                     # the glint
+add(load("transition/fs-786514-swoosh-v2.ogg", 1.4), t_of(336), 0.12)                     # the glint
 add(load("ding/kenney-interface-glass-002.ogg", 1.25), t_of(346), 0.14, 0.2)
 # ---- 9.7-10.3 s: the lights flicker like a striking fluorescent tube as the tentacles let go ----
 FK0, FK1 = 292, 308                                                                           # same as CFG["flicker"] in the scene
