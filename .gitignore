@@ -72,3 +72,6 @@ tools/
 
 # LostData: cut-outs made from the user's car photo, plus copied sounds (local only)
 public/car/
+
+# Ferrari glitch: copies, masks, mosaics and patterns of the user's photos (local only)
+public/ferrari/
