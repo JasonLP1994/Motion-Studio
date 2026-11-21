@@ -2,7 +2,7 @@
 # a tight 100 BPM glitch beat (kick, clap, bit-crushed hats) over an engine-style rumble
 # (a low detuned saw idle that revs up into the dissolve), stopping as the wordmark lands.
 import numpy as np, wave, sys
-SR=48000; BPM=100; DUR=8.0; B=60/BPM
+SR=48000; BPM=100; DUR=16.0; B=60/BPM
 t=np.arange(int(SR*DUR))/SR; out=np.zeros_like(t); rng=np.random.default_rng(5)
 def add(sig,at,g=1.0):
     i=int(at*SR); n=min(len(sig),len(out)-i)
@@ -16,7 +16,7 @@ def clap():
     tt=np.arange(int(SR*0.2))/SR; return band(0.2,1000,6000)*np.exp(-tt*20)
 def hat():
     tt=np.arange(int(SR*0.03))/SR; h=band(0.03,6000,15000)*np.exp(-tt*120); return np.round(h*16)/16
-END=189/30; DROP=171/30
+END=405/30; DROP=387/30  # dissolve and wordmark frames (see src/car/config.ts timeline)
 for i in range(int(DROP/(B/2))):        # 8ths until the dissolve
     at=i*B/2; k=i%8
     if k in (0,3,6): add(kick(),at,0.9)

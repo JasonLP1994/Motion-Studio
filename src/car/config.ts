@@ -1,71 +1,108 @@
-// Lost Data -> Phillips Digital. Every word, colour, size, event and sound lives here.
-// Grammar from references/car-ref.mp4: a still top-down car on a black->grey gradient, hit by
-// short flickering glitch bursts on the beat (pixel glyphs, colour flood, dot matrix, brand flash,
-// strobes, scanline tears, data readouts), here recoloured to the car's own acid green.
+// Lost Data -> Phillips Digital. Every word, colour, size, scene, event and sound lives here.
+// Grammar from references/car-ref.mp4: a still car on a dark gradient, hit by short flickering
+// glitch bursts on the beat (pixel glyphs, colour flood, dot matrix, brand flash, strobes,
+// scanline tears, data readouts). Palette (user): green, black and yellow only.
 
 export const C = {
-  green: "#8BD11B", // accent = the car's paint
-  greenDeep: "#3E6B06",
-  white: "#F4F4F2",
+  green: "#8BD11B", // the car's paint
+  yellow: "#FFD60A",
   black: "#050505",
-  floor: "#C9C9C6", // bottom of the gradient
+  floor: "#22231F", // bottom of the background gradient (near-black)
 };
 
 export type Ev =
   | { kind: "dots"; at: number; len: number; text: string }
-  | { kind: "strobe"; at: number; len: number; lines?: boolean }
+  | { kind: "strobe"; at: number; len: number; lines?: boolean; ink?: "green" | "yellow" }
   | { kind: "glyph"; at: number; len: number; ch: string }
   | { kind: "flood"; at: number; len: number }
   | { kind: "brand"; at: number; len: number }
   | { kind: "tear"; at: number; len: number }
   | { kind: "brackets"; at: number; len: number };
 
+export type Scene = {
+  name: string;
+  src: string; mask: string; mosaic: string; // mosaic prefix: `${mosaic}mosaic_<b>.png`
+  w: number; h: number; // cut-out size in px
+  fit: { width?: number; height?: number }; // on-screen size (one of them)
+  x: number; y: number; // centre offset from frame centre
+  shadow: "top" | "floor" | "none";
+  len: number; // in 8ths (9 frames)
+  events: Ev[]; // `at` in frames from the scene start
+  readout: string; // bottom-right status line
+};
+
+const S = (n: number) => n * 9; // 8ths -> frames
+
 export const carConfig = {
-  output: { width: 1920, height: 1080, fps: 30, durationInFrames: 240 },
+  output: { width: 1920, height: 1080, fps: 30, durationInFrames: 480 },
   bpm: 100, // 8th note = 9 frames
-  car: { src: "car/car.png", mask: "car/mask.png", w: 1205, h: 711, scale: 1.1, y: 30 },
   words: {
     brand: "PHILLIPS DIGITAL",
-    readouts: ["PHILLIPS DIGITAL // FILE 07", "DATA INTEGRITY COMPROMISED", "SECTOR 0x3F LOST", "RECOVERING ... 41%"],
+    file: "PHILLIPS DIGITAL // FILE 07",
+    view: "VIEW {n}/04",
     restored: "DATA RESTORED",
   },
   monoFont: "LiberationMono",
-  pixel: 14, // dot-matrix cell size (px)
-  mosaic: 18, // pixelation block size during glyph bursts (px)
+  pixel: 14,
+  flicker: [1, 1, 0, 1, 1, 0, 1, 1, 1], // frame-by-frame on/off inside a burst
 
-  // Events, in frames. Bursts flicker: on/off per `flicker` pattern.
-  flicker: [1, 1, 0, 1, 1, 0, 1, 1, 1], // frame-by-frame on/off within a burst
-  events: [
-    { kind: "dots", at: 9, len: 9, text: "PD" },
-    { kind: "strobe", at: 36, len: 9 },
-    { kind: "glyph", at: 45, len: 9, ch: "P" },
-    { kind: "flood", at: 54, len: 4 },
-    { kind: "glyph", at: 58, len: 5, ch: "D" },
-    { kind: "brackets", at: 63, len: 18 },
-    { kind: "brand", at: 81, len: 9 },
-    { kind: "tear", at: 108, len: 9 },
-    { kind: "strobe", at: 117, len: 9, lines: true },
-    { kind: "glyph", at: 144, len: 5, ch: "H" },
-    { kind: "flood", at: 149, len: 4 },
-    { kind: "dots", at: 153, len: 9, text: "PD" },
-    { kind: "tear", at: 162, len: 5 },
-    { kind: "strobe", at: 167, len: 4 },
-  ] as Ev[],
+  scenes: [
+    {
+      name: "top", src: "car/car.png", mask: "car/mask.png", mosaic: "car/", w: 1205, h: 711,
+      fit: { width: 1325 }, x: 0, y: 30, shadow: "top", len: 12, readout: "DATA INTEGRITY COMPROMISED",
+      events: [
+        { kind: "dots", at: S(1), len: 9, text: "PD" },
+        { kind: "strobe", at: S(4), len: 9, ink: "green" },
+        { kind: "glyph", at: S(5), len: 9, ch: "P" },
+        { kind: "flood", at: S(6), len: 4 },
+        { kind: "brackets", at: S(7), len: 18 },
+        { kind: "glyph", at: S(9), len: 9, ch: "H" },
+        { kind: "tear", at: S(11) + 4, len: 5 },
+      ],
+    },
+    {
+      name: "side", src: "car/side.png", mask: "car/side-mask.png", mosaic: "car/side-", w: 1342, h: 365,
+      fit: { width: 1700 }, x: 0, y: 110, shadow: "floor", len: 12, readout: "SECTOR 0x3F LOST",
+      events: [
+        { kind: "glyph", at: S(1), len: 9, ch: "I" },
+        { kind: "brand", at: S(3), len: 9 },
+        { kind: "strobe", at: S(5), len: 9, ink: "yellow", lines: true },
+        { kind: "glyph", at: S(7), len: 5, ch: "L" },
+        { kind: "flood", at: S(7) + 5, len: 4 },
+        { kind: "dots", at: S(9), len: 9, text: "PD" },
+        { kind: "tear", at: S(11) + 4, len: 5 },
+      ],
+    },
+    {
+      name: "rear", src: "car/rear.png", mask: "car/rear-mask.png", mosaic: "car/rear-", w: 1112, h: 652,
+      fit: { height: 800 }, x: 0, y: 60, shadow: "floor", len: 10, readout: "RECOVERING ... 41%",
+      events: [
+        { kind: "glyph", at: S(1), len: 9, ch: "L" },
+        { kind: "strobe", at: S(3), len: 9, ink: "green" },
+        { kind: "brackets", at: S(4), len: 18 },
+        { kind: "glyph", at: S(6), len: 9, ch: "I" },
+        { kind: "brand", at: S(8), len: 9 },
+        { kind: "tear", at: S(9) + 4, len: 5 },
+      ],
+    },
+    {
+      name: "front", src: "car/front.png", mask: "car/front-mask.png", mosaic: "car/front-", w: 1448, h: 967,
+      fit: { width: 1920 }, x: 0, y: 60, shadow: "none", len: 9, readout: "RECOVERING ... 87%",
+      events: [
+        { kind: "glyph", at: S(1), len: 9, ch: "P" },
+        { kind: "flood", at: S(3), len: 4 },
+        { kind: "strobe", at: S(4), len: 9, ink: "yellow", lines: true },
+        { kind: "glyph", at: S(6), len: 9, ch: "S" },
+        { kind: "dots", at: S(8), len: 9, text: "PD" },
+      ],
+    },
+  ] as Scene[],
 
-  // Readouts: [text index, from, to, corner]
-  readouts: [
-    [0, 2, 171, "tl"],
-    [1, 40, 120, "br"],
-    [2, 90, 171, "tr"],
-    [3, 100, 171, "bl"],
-  ] as [number, number, number, "tl" | "tr" | "bl" | "br"][],
-
-  dissolve: { start: 171, end: 189 }, // car pixelates and drops out to black
-  end: { start: 189, glitchFrames: 9, pixel: 18, restoredAt: 204 },
+  dissolveFrames: 18, // after the last scene: the car pixelates and drops out
+  end: { glitchFrames: 9, pixel: 22, restoredDelay: 15 },
 
   audio: {
     music: "car/music.wav", musicVolume: 0.85,
-    // sound per event kind (rotated takes), trimmed to the burst length
     sfx: {
       dots: ["car/sfx/kenney-interface-glitch-002.ogg"],
       strobe: ["car/sfx/kenney-sci-computernoise-000.ogg", "car/sfx/kenney-sci-computernoise-001.ogg"],
@@ -79,3 +116,16 @@ export const carConfig = {
     endHit: "car/sfx/kenney-sci-lowfrequency-explosion-000.ogg", endHitVolume: 0.7,
   },
 };
+
+// Scene start frames, the dissolve and the wordmark, all derived from the lengths above.
+export const timeline = (() => {
+  let t = 0;
+  const starts = carConfig.scenes.map((s) => {
+    const a = t;
+    t += S(s.len);
+    return a;
+  });
+  const dissolve = t;
+  const end = dissolve + carConfig.dissolveFrames;
+  return { starts, dissolve, end };
+})();

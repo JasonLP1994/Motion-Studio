@@ -1,4 +1,6 @@
-# Lost Data → Phillips Digital (16:9, 8 s)
+# Lost Data → Phillips Digital (16:9, 16 s, 4 scenes)
+
+v2 changes (user): palette green / black / yellow only; three more photos cut out (`inputs/green-car-side.png`, `-rear`, `-front` → `scripts/car/cutout_ground.py`, ground line drops the floor reflections and refills tyres/diffuser) used as scenes; length 16 s.
 
 Picks: Words = PHILLIPS DIGITAL + small data readouts · Format = 16:9, car turned to point right · Background = reference-style gradient (car cut out) · Polish = glitch beat + SFX, engine-style rumble.
 Inputs: `inputs/green-car-top.png` (user's photo, untouched). Cut-out by colour key: `scripts/car/cutout.py` → `public/car/car.png` + `mask.png`.
@@ -16,18 +18,13 @@ Note: the car maker's badge stays as photographed; no maker logo or name is adde
 | shader-glsl-style glitch (CSS/SVG) | Mosaic pixelation, scanline tears, dither, strobes | The glitch kit |
 | sound-effects | Original glitch beat + engine-style rumble made in code, bundled CC0 glitch sounds on bursts, -14 LUFS | Sound picks |
 
-## Second by second (30 fps, 240 frames, 100 BPM: 8th = 9 f)
-| Time | Frames | What you see |
-|---|---|---|
-| 0.0–0.3 s | 0–9 | Clean car; readout types in |
-| 0.3–0.6 s | 9–18 | White dot-matrix "PD" on the bodywork, flickering |
-| 1.2–1.5 s | 36–45 | Full-frame green strobe |
-| 1.5–2.1 s | 45–63 | Pixel "P" eats the car in green → whole car floods green → pixel "D" |
-| 2.1–2.7 s | 63–81 | Clean, pixel corner brackets |
-| 2.7–3.0 s | 81–90 | PHILLIPS DIGITAL dot-matrix flash, alternating frames |
-| 3.6–4.2 s | 108–126 | Scanline tear → green strobe with lines |
-| 4.8–5.4 s | 144–162 | Pixel "H" + car flood + dot matrix |
-| 5.4–5.7 s | 162–171 | Tear + strobe |
-| 5.7–6.3 s | 171–189 | Car pixel-dissolves to black |
-| 6.3–6.6 s | 189–198 | PHILLIPS DIGITAL glitches in (green pixel type) |
-| 6.6–8.0 s | 198–240 | Holds still, "DATA RESTORED" readout |
+## Second by second (v2: 30 fps, 480 frames, 100 BPM, 8th = 9 f)
+| Time | Frames | Scene | Bursts |
+|---|---|---|---|
+| 0.0–3.6 s | 0–108 | Top view | PD dots, green strobe, pixel P, yellow flood, brackets, pixel H, tear into the cut |
+| 3.6–7.2 s | 108–216 | Side profile | pixel I, PHILLIPS DIGITAL flash, yellow strobe + lines, pixel L, flood, PD dots, tear |
+| 7.2–10.2 s | 216–306 | Rear | pixel L, green strobe, brackets, pixel I, brand flash, tear |
+| 10.2–12.9 s | 306–387 | Front close-up (full frame) | pixel P, flood, yellow strobe + lines, pixel S, PD dots |
+| 12.9–13.5 s | 387–405 | Front pixel-dissolves to black | |
+| 13.5–16.0 s | 405–480 | PHILLIPS DIGITAL green pixel wordmark glitches in, holds; "DATA RESTORED" in yellow | low boom |
+The pixel letters across the scenes spell P-H-I-L-L-I-P-S.
