@@ -30,3 +30,8 @@ Note: the car maker's badge stays as photographed; no maker logo or name is adde
 The pixel letters across the scenes spell P-H-I-L-L-I-P-S.
 v3: white digital annotations (callouts with coordinates, reticles, dimension lines, + clusters), 8 per scene at seeded-random points and half-beat times, spaced >= 220 px apart, hidden during strobes and tears.
 v4: ASCII x dither pattern frames (grammar from the user's 3 reference stills): scripts/car/make_patterns.py rebuilds each view from stepped regions of 1-bit ordered dither, ASCII by brightness, checkerboards and solid blocks (green/yellow on black); 2-3 per scene as 'pattern' (car swaps to its pattern) or 'patternZoom' (full-frame punch-in on a crop).
+
+## v1 render check (renders/lost-data-v1.mp4)
+- 16.0 s, 1920x1080, 30 fps. Frames checked across the whole video (3 fps sheet): all 4 scenes, every burst type, pattern swaps and punch-ins, dissolve, wordmark hold.
+- Loudness -14.0 LUFS, peak -1.8 dBFS (measured gain + limiter on the premaster). End boom placed at frame 405 (13.50 s) in code; the rumble's wobble makes its onset hard to isolate by measurement. Measured, not heard.
+- Score 8.4/10: layout 8.5, timing 8.5, readability 8, polish 8.5. Weakest: "DATA RESTORED" under the wordmark is small; the yellow flood is a flat fill.
