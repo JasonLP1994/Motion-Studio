@@ -23,6 +23,8 @@ import { KineticSymbols } from "./kinetic/KineticSymbols";
 import { kineticConfig as kc } from "./kinetic/config";
 import { GraffitiFlip } from "./grunge/GraffitiFlip";
 import { graffitiConfig as gc } from "./grunge/config";
+import { LostData } from "./car/LostData";
+import { carConfig as cc2 } from "./car/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -41,6 +43,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="IonadeSting" component={IonadeSting} durationInFrames={ion.output.durationInFrames} fps={ion.output.fps} width={ion.output.width} height={ion.output.height} />
       <Composition id="KineticSymbols" component={KineticSymbols} durationInFrames={kc.output.durationInFrames} fps={kc.output.fps} width={kc.output.width} height={kc.output.height} />
       <Composition id="GraffitiFlip" component={GraffitiFlip} durationInFrames={gc.output.durationInFrames} fps={gc.output.fps} width={gc.output.width} height={gc.output.height} />
+      <Composition id="LostData" component={LostData} durationInFrames={cc2.output.durationInFrames} fps={cc2.output.fps} width={cc2.output.width} height={cc2.output.height} />
     </>
   );
 };

@@ -69,3 +69,6 @@ public/ionade/
 
 # Local tool binaries (e.g. OIDN denoiser, installed by scripts/denoise/setup_oidn.sh)
 tools/
+
+# LostData: cut-outs made from the user's car photo, plus copied sounds (local only)
+public/car/
