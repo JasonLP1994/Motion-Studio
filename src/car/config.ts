@@ -18,7 +18,9 @@ export type Ev =
   | { kind: "flood"; at: number; len: number }
   | { kind: "brand"; at: number; len: number }
   | { kind: "tear"; at: number; len: number }
-  | { kind: "brackets"; at: number; len: number };
+  | { kind: "brackets"; at: number; len: number }
+  | { kind: "pattern"; at: number; len: number; v: number } // car rebuilt as ASCII x dither pattern
+  | { kind: "patternZoom"; at: number; len: number; v: number; zoom: number; fx: number; fy: number }; // full-frame punch-in
 
 export type Scene = {
   name: string;
@@ -59,6 +61,8 @@ export const carConfig = {
         { kind: "brackets", at: S(7), len: 18 },
         { kind: "glyph", at: S(9), len: 9, ch: "H" },
         { kind: "tear", at: S(11) + 4, len: 5 },
+        { kind: "pattern", at: 22, len: 5, v: 1 },
+        { kind: "patternZoom", at: 72, len: 4, v: 2, zoom: 3, fx: 0.3, fy: 0.4 },
       ],
     },
     {
@@ -72,6 +76,9 @@ export const carConfig = {
         { kind: "flood", at: S(7) + 5, len: 4 },
         { kind: "dots", at: S(9), len: 9, text: "PD" },
         { kind: "tear", at: S(11) + 4, len: 5 },
+        { kind: "pattern", at: 18, len: 5, v: 2 },
+        { kind: "patternZoom", at: 54, len: 4, v: 1, zoom: 2.6, fx: 0.62, fy: 0.45 },
+        { kind: "pattern", at: 92, len: 4, v: 1 },
       ],
     },
     {
@@ -84,6 +91,9 @@ export const carConfig = {
         { kind: "glyph", at: S(6), len: 9, ch: "I" },
         { kind: "brand", at: S(8), len: 9 },
         { kind: "tear", at: S(9) + 4, len: 5 },
+        { kind: "pattern", at: 18, len: 5, v: 1 },
+        { kind: "patternZoom", at: 45, len: 4, v: 2, zoom: 2.8, fx: 0.25, fy: 0.55 },
+        { kind: "pattern", at: 63, len: 5, v: 2 },
       ],
     },
     {
@@ -95,6 +105,9 @@ export const carConfig = {
         { kind: "strobe", at: S(4), len: 9, ink: "yellow", lines: true },
         { kind: "glyph", at: S(6), len: 9, ch: "S" },
         { kind: "dots", at: S(8), len: 9, text: "PD" },
+        { kind: "patternZoom", at: 18, len: 4, v: 1, zoom: 2.4, fx: 0.7, fy: 0.5 },
+        { kind: "pattern", at: 45, len: 5, v: 2 },
+        { kind: "pattern", at: 63, len: 5, v: 1 },
       ],
     },
   ] as Scene[],
@@ -124,6 +137,8 @@ export const carConfig = {
       brand: ["car/sfx/fs-416777-digital-typing-wav.ogg"],
       tear: ["car/sfx/fs-402451-fast-forward.ogg"],
       brackets: [],
+      pattern: ["car/sfx/kenney-interface-glitch-002.ogg"],
+      patternZoom: ["car/sfx/kenney-sci-computernoise-001.ogg"],
     } as Record<string, string[]>,
     sfxVolume: 0.55,
     endHit: "car/sfx/kenney-sci-lowfrequency-explosion-000.ogg", endHitVolume: 0.7,

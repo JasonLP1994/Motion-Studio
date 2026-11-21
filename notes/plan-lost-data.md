@@ -29,3 +29,4 @@ Note: the car maker's badge stays as photographed; no maker logo or name is adde
 | 13.5–16.0 s | 405–480 | PHILLIPS DIGITAL green pixel wordmark glitches in, holds; "DATA RESTORED" in yellow | low boom |
 The pixel letters across the scenes spell P-H-I-L-L-I-P-S.
 v3: white digital annotations (callouts with coordinates, reticles, dimension lines, + clusters), 8 per scene at seeded-random points and half-beat times, spaced >= 220 px apart, hidden during strobes and tears.
+v4: ASCII x dither pattern frames (grammar from the user's 3 reference stills): scripts/car/make_patterns.py rebuilds each view from stepped regions of 1-bit ordered dither, ASCII by brightness, checkerboards and solid blocks (green/yellow on black); 2-3 per scene as 'pattern' (car swaps to its pattern) or 'patternZoom' (full-frame punch-in on a crop).

@@ -197,6 +197,26 @@ const Readout: React.FC<{ text: string; t: number; corner: "tl" | "tr" | "br" }>
   );
 };
 
+// ---------- ASCII x dither pattern frames (pre-made by scripts/car/make_patterns.py) ----------
+const PAD = 0.12;
+const patternBox = (s: Scene, b: Box): Box => {
+  const k = b.w / s.w;
+  const pw = Math.floor(s.w * PAD);
+  const ph = Math.floor(s.h * PAD);
+  return { x: b.x - pw * k, y: b.y - ph * k, w: (s.w + 2 * pw) * k, h: (s.h + 2 * ph) * k };
+};
+const PatternCar: React.FC<{ s: Scene; b: Box; v: number }> = ({ s, b, v }) => <CarImg src={`${s.mosaic}pattern_${v}.png`} b={patternBox(s, b)} />;
+const PatternZoom: React.FC<{ s: Scene; b: Box; v: number; zoom: number; fx: number; fy: number }> = ({ s, b, v, zoom, fx, fy }) => {
+  const p = patternBox(s, b);
+  const w = p.w * zoom;
+  const h = p.h * zoom;
+  return (
+    <AbsoluteFill style={{ background: C.black, overflow: "hidden" }}>
+      <Img src={staticFile(`${s.mosaic}pattern_${v}.png`)} style={{ position: "absolute", left: W / 2 - fx * w, top: H / 2 - fy * h, width: w, height: h, imageRendering: "pixelated" }} />
+    </AbsoluteFill>
+  );
+};
+
 // ---------- Events ----------
 const burstOn = (local: number) => K.flicker[local % K.flicker.length] === 1;
 
@@ -214,6 +234,10 @@ const EventLayer: React.FC<{ e: Ev; t: number; i: number; s: Scene; b: Box }> = 
       return <Tear seed={i + 1} t={local} s={s} b={b} />;
     case "brackets":
       return <Brackets b={b} />;
+    case "pattern":
+      return null; // drawn in place of the car (see SceneView)
+    case "patternZoom":
+      return <PatternZoom s={s} b={b} v={e.v} zoom={e.zoom} fx={e.fx} fy={e.fy} />;
     case "dots":
       return (
         <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
@@ -341,11 +365,13 @@ const Annotations: React.FC<{ s: Scene; n: number; b: Box; t: number; frame: num
 const SceneView: React.FC<{ s: Scene; n: number; t: number; frame: number }> = ({ s, n, t, frame }) => {
   const b = boxOf(s);
   const active = s.events.map((e, i) => ({ e, i: n * 100 + i })).filter(({ e }) => t >= e.at && t < e.at + e.len);
-  const fullFrame = active.some(({ e, i }) => (e.kind === "strobe" || e.kind === "tear") && burstOn(t - e.at) && i >= 0);
+  const fullFrame = active.some(({ e }) => (e.kind === "strobe" || e.kind === "tear" || e.kind === "patternZoom") && burstOn(t - e.at));
+  const pe = active.find(({ e }) => e.kind === "pattern" && burstOn(t - e.at));
+  const patternOn = pe && pe.e.kind === "pattern" ? pe.e : null;
   return (
     <>
       <Shadow s={s} b={b} />
-      <CarImg src={s.src} b={b} />
+      {patternOn ? <PatternCar s={s} b={b} v={patternOn.v} /> : <CarImg src={s.src} b={b} />}
       {active.map(({ e, i }) => (
         <EventLayer key={i} e={e} t={t} i={i} s={s} b={b} />
       ))}
