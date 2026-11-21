@@ -21,6 +21,8 @@ import { IonadeSting } from "./ionade/Ionade";
 import { ionadeConfig as ion } from "./ionade/config";
 import { KineticSymbols } from "./kinetic/KineticSymbols";
 import { kineticConfig as kc } from "./kinetic/config";
+import { GraffitiFlip } from "./grunge/GraffitiFlip";
+import { graffitiConfig as gc } from "./grunge/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -38,6 +40,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="PaintedStatue" component={PaintedStatue} durationInFrames={stc.output.fps * stc.output.durationInSeconds} fps={stc.output.fps} width={stc.output.width} height={stc.output.height} />
       <Composition id="IonadeSting" component={IonadeSting} durationInFrames={ion.output.durationInFrames} fps={ion.output.fps} width={ion.output.width} height={ion.output.height} />
       <Composition id="KineticSymbols" component={KineticSymbols} durationInFrames={kc.output.durationInFrames} fps={kc.output.fps} width={kc.output.width} height={kc.output.height} />
+      <Composition id="GraffitiFlip" component={GraffitiFlip} durationInFrames={gc.output.durationInFrames} fps={gc.output.fps} width={gc.output.width} height={gc.output.height} />
     </>
   );
 };
