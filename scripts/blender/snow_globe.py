@@ -54,16 +54,25 @@ CFG = {
         ("candy-cane-red", (0, -1), (-0.3, 0.22), 30, 0.9, False),
         ("bench", (1, 0), (0.24, -0.22), -135, 0.42, True),
         ("lantern", (1, 0), (-0.3, 0.3), 0, 0.42, False),
-        ("tree-snow-c", (-1, 0), (-0.32, 0.33), 0, 0.36, False),
-        ("tree-snow-c", (0, 1), (0.36, -0.3), 0, 0.34, False),
-        ("sled", (0, 1), (-0.3, -0.3), 40, 0.38, False),
-        ("tree-snow-b", (1, 1), (0.32, -0.3), 0, 0.36, False),
+        # small pines and the sled sit in the clear strip in front of each house, under the eaves (never inside a wall:
+        # checked with a mesh intersection test after the houses grew)
+        ("tree-snow-c", (-1, 0), (0.345, 0.345), 0, 0.23, False),
+        ("tree-snow-c", (0, 1), (0.36, -0.40), 0, 0.22, False),
+        ("sled", (0, 1), (-0.32, -0.40), 90, 0.30, True),
+        ("tree-snow-b", (1, 1), (0.34, -0.40), 0, 0.22, False),
     ],
     "floor_r": 2.45, "globe_r": 2.75, "glass": 0.035, "glass_card": 1.2,
     "mound": 0.20,                                   # snow mound height at the centre (m)
     "base_h": 1.25, "base_flare": 1.14,
     "view": ("Standard", "None"), "exposure": 0.2,
     "light": {"key": 2600, "fill": 420, "back": 650, "world": 0.45},
+    # material between plastic and playdough (user: "slightly more reflection ... push it more"): surfaces rougher than
+    # "matte" (>= 0.6: snow, roofs, backdrop) stay as they were; the rest get a glossier coat and tighter highlights
+    "clay": {"rough_mul": 0.72, "spec": 0.6, "coat": 0.6, "coat_rough": 0.10, "sheen": 0.08, "sss": 0.20},
+    # soft back shadow on the floor like the reference: a sun from the front-left that lights ONLY the floor
+    # (azimuth from the camera deg, elevation deg, strength, softness = sun angle deg)
+    "shadow": {"az": -45.0, "el": 22.0, "strength": 2.4, "angle": 8.0, "floor_gain": 0.52, "glass": 0.35},   # glass: how much light the globe's soft glass shadow lets through   # floor_gain: dims the floor colour so lit floor keeps the old blue and only the shadow is darker
+    "star": {"depth": 0.45, "inner": 0.48},           # chunky 3D tree star: thickness and inner radius (x outer radius)
     "snow": {"count": 700, "size": (0.014, 0.032), "swirl": 0.10},
     # camera: a full orbit around the globe each loop (start azimuth deg, orbit deg per loop, elevation deg, lens mm,
     # target z, distance). Framed close like the reference: the town fills ~60% of the width.
@@ -119,21 +128,23 @@ class NT:
 def new_mat(name):
     m = bpy.data.materials.new(name); m.use_nodes = True; m.node_tree.nodes.clear(); return m, NT(m.node_tree)
 
-def clay_bsdf(T, base, rough=0.40, sss=0.22):
+def clay_bsdf(T, base, rough=0.40, sss=None):
     """playdough / soft plastic toy (user: "they look more like clay playdough or plastic"): satin, a soft clear coat so
     rounded corners catch a broad highlight, and subsurface glow so the shadow sides stay colourful, not grey"""
     b = T.n("ShaderNodeBsdfPrincipled")
     if isinstance(base, tuple): b.inputs["Base Color"].default_value = base
     else: T.link(base, b.inputs["Base Color"])
-    b.inputs["Roughness"].default_value = rough
-    b.inputs["Specular IOR Level"].default_value = 0.5
+    K = CFG["clay"]; push = rough < 0.6            # props, tiles, houses, base: glossier toy plastic
+    if sss is None: sss = K["sss"] if push else 0.22
+    b.inputs["Roughness"].default_value = rough * K["rough_mul"] if push else rough
+    b.inputs["Specular IOR Level"].default_value = K["spec"] if push else 0.5
     b.inputs["Subsurface Weight"].default_value = sss
     b.inputs["Subsurface Radius"].default_value = (0.10, 0.14, 0.22)
     b.inputs["Subsurface Scale"].default_value = 0.06
-    b.inputs["Sheen Weight"].default_value = 0.15
+    b.inputs["Sheen Weight"].default_value = K["sheen"] if push else 0.15
     b.inputs["Sheen Roughness"].default_value = 0.5
-    b.inputs["Coat Weight"].default_value = 0.3
-    b.inputs["Coat Roughness"].default_value = 0.28
+    b.inputs["Coat Weight"].default_value = K["coat"] if push else 0.3
+    b.inputs["Coat Roughness"].default_value = K["coat_rough"] if push else 0.28
     return b
 
 def out(T, surf):
@@ -291,8 +302,10 @@ def house(k, tile, off, size, roof_h, ci, face, steeple):
         parts.append(pyramid(f"h{k}_spire", sw + 0.06, 0.30, (x, fy + 0.02, z + h + roof_h * 0.5 + 0.42), clay(C["roof_snow"], 0.65)))
         parts.append(rbox(f"h{k}_star", (0.05, 0.05, 0.05), (x, fy + 0.02, z + h + roof_h * 0.5 + 0.60), clay(C["gold"], 0.3), r=0.024))
     else:
-        parts.append(rbox(f"h{k}_chim", (0.09, 0.09, 0.22), (x + w * 0.27, y + d * 0.15, z + h + 0.18), clay(C["house_dark"]), r=0.02))
-        parts.append(rbox(f"h{k}_chimsnow", (0.12, 0.12, 0.035), (x + w * 0.27, y + d * 0.15, z + h + 0.30), clay(C["roof_snow"], 0.65), r=0.016))
+        # the chimney stands clearly above the roof slope from every side (it used to sit 2 cm proud: read as a hole)
+        roof_at = roof_h * (1 - (d * 0.15) / ((d + 0.14) / 2)); ch_top = h - 0.02 + roof_at + 0.16; ch_h = ch_top - (h - 0.04)
+        parts.append(rbox(f"h{k}_chim", (0.10, 0.10, ch_h), (x + w * 0.27, y + d * 0.15, z + h - 0.04 + ch_h / 2), clay(C["house_dark"]), r=0.022))
+        parts.append(rbox(f"h{k}_chimsnow", (0.135, 0.135, 0.04), (x + w * 0.27, y + d * 0.15, z + ch_top + 0.01), clay(C["roof_snow"], 0.65), r=0.018))
     k_ = CFG["prop_scale"]          # grow the whole house about its footprint
     for p_ in parts:
         p_.location = (x + (p_.location.x - x) * k_, y + (p_.location.y - y) * k_, z + (p_.location.z - z) * k_); p_.scale = (k_,) * 3
@@ -324,6 +337,55 @@ def attr_mat():
     T.link(T.m("MULTIPLY", g.outputs["Fac"], st.outputs[0]), e.inputs["Strength"])
     add = T.n("ShaderNodeAddShader"); T.link(b.outputs[0], add.inputs[0]); T.link(e.outputs[0], add.inputs[1])
     out(T, add.outputs[0]); MATS["clay_attr"] = m; return m
+
+def revoxel(o, voxel=0.03, relax=(0.9, 22)):
+    """pines: their tiers are low-poly triangle fans that subdivision can't round evenly (flat facets). Rebuild the
+    surface as an even voxel mesh, relax it, then copy each corner's colour back from the nearest point of the original."""
+    from mathutils.bvhtree import BVHTree
+    src = bmesh.new(); src.from_mesh(o.data); src.faces.ensure_lookup_table()
+    scol = src.loops.layers.float_color["Col"]; tree = BVHTree.FromBMesh(src)
+    rm = o.modifiers.new("vox", "REMESH"); rm.mode = "VOXEL"; rm.voxel_size = voxel; rm.use_smooth_shade = True
+    sm = o.modifiers.new("relax", "SMOOTH"); sm.factor, sm.iterations = relax      # strong relax: rounds the octagonal tiers like the reference pines
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(o.evaluated_get(dg)); o.modifiers.clear(); old = o.data; o.data = me; bpy.data.meshes.remove(old)
+    ca = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER"); data = []
+    for lp in me.loops:
+        _, _, fi, _ = tree.find_nearest(me.vertices[lp.vertex_index].co)
+        data += list(src.faces[fi].loops[0][scol])
+    ca.data.foreach_set("color", data)
+    me.attributes.new("glow", "FLOAT", "FACE")
+    for p in me.polygons: p.use_smooth = True
+    me.materials.clear(); me.materials.append(attr_mat()); src.free()
+
+def tree_star(o):
+    """the kit's tree star is flat: edge-on it reads as a thin yellow bar while the camera orbits. Replace it with a
+    chunky puffy 3D star (bevelled toy plastic) that reads from every angle."""
+    me = o.data; zmax = max(v.co.z for v in me.vertices); glow = me.attributes["glow"].data
+    bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table(); gl = bm.faces.layers.float["glow"]
+    star = [f for f in bm.faces if f[gl] > 0.5 and f.calc_center_median().z > 0.86 * zmax]
+    vs = {v for f in star for v in f.verts}
+    lo = Vector([min(v.co[i] for v in vs) for i in range(3)]); hi = Vector([max(v.co[i] for v in vs) for i in range(3)])
+    print(f"tree star: {len(star)} faces, bbox {tuple(round(x, 3) for x in lo)} .. {tuple(round(x, 3) for x in hi)}")
+    bmesh.ops.delete(bm, geom=star, context="FACES"); bm.to_mesh(me); bm.free()
+    c = (lo + hi) / 2; R = max(hi.x - lo.x, hi.z - lo.z) / 2 * 1.05; S = CFG["star"]
+    sb = bmesh.new(); rim = []
+    for k in range(10):
+        a = math.pi / 2 + k * math.pi / 5; r = R if k % 2 == 0 else R * S["inner"]
+        rim.append(sb.verts.new((r * math.cos(a), 0.0, r * math.sin(a))))
+    fr = sb.verts.new((0, -R * S["depth"], 0)); bk = sb.verts.new((0, R * S["depth"], 0))
+    for k in range(10):
+        a_, b_ = rim[k], rim[(k + 1) % 10]; sb.faces.new((fr, a_, b_)); sb.faces.new((bk, b_, a_))
+    bmesh.ops.recalc_face_normals(sb, faces=sb.faces)
+    for f in sb.faces: f.smooth = True
+    sm_ = bpy.data.meshes.new("tree_star"); sb.to_mesh(sm_); sb.free()
+    gold = tuple(srgb2lin(x) for x in (0.95, 0.76, 0.31)) + (1.0,)
+    sm_.color_attributes.new("Col", "FLOAT_COLOR", "CORNER").data.foreach_set("color", list(gold) * len(sm_.loops))
+    sm_.attributes.new("glow", "FLOAT", "FACE").data.foreach_set("value", [1.0] * len(sm_.polygons))
+    sm_.materials.append(attr_mat())
+    so = bpy.data.objects.new("tree_star", sm_); bpy.context.scene.collection.objects.link(so)
+    so.location = c; so.parent = o
+    bv = so.modifiers.new("round", "BEVEL"); bv.width = R * 0.12; bv.segments = 4; bv.limit_method = "ANGLE"; bv.angle_limit = math.radians(20)
+    wn = so.modifiers.new("wn", "WEIGHTED_NORMAL"); sm_.use_auto_smooth = True
 
 def kit(name, loc, rot, scale):
     before = set(bpy.data.objects)
@@ -359,10 +421,15 @@ def kit(name, loc, rot, scale):
     # smooth clay (user: "make the props smoother"): no hard edges kept, wide rounded bevels, two smoothing passes.
     # The bevel adds support loops so the subdivision rounds the low-poly facets without melting the shapes.
     o.data.use_auto_smooth = False
+    if name == "tree-decorated-snow": tree_star(o)
+    if name.startswith("tree-snow"): revoxel(o); return finish_prop(o, name, loc, rot, scale, subd=1)
+    return finish_prop(o, name, loc, rot, scale, subd=CFG["prop_round"]["subd"])
+
+def finish_prop(o, name, loc, rot, scale, subd):
     R_ = CFG["prop_round"]
     if R_["bevel"] > 0:
         bv = o.modifiers.new("round", "BEVEL"); bv.width = R_["bevel"]; bv.segments = 2; bv.limit_method = "ANGLE"; bv.angle_limit = math.radians(25)
-    sd = o.modifiers.new("soft", "SUBSURF"); sd.levels = 2; sd.render_levels = R_["subd"]
+    sd = o.modifiers.new("soft", "SUBSURF"); sd.levels = min(2, subd); sd.render_levels = subd
     o.name = name; o.location = loc; o.rotation_euler.z = math.radians(rot); o.scale = (scale,) * 3
     return o
 
@@ -454,7 +521,11 @@ for r_ in range(1, len(ringsB) - 1):
     A_, B_ = ringsB[r_], ringsB[r_ + 1]
     for k in range(SEGB): bm.faces.new([A_[k], A_[(k + 1) % SEGB], B_[(k + 1) % SEGB], B_[k]])
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-cyc = obj_from_bm("backdrop_bowl", bm, clay(C["backdrop"], 0.95))
+def dim_hex(hx, g):          # scale a colour in linear light (same hue), back to hex
+    lin = [srgb2lin(int(hx[i:i + 2], 16) / 255) * g for i in (1, 3, 5)]
+    enc = [12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055 for c in lin]
+    return "#" + "".join(f"{round(min(1, e) * 255):02X}" for e in enc)
+cyc = obj_from_bm("backdrop_bowl", bm, clay(dim_hex(C["backdrop"], CFG["shadow"]["floor_gain"]), 0.95))
 for f_ in cyc.data.polygons: f_.use_smooth = True
 if cyc.data.polygons[0].normal.z < 0:      # face the inside (up / towards the globe)
     bm2 = bmesh.new(); bm2.from_mesh(cyc.data); bmesh.ops.reverse_faces(bm2, faces=bm2.faces); bm2.to_mesh(cyc.data); bm2.free()
@@ -476,6 +547,12 @@ def area(name, loc, size, energy, col=(1, 1, 1)):
 area("key", around(-45, 13, 15), 16.0, CFG["light"]["key"], (1.0, 0.98, 0.95))     # big soft top-left key: soft shadows like the reference
 area("fill", around(60, 15, 4), 18.0, CFG["light"]["fill"], (0.88, 0.93, 1.0))
 area("back", around(180, 14, 9), 12.0, CFG["light"]["back"], (0.93, 0.96, 1.0))
+SH = CFG["shadow"]; sd_ = bpy.data.lights.new("shadow_sun", "SUN"); sd_.energy = SH["strength"]; sd_.angle = math.radians(SH["angle"])
+sd_.color = (0.86, 0.92, 1.0)      # a cool sun keeps the floor in the blue family
+shadow_sun = link_obj("shadow_sun", sd_); shadow_sun.visible_camera = False; shadow_sun.visible_glossy = False
+shadow_sun.location = around(SH["az"], 10 * math.cos(math.radians(SH["el"])), 10 * math.sin(math.radians(SH["el"])))
+shadow_sun.rotation_euler = (Vector((0, 0, 0)) - Vector(shadow_sun.location)).to_track_quat("-Z", "Y").to_euler()
+shadow_sun.parent = rig
 
 def reflect_card(name, a_deg, el_deg, dist, w, h, strength):
     """a soft glowing card seen ONLY in the glass reflections: one gentle studio sheen, feathered edges"""
@@ -520,6 +597,24 @@ for ob in sc.objects:
 for lo in LIGHTS:
     try: lo.light_linking.receiver_collection = lit
     except AttributeError: lo.visible_glossy = False        # older Blender: no light linking, keep lights out of reflections
+floor_only = bpy.data.collections.new("floor_only"); floor_only.objects.link(cyc)
+shadow_sun.light_linking.receiver_collection = floor_only   # the shadow sun lights only the floor: the town look is unchanged
+blockers = bpy.data.collections.new("sun_blockers")          # ... and only the town and base cast its shadow: the huge
+for ob in lit.objects:                                        # backdrop bowl would otherwise shade the whole floor
+    if ob is not cyc: blockers.objects.link(ob)
+# a glass globe casts a soft, light shadow; the render's glass is see-through to shadow rays (clean interior), so a
+# shadow-only disc the size of the globe stands in for it, for this sun only. It sits out along the sun direction
+# (parallel light: same shadow), away from the town, so it never blocks the studio lights or the sky.
+sdir = (Vector(shadow_sun.location)).normalized()
+bm_ = bmesh.new(); bmesh.ops.create_circle(bm_, cap_ends=True, segments=96, radius=GR * 0.98)
+gm, gT = new_mat("glass_shadow"); tp_ = gT.n("ShaderNodeBsdfTransparent"); tp_.inputs[0].default_value = (SH["glass"],) * 3 + (1.0,); out(gT, tp_.outputs[0])
+gdisc = obj_from_bm("glass_shadow_disc", bm_, gm, smooth=False)
+gdisc.location = Vector((0, 0, GC)) + sdir * 6.0; gdisc.rotation_euler = sdir.to_track_quat("Z", "Y").to_euler()
+for k_ in ("visible_camera", "visible_diffuse", "visible_glossy", "visible_transmission", "visible_volume_scatter"): setattr(gdisc, k_, False)
+gdisc.parent = rig; blockers.objects.link(gdisc)
+for lo in LIGHTS: lo.light_linking.blocker_collection = lit     # the studio lights ignore the disc
+shadow_sun.light_linking.blocker_collection = blockers
+for c_ in (lit, floor_only, blockers): c_.use_fake_user = True   # keep the link collections when the file is saved
 
 # ---------------- render settings ----------------
 sc.render.engine = "CYCLES"; cy = sc.cycles
