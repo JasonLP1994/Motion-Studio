@@ -49,3 +49,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (snow globe): push the material between plastic and playdough: glossier coat and tighter highlights than matte clay, but keep the soft subsurface. User: "slightly more reflection ... we can push it more".
 - DO (snow globe): give the globe a soft back shadow on the floor like the reference tile shots.
 - DO: make stars and flat ornaments chunky 3D shapes so they still read edge-on when the camera orbits.
+- DON'T (clay diorama): light glossy toy materials with one huge soft key plus strong fill/sky: it flattens them and the plastic reflections disappear (user: "too bright ... you can't see the reflections"). DO: one smaller, brighter softbox (hidden from camera, light-linked out of the glass) above-right, low fill/sky, glossy coat ~1.0 / roughness ~0.07, and keep snow just below white (icy blue) so it doesn't clip.

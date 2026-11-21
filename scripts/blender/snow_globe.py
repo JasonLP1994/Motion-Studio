@@ -20,9 +20,9 @@ CFG = {
     "fps": 30, "frames": 450, "res": (1920, 1080),
     "col": {   # one blue family + snow + ONE warm accent (glow/gold)
         "backdrop": "#C4DEF7", "world": "#DCEBFA",
-        "tiles": ["#6FA9E6", "#86B8EC", "#5C99DD"], "tile_snow": "#EEF5FD", "path": "#7DB2EA", "plaza": "#94C1EE",
-        "house": ["#4F88D6", "#6A9EE0", "#3F78C8"], "house_dark": "#355FA8", "roof_snow": "#F7FAFE", "door": "#3E6DB5",
-        "base": "#3F78C8", "band": "#F4F8FD", "ground_snow": "#F2F7FD",
+        "tiles": ["#6FA9E6", "#86B8EC", "#5C99DD"], "tile_snow": "#DEEAF8", "path": "#7DB2EA", "plaza": "#94C1EE",
+        "house": ["#4F88D6", "#6A9EE0", "#3F78C8"], "house_dark": "#355FA8", "roof_snow": "#E6EFFA", "door": "#3E6DB5",
+        "base": "#3F78C8", "band": "#F4F8FD", "ground_snow": "#E1ECF9",
         "glow": "#FFC970", "gold": "#F2C14E", "snow": "#FFFFFF",
     },
     "blue_hue": 0.588, "blue_sat": 0.62,          # every prop colour is remapped onto this hue (HLS)
@@ -65,13 +65,18 @@ CFG = {
     "mound": 0.20,                                   # snow mound height at the centre (m)
     "base_h": 1.25, "base_flare": 1.14,
     "view": ("Standard", "None"), "exposure": 0.2,
-    "light": {"key": 2600, "fill": 420, "back": 650, "world": 0.45},
+    # one main softbox above and to the right of the dome (user: "a soft box ... invisible in the shot"): smaller and
+    # closer than a big soft key, so the glossy toy coat shows a clear highlight on every rounded edge. Hidden from the
+    # camera, kept out of the glass by light linking. Fill, back light and sky stay low for contrast.
+    # softbox: azimuth from the camera deg (+ = screen right), elevation deg, distance m, size (w, h) m, power W
+    "light": {"softbox": {"az": 38.0, "el": 48.0, "dist": 7.5, "size": (2.4, 1.5), "power": 370},
+              "fill": 200, "back": 300, "world": 0.32},
     # material between plastic and playdough (user: "slightly more reflection ... push it more"): surfaces rougher than
     # "matte" (>= 0.6: snow, roofs, backdrop) stay as they were; the rest get a glossier coat and tighter highlights
-    "clay": {"rough_mul": 0.72, "spec": 0.6, "coat": 0.6, "coat_rough": 0.10, "sheen": 0.08, "sss": 0.20},
+    "clay": {"rough_mul": 0.65, "spec": 0.7, "coat": 1.0, "coat_rough": 0.07, "sheen": 0.06, "sss": 0.20},
     # soft back shadow on the floor like the reference: a sun from the front-left that lights ONLY the floor
     # (azimuth from the camera deg, elevation deg, strength, softness = sun angle deg)
-    "shadow": {"az": -45.0, "el": 22.0, "strength": 2.4, "angle": 8.0, "floor_gain": 0.52, "glass": 0.35},   # glass: how much light the globe's soft glass shadow lets through   # floor_gain: dims the floor colour so lit floor keeps the old blue and only the shadow is darker
+    "shadow": {"az": 40.0, "el": 22.0, "strength": 2.4, "angle": 8.0, "floor_gain": 0.88, "glass": 0.35},   # glass: how much light the globe's soft glass shadow lets through   # floor_gain: dims the floor colour so lit floor keeps the old blue and only the shadow is darker
     "star": {"depth": 0.45, "inner": 0.48},           # chunky 3D tree star: thickness and inner radius (x outer radius)
     "snow": {"count": 700, "size": (0.014, 0.032), "swirl": 0.10},
     # camera: a full orbit around the globe each loop (start azimuth deg, orbit deg per loop, elevation deg, lens mm,
@@ -537,14 +542,16 @@ keys(rig, "rotation_euler", [(0.0, 0.0, math.radians(CFG["cam"]["orbit"]) * T_OF
 
 def around(a_deg, r, z): a = AZ + math.radians(a_deg); return (r * math.cos(a), r * math.sin(a), z)
 LIGHTS = []
-def area(name, loc, size, energy, col=(1, 1, 1)):
+def area(name, loc, size, energy, col=(1, 1, 1), rect=None):
     ld = bpy.data.lights.new(name, "AREA"); ld.size = size; ld.energy = energy; ld.color = col; ld.shape = "DISK"
+    if rect: ld.shape = "RECTANGLE"; ld.size, ld.size_y = rect
     lo = link_obj(name, ld); lo.location = loc; lo.visible_camera = False; lo.visible_glossy = True; lo.visible_transmission = False
     LIGHTS.append(lo)
     lo.rotation_euler = (Vector((0, 0, GC * 0.5)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
     lo.parent = rig
     return lo
-area("key", around(-45, 13, 15), 16.0, CFG["light"]["key"], (1.0, 0.98, 0.95))     # big soft top-left key: soft shadows like the reference
+SB = CFG["light"]["softbox"]; _e = math.radians(SB["el"])
+area("softbox", around(SB["az"], SB["dist"] * math.cos(_e), GC + SB["dist"] * math.sin(_e)), 0, SB["power"], (1.0, 0.98, 0.95), rect=SB["size"])
 area("fill", around(60, 15, 4), 18.0, CFG["light"]["fill"], (0.88, 0.93, 1.0))
 area("back", around(180, 14, 9), 12.0, CFG["light"]["back"], (0.93, 0.96, 1.0))
 SH = CFG["shadow"]; sd_ = bpy.data.lights.new("shadow_sun", "SUN"); sd_.energy = SH["strength"]; sd_.angle = math.radians(SH["angle"])
