@@ -27,6 +27,8 @@ import { LostData } from "./car/LostData";
 import { carConfig as cc2 } from "./car/config";
 import { RedGlitch } from "./ferrari/RedGlitch";
 import { redConfig as rc } from "./ferrari/config";
+import { Kingz } from "./statue/Kingz";
+import { kingzConfig as kz } from "./statue/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -47,6 +49,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="GraffitiFlip" component={GraffitiFlip} durationInFrames={gc.output.durationInFrames} fps={gc.output.fps} width={gc.output.width} height={gc.output.height} />
       <Composition id="LostData" component={LostData} durationInFrames={cc2.output.durationInFrames} fps={cc2.output.fps} width={cc2.output.width} height={cc2.output.height} />
       <Composition id="RedGlitch" component={RedGlitch} durationInFrames={rc.output.durationInFrames} fps={rc.output.fps} width={rc.output.width} height={rc.output.height} />
+      <Composition id="Kingz" component={Kingz} durationInFrames={kz.output.durationInFrames} fps={kz.output.fps} width={kz.output.width} height={kz.output.height} />
     </>
   );
 };

@@ -78,3 +78,6 @@ public/ferrari/
 
 # SAM 2 virtual environment (local tool, delete to remove)
 .object-separation/
+
+# KINGZ statue piece: working copy of the stock clip + roto layers (local only)
+public/statue/
