@@ -1,6 +1,6 @@
-# Original 120 BPM beat for KineticSymbols, made from scratch in numpy (no samples).
+# Original 115 BPM beat for KineticSymbols, made from scratch in numpy (no samples).
 import numpy as np, wave, sys
-SR=48000; BPM=120; DUR=8.0; beat=60/BPM
+SR=48000; BPM=115; DUR=9.0; beat=60/BPM
 t=np.arange(int(SR*DUR))/SR; out=np.zeros_like(t)
 rng=np.random.default_rng(7)
 def add(sig,at,g=1.0):
@@ -19,7 +19,8 @@ def clap(d=0.18):
 def bass(freq,d):
     tt=np.arange(int(SR*d))/SR; s=np.tanh(2.2*np.sin(2*np.pi*freq*tt))
     return s*np.minimum(1,tt*200)*np.exp(-tt*3.5)*0.35
-drums_end=6.5  # beat runs under the strip and the three name tricks
+LAND=round(28*900/BPM)/30  # lockup lands on half-beat 28 (same maths as the video)
+drums_end=LAND
 notes=[55.0,55.0,65.41,49.0]
 for i in range(int(drums_end/beat)):
     at=i*beat; add(kick(),at,0.9)
@@ -30,7 +31,7 @@ for j in range(int(drums_end/(beat/2))):
 # Beat stops under the lockup; one sub boom when it lands.
 tt=np.arange(int(SR*2.2))/SR
 boom=np.sin(2*np.pi*41*tt)*np.exp(-tt*1.6)*0.8
-add(boom,6.63)  # lockup lands (frame 199)
+add(boom,LAND)
 out=np.tanh(out*1.2)/np.tanh(1.2)
 out/=np.max(np.abs(out))*1.12
 pcm=(out*32767).astype(np.int16)
