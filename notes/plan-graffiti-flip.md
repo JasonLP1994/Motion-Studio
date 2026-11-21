@@ -22,3 +22,8 @@ Reference: `references/grunge-ref.mp4` (Pinterest screen recording). Measured at
 | 5.33–6.4 s | 160–192 | End card on pink: "PHILLIPS DIGITAL" headline; "Phillips" tag sprays on left to right | spray hiss |
 | 6.3–6.9 s | 190–206 | Drips run down from the tag; ® pops | snare + kick |
 | 6.9–8.0 s | 206–240 | Hold, dead still | crackle tail |
+
+## v1 check (renders/graffiti-flip-v1.mp4)
+- 40 flips, every one exactly 4 frames apart; end card from 5.33 s; spray 5.4–6.47 s; hit measured at 6.40 s (frame 192, on the bar).
+- Loudness -14.0 LUFS, peak -6.7 dBFS (measured gain pass on the premaster). Measured, not heard.
+- Score 8.3/10: layout 8.5, timing 8.5, readability 8, polish 8. Weakest: drips are thin; spray hiss sits ~3 dB above the beat.
