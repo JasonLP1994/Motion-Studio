@@ -28,3 +28,4 @@ Note: the car maker's badge stays as photographed; no maker logo or name is adde
 | 12.9–13.5 s | 387–405 | Front pixel-dissolves to black | |
 | 13.5–16.0 s | 405–480 | PHILLIPS DIGITAL green pixel wordmark glitches in, holds; "DATA RESTORED" in yellow | low boom |
 The pixel letters across the scenes spell P-H-I-L-L-I-P-S.
+v3: white digital annotations (callouts with coordinates, reticles, dimension lines, + clusters), 8 per scene at seeded-random points and half-beat times, spaced >= 220 px apart, hidden during strobes and tears.

@@ -8,6 +8,7 @@ export const C = {
   yellow: "#FFD60A",
   black: "#050505",
   floor: "#22231F", // bottom of the background gradient (near-black)
+  white: "#F5F5F2", // ONLY for the digital annotations
 };
 
 export type Ev =
@@ -97,6 +98,18 @@ export const carConfig = {
       ],
     },
   ] as Scene[],
+
+  // White digital annotations, placed at seeded-random points on each car, on the beat.
+  annotations: {
+    perScene: 8,
+    life: [14, 32] as [number, number], // frames on screen
+    lineFrames: 3, // leader line draws on
+    kinds: ["callout", "callout", "reticle", "dimension", "cross", "callout"] as const,
+    labels: ["NODE_0x3F", "SCAN 87%", "REF 07-A", "LAYER 03", "CRC ERR", "SYNC", "MESH 2048", "Ø 21.4", "VTX 1129", "FRAME {f}"],
+    fontSize: 21,
+    stroke: 3,
+    minGap: 220, // px: skip an annotation that would crowd one already on screen
+  },
 
   dissolveFrames: 18, // after the last scene: the car pixelates and drops out
   end: { glitchFrames: 9, pixel: 22, restoredDelay: 15 },

@@ -229,7 +229,116 @@ const EventLayer: React.FC<{ e: Ev; t: number; i: number; s: Scene; b: Box }> = 
   }
 };
 
-const SceneView: React.FC<{ s: Scene; n: number; t: number }> = ({ s, n, t }) => {
+// ---------- White digital annotations (seeded random, on the beat) ----------
+type Anno = { kind: string; at: number; life: number; x: number; y: number; dir: number; label: string; seed: number };
+const annosFor = (s: Scene, n: number, b: Box): Anno[] => {
+  const A = K.annotations;
+  const all = Array.from({ length: A.perScene }).map((_, k) => {
+    const r = (j: number) => rnd(n * 977 + k * 31 + j);
+    const x = Math.min(W - 120, Math.max(120, b.x + b.w * (0.12 + 0.76 * r(1))));
+    const y = Math.min(H - 120, Math.max(120, b.y + b.h * (0.18 + 0.64 * r(2))));
+    return {
+      kind: A.kinds[Math.floor(r(3) * A.kinds.length)],
+      at: 9 * Math.floor(r(4) * (s.len - 1)) + (k % 3 === 0 ? 4 : 0),
+      life: Math.round(A.life[0] + r(5) * (A.life[1] - A.life[0])),
+      x, y, dir: x < W / 2 ? -1 : 1,
+      label: A.labels[Math.floor(r(6) * A.labels.length)],
+      seed: n * 100 + k,
+    };
+  });
+  // keep annotations from crowding each other while both are on screen
+  const kept: Anno[] = [];
+  for (const a of all) {
+    const clash = kept.some((o) => a.at < o.at + o.life && o.at < a.at + a.life && Math.hypot(a.x - o.x, a.y - o.y) < A.minGap);
+    if (!clash) kept.push(a);
+  }
+  return kept;
+};
+const coord = (v: number) => String(Math.round(v)).padStart(4, "0");
+
+const AnnoView: React.FC<{ a: Anno; t: number; frame: number }> = ({ a, t, frame }) => {
+  const A = K.annotations;
+  const local = t - a.at;
+  if (local < 0 || local >= a.life) return null;
+  if ((local === 1 || local === a.life - 2) ) return null; // flicker in and out
+  const draw = Math.min(1, (local + 1) / A.lineFrames);
+  const typed = (txt: string, d = 0) => txt.slice(0, Math.max(0, Math.floor((local - d) * 2.2)));
+  const label = a.label.replace("{f}", String(frame).padStart(4, "0"));
+  const st = { stroke: C.white, strokeWidth: A.stroke, fill: "none" } as const;
+  const txt = (x: number, y: number, v: string, anchor: "start" | "end" | "middle", size = A.fontSize) => (
+    <text x={x} y={y} fill={C.white} fontFamily={K.monoFont} fontSize={size} letterSpacing="0.06em" textAnchor={anchor}>
+      {v}
+    </text>
+  );
+  if (a.kind === "callout") {
+    const ex = a.x + a.dir * 80;
+    const ey = a.y - 80;
+    const hx = ex + a.dir * 210;
+    const path = `M${a.x} ${a.y} L${ex} ${ey} L${hx} ${ey}`;
+    return (
+      <g>
+        <rect x={a.x - 8} y={a.y - 8} width={16} height={16} {...st} />
+        <path d={path} {...st} pathLength={1} strokeDasharray={`${draw} 1`} />
+        {draw >= 1 && txt(hx, ey - 12, typed(label), a.dir > 0 ? "end" : "start")}
+        {draw >= 1 && txt(hx, ey + 28, typed(`X${coord(a.x)} Y${coord(a.y)}`, 3), a.dir > 0 ? "end" : "start", A.fontSize - 3)}
+      </g>
+    );
+  }
+  if (a.kind === "reticle") {
+    const r = 40 + 16 * draw;
+    return (
+      <g>
+        <circle cx={a.x} cy={a.y} r={r} {...st} />
+        {[0, 90, 180, 270].map((d) => {
+          const c = Math.cos((d * Math.PI) / 180);
+          const s2 = Math.sin((d * Math.PI) / 180);
+          return <line key={d} x1={a.x + c * (r - 10)} y1={a.y + s2 * (r - 10)} x2={a.x + c * (r + 12)} y2={a.y + s2 * (r + 12)} {...st} />;
+        })}
+        <rect x={a.x - 2} y={a.y - 2} width={4} height={4} fill={C.white} />
+        {txt(a.x + r + 18, a.y + 5, typed(`TRK ${label}`), "start")}
+      </g>
+    );
+  }
+  if (a.kind === "dimension") {
+    const len = 180 + rnd(a.seed + 9) * 200;
+    const x0 = Math.max(80, Math.min(W - 80 - len, a.x - len / 2));
+    const y = a.y;
+    const x1 = x0 + len * draw;
+    return (
+      <g>
+        <line x1={x0} y1={y - 10} x2={x0} y2={y + 10} {...st} />
+        <line x1={x0} y1={y} x2={x1} y2={y} {...st} />
+        {draw >= 1 && <line x1={x0 + len} y1={y - 10} x2={x0 + len} y2={y + 10} {...st} />}
+        {draw >= 1 && txt(x0 + len / 2, y - 14, typed(`${Math.round(len)} PX`), "middle")}
+      </g>
+    );
+  }
+  // cross: a small cluster of + marks with a coordinate
+  return (
+    <g>
+      {[0, 1, 2].map((i) => {
+        const cx = a.x + i * 44;
+        return (
+          <g key={i} opacity={local > i ? 1 : 0}>
+            <line x1={cx - 12} y1={a.y} x2={cx + 12} y2={a.y} {...st} />
+            <line x1={cx} y1={a.y - 12} x2={cx} y2={a.y + 12} {...st} />
+          </g>
+        );
+      })}
+      {txt(a.x - 12, a.y + 40, typed(`${coord(a.x)}.${coord(a.y)}`, 2), "start", A.fontSize - 3)}
+    </g>
+  );
+};
+
+const Annotations: React.FC<{ s: Scene; n: number; b: Box; t: number; frame: number }> = ({ s, n, b, t, frame }) => (
+  <svg width={W} height={H} style={{ position: "absolute", inset: 0, filter: "drop-shadow(0 0 3px rgba(0,0,0,0.85))" }}>
+    {annosFor(s, n, b).map((a, i) => (
+      <AnnoView key={i} a={a} t={t} frame={frame} />
+    ))}
+  </svg>
+);
+
+const SceneView: React.FC<{ s: Scene; n: number; t: number; frame: number }> = ({ s, n, t, frame }) => {
   const b = boxOf(s);
   const active = s.events.map((e, i) => ({ e, i: n * 100 + i })).filter(({ e }) => t >= e.at && t < e.at + e.len);
   const fullFrame = active.some(({ e, i }) => (e.kind === "strobe" || e.kind === "tear") && burstOn(t - e.at) && i >= 0);
@@ -240,6 +349,7 @@ const SceneView: React.FC<{ s: Scene; n: number; t: number }> = ({ s, n, t }) =>
       {active.map(({ e, i }) => (
         <EventLayer key={i} e={e} t={t} i={i} s={s} b={b} />
       ))}
+      {!fullFrame && <Annotations s={s} n={n} b={b} t={t} frame={frame} />}
       {!fullFrame && (
         <>
           <Readout text={K.words.file} t={t} corner="tl" />
@@ -302,7 +412,7 @@ export const LostData: React.FC = () => {
   const fade = interpolate(f, [TL.dissolve, TL.end], [0, 1], clamp);
   return (
     <AbsoluteFill style={{ background: `linear-gradient(180deg, ${C.black} 0%, ${C.black} 30%, ${C.floor} 100%)` }}>
-      {n >= 0 && <SceneView s={K.scenes[n]} n={n} t={f - TL.starts[n]} />}
+      {n >= 0 && <SceneView s={K.scenes[n]} n={n} t={f - TL.starts[n]} frame={f} />}
       {f >= TL.dissolve && f < TL.end && <Dissolve f={f} />}
       {f >= TL.dissolve && <AbsoluteFill style={{ background: C.black, opacity: fade }} />}
       {f >= TL.end && <EndMark f={f} />}
