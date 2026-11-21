@@ -25,6 +25,9 @@ CFG = {
         "base": "#3F78C8", "band": "#F4F8FD", "ground_snow": "#E1ECF9",
         "glow": "#FFC970", "gold": "#F2C14E", "snow": "#FFFFFF",
     },
+    # colour grade on every blue (user: "up the saturation a little ... more blue, it's washed blue-purple"):
+    # saturation multiplier and a small hue nudge away from purple (HLS hue units, -0.01 = about -4 deg). Warm accents untouched.
+    "grade": {"sat": 1.15, "hue": -0.011},
     "blue_hue": 0.588, "blue_sat": 0.62,          # every prop colour is remapped onto this hue (HLS)
     "tile": 1.05, "gap": 0.03, "tile_base_h": 0.42, "prop_scale": 1.2, "prop_round": {"bevel": 0.0, "subd": 3},   # prop_scale: every house and prop on the tiles
     "tile_dh": {(-1, 1): 0.10, (0, 1): 0.04, (1, 1): 0.12, (-1, 0): 0.06, (0, 0): 0.0, (1, 0): 0.03,
@@ -96,8 +99,14 @@ FACE = CFG["cam"]["az"] + 90   # rotation that turns a kit model (front = -y) to
 
 # ---------------- helpers ----------------
 def srgb2lin(c): return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+def grade(rgb):
+    """the config's colour grade, on display (sRGB) values: blues get a touch more saturation, nudged away from purple"""
+    hh, ll, ss = colorsys.rgb_to_hls(*rgb)
+    if not 0.42 < hh < 0.80: return rgb                     # leave golds, warm glow and neutrals alone
+    G = CFG["grade"]; return colorsys.hls_to_rgb(hh + G["hue"], ll, min(1.0, ss * G["sat"]))
+
 def hexc(h, a=1.0):
-    h = h.lstrip("#"); return tuple(srgb2lin(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4)) + (a,)
+    h = h.lstrip("#"); return tuple(srgb2lin(c) for c in grade(tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)))) + (a,)
 
 def keys(id_data, path, values, count=1, frames=F, interp="LINEAR"):
     ad = id_data.animation_data or id_data.animation_data_create()
@@ -413,7 +422,7 @@ def kit(name, loc, rot, scale):
     for p in me.polygons:   # per-face colour from the kit's colour swatch, remapped
         u = sum(uv[li].uv.x for li in p.loop_indices) / p.loop_total; v = sum(uv[li].uv.y for li in p.loop_indices) / p.loop_total
         px = min(CW - 1, max(0, int(u * CW))); py = min(CH - 1, max(0, int(v * CH))); k = (py * CW + px) * 4
-        c, gl = remap(tuple(CPX[k:k + 3])); cols.append(c); glows.append(gl)
+        c, gl = remap(tuple(CPX[k:k + 3])); cols.append(grade(c)); glows.append(gl)
     ca = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER"); data = []
     for p, c in zip(me.polygons, cols):
         lc = tuple(srgb2lin(x) for x in c) + (1.0,)
@@ -551,7 +560,7 @@ def area(name, loc, size, energy, col=(1, 1, 1), rect=None):
     lo.parent = rig
     return lo
 SB = CFG["light"]["softbox"]; _e = math.radians(SB["el"])
-area("softbox", around(SB["az"], SB["dist"] * math.cos(_e), GC + SB["dist"] * math.sin(_e)), 0, SB["power"], (1.0, 0.98, 0.95), rect=SB["size"])
+area("softbox", around(SB["az"], SB["dist"] * math.cos(_e), GC + SB["dist"] * math.sin(_e)), 0, SB["power"], (0.97, 0.985, 1.0), rect=SB["size"])   # neutral-cool: a warm key read purple on the blues
 area("fill", around(60, 15, 4), 18.0, CFG["light"]["fill"], (0.88, 0.93, 1.0))
 area("back", around(180, 14, 9), 12.0, CFG["light"]["back"], (0.93, 0.96, 1.0))
 SH = CFG["shadow"]; sd_ = bpy.data.lights.new("shadow_sun", "SUN"); sd_.energy = SH["strength"]; sd_.angle = math.radians(SH["angle"])
