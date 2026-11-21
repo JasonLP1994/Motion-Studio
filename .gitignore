@@ -75,3 +75,6 @@ public/car/
 
 # Ferrari glitch: copies, masks, mosaics and patterns of the user's photos (local only)
 public/ferrari/
+
+# SAM 2 virtual environment (local tool, delete to remove)
+.object-separation/

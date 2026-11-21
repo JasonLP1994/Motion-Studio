@@ -1,6 +1,6 @@
 // Red Glitch -> Phillips Digital. Every word, colour, scene, event and sound lives here.
 // Same grammar as LostData (references/car-ref.mp4) but in the reference's own red / black / white,
-// on full-frame photos, and much wilder: stacked bursts, RGB split, macroblock shuffle, pixel smears,
+// on flat paper white with SAM 2 cut-outs of the user's photos (user: "white background"), and much wilder: stacked bursts, RGB split, macroblock shuffle, pixel smears,
 // negative flashes, beat zoom punches with shake, a rapid-cut montage and paper ASCII x dither frames.
 
 export const C = {
@@ -69,7 +69,7 @@ export const redConfig = {
         { kind: "rgb", at: S(1) + 7, len: 6 },
         { kind: "glyph", at: S(2) + 4, len: 7, ch: "I" },
         { kind: "patternZoom", at: S(3) + 4, len: 4, v: 2, zoom: 2.6, fx: 0.42, fy: 0.5 },
-        { kind: "strobe", at: S(4) + 2, len: 6, ink: "white", lines: true },
+        { kind: "strobe", at: S(4) + 2, len: 6, ink: "black", lines: true },
         { kind: "shuffle", at: S(5), len: 6 },
         { kind: "glyph", at: S(6), len: 6, ch: "L" },
         { kind: "flood", at: S(6) + 6, len: 3 },
@@ -103,7 +103,7 @@ export const redConfig = {
         { kind: "glyph", at: S(1) + 5, len: 7, ch: "P" },
         { kind: "rgb", at: S(2) + 5, len: 6 },
         { kind: "dots", at: S(3) + 5, len: 8, text: "PD" },
-        { kind: "strobe", at: S(4) + 5, len: 5, ink: "white" },
+        { kind: "strobe", at: S(4) + 5, len: 5, ink: "black" },
         { kind: "smear", at: S(5) + 4, len: 6 },
         { kind: "pattern", at: S(6) + 3, len: 6, v: 2 },
         { kind: "glyph", at: S(7) + 1, len: 7, ch: "S" },

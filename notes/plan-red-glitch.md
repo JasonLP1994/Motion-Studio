@@ -1,5 +1,7 @@
 # Red Glitch → Phillips Digital (Ferrari photos, 16:9, 19.2 s)
 
+v2 (user: "white background", flat paper white): cars cut out with SAM 2 (`facebook/sam2.1-hiera-large`, image mode, box + paint points; `scripts/ferrari/sam_cutout.py` run with `.object-separation/bin/python`, `HF_HUB_DISABLE_XET=1`; `scripts/ferrari/keep_largest.py` drops floor-reflection specks). Paper #EEECE7 + faint grain; graphics in black ink, red accent; split = red/black silhouette misregistration; negative = B&W; dissolve fades to paper; red wordmark on paper.
+
 Brief (user): a Ferrari version in the reference's own colours (red / black / white), "more crazy, more glitchy, more wild". Plus "node" frames like the user's Lost Data node still, saying FERRARI (text only; no maker logo added). Inputs: `inputs/ferrari-{top,side,front,toprear,wheel}.png` (user's images, untouched; derived files in ignored `public/ferrari/`).
 Reference: `references/car-ref.mp4` (same file as LostData, checksum match) + the user's ASCII x dither stills + the node still.
 

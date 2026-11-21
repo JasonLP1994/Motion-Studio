@@ -15,6 +15,11 @@ const rnd = (n: number) => {
 };
 const burstOn = (local: number) => K.flicker[local % K.flicker.length] === 1;
 const img = (s: Scene, suffix = "") => `ferrari/${s.name}${suffix}.png`;
+// Paper-white version (user): cars are SAM 2 cut-outs; pixelated versions come from the cut-outs too.
+const cut = (s: Scene, suffix = "") => `ferrari/${s.name}-cut${suffix}.png`;
+const BG = C.paper;
+const INK = C.black;
+const SHADOW = "drop-shadow(0 22px 26px rgba(0,0,0,0.35))";
 const sceneByName = (n: string) => K.scenes.find((s) => s.name === n) as Scene;
 
 type Box = { x: number; y: number; w: number; h: number };
@@ -67,13 +72,26 @@ const ChannelDefs: React.FC = () => (
   </svg>
 );
 
-// Red / white split (stays in palette): a white-ish luminance copy and a red-channel copy, offset.
-const RGBSplit: React.FC<{ s: Scene; b: Box; seed: number }> = ({ s, b, seed }) => {
-  const o = (k: number) => (rnd(seed + k) - 0.5) * 80;
+// Print-style misregistration split on paper: solid red and black silhouettes of the car, offset in
+// opposite directions behind the untouched car, so only their edges show (stays red / black / white).
+const Silhouette: React.FC<{ s: Scene; b: Box; color: string; dx: number; dy: number }> = ({ s, b, color, dx, dy }) => {
+  const url = `url(${staticFile(cut(s))})`; // the cut-out's own alpha shapes the silhouette
   return (
-    <AbsoluteFill style={{ background: C.black }}>
-      <Photo src={img(s)} b={{ ...b, x: b.x + o(1), y: b.y + o(2) * 0.3 }} style={{ filter: "grayscale(1) brightness(0.85) contrast(1.3)", mixBlendMode: "screen" }} />
-      <Photo src={img(s)} b={{ ...b, x: b.x - o(1), y: b.y - o(2) * 0.3 }} style={{ filter: "url(#chR)", mixBlendMode: "screen" }} />
+    <div
+      style={{
+        position: "absolute", left: b.x + dx, top: b.y + dy, width: b.w, height: b.h, background: color,
+        WebkitMaskImage: url, maskImage: url, WebkitMaskSize: "100% 100%", maskSize: "100% 100%",
+      }}
+    />
+  );
+};
+const RGBSplit: React.FC<{ s: Scene; b: Box; seed: number }> = ({ s, b, seed }) => {
+  const o = (k: number) => (rnd(seed + k * 3.1) > 0.5 ? 1 : -1) * (26 + rnd(seed + k) * 40); // always a visible offset
+  return (
+    <AbsoluteFill style={{ background: BG }}>
+      <Silhouette s={s} b={b} color={C.red} dx={o(1)} dy={o(2) * 0.35} />
+      <Silhouette s={s} b={b} color={INK} dx={-o(1) * 0.8} dy={-o(2) * 0.3} />
+      <Photo src={cut(s)} b={b} />
     </AbsoluteFill>
   );
 };
@@ -90,8 +108,8 @@ const JitterBands: React.FC<{ s: Scene; b: Box; frame: number }> = ({ s, b, fram
         const h = 6 + rnd(k + 1) * 50;
         const dx = (rnd(k + 2) - 0.5) * 260;
         return (
-          <div key={i} style={{ position: "absolute", left: 0, top: y, width: W, height: h, overflow: "hidden" }}>
-            <Photo src={img(s)} b={{ ...b, x: b.x + dx, y: b.y - y }} />
+          <div key={i} style={{ position: "absolute", left: 0, top: y, width: W, height: h, overflow: "hidden", background: BG }}>
+            <Photo src={cut(s)} b={{ ...b, x: b.x + dx, y: b.y - y }} />
           </div>
         );
       })}
@@ -111,8 +129,8 @@ const Shuffle: React.FC<{ s: Scene; b: Box; seed: number }> = ({ s, b, seed }) =
       const dx = Math.round((rnd(k + 1) - 0.5) * 8) * bs;
       const dy = Math.round((rnd(k + 2) - 0.5) * 4) * bs;
       cells.push(
-        <div key={k} style={{ position: "absolute", left: c * bs, top: r * bs, width: bs, height: bs, overflow: "hidden" }}>
-          <Photo src={rnd(k + 3) > 0.75 ? img(s, "-mosaic_16") : img(s)} b={{ ...b, x: b.x - c * bs + dx, y: b.y - r * bs + dy }} />
+        <div key={k} style={{ position: "absolute", left: c * bs, top: r * bs, width: bs, height: bs, overflow: "hidden", background: BG }}>
+          <Photo src={rnd(k + 3) > 0.75 ? cut(s, "-mosaic_16") : cut(s)} b={{ ...b, x: b.x - c * bs + dx, y: b.y - r * bs + dy }} />
         </div>,
       );
     }
@@ -130,7 +148,7 @@ const Smear: React.FC<{ s: Scene; b: Box; seed: number }> = ({ s, b, seed }) => 
       const stretch = 260;
       return (
         <div key={i} style={{ position: "absolute", left: x0, top: y, width: W - x0, height: bh, overflow: "hidden" }}>
-          <Img src={staticFile(img(s))} style={{ position: "absolute", left: -(x0 - b.x) * stretch, top: b.y - y, width: b.w * stretch, height: b.h }} />
+          <Img src={staticFile(cut(s))} style={{ position: "absolute", left: -(x0 - b.x) * stretch, top: b.y - y, width: b.w * stretch, height: b.h }} />
         </div>
       );
     })}
@@ -163,7 +181,7 @@ const Glyph: React.FC<{ ch: string; s: Scene; b: Box; seed: number }> = ({ ch, s
   const y0 = (H - 7 * cell) / 2;
   return (
     <>
-      <Photo src={img(s, "-mosaic_18")} b={b} />
+      <Photo src={cut(s, "-mosaic_18")} b={b} />
       <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
         <defs>
           <pattern id={`gd${seed}`} width={8} height={8} patternUnits="userSpaceOnUse">
@@ -173,7 +191,7 @@ const Glyph: React.FC<{ ch: string; s: Scene; b: Box; seed: number }> = ({ ch, s
         </defs>
         {cellsOf(ch).map(([c, r], i) => (
           <g key={i}>
-            <rect x={x0 + c * cell} y={y0 + r * cell} width={cell + 1} height={cell + 1} fill={C.white} />
+            <rect x={x0 + c * cell} y={y0 + r * cell} width={cell + 1} height={cell + 1} fill={INK} />
             {rnd(i + seed) > 0.7 && <rect x={x0 + c * cell} y={y0 + r * cell} width={cell + 1} height={cell + 1} fill={`url(#gd${seed})`} />}
           </g>
         ))}
@@ -194,7 +212,7 @@ const Strobe: React.FC<{ ink: string; lines?: boolean; seed: number }> = ({ ink,
     {lines && (
       <svg width={W} height={H}>
         {Array.from({ length: 60 }).map((_, i) => (
-          <rect key={i} x={rnd(seed + i) * W * 0.5} y={i * 18 + 6} width={W * (0.2 + rnd(seed + i + 70) * 0.8)} height={3} fill={ink === C.black ? C.red : C.black} opacity={0.9} />
+          <rect key={i} x={rnd(seed + i) * W * 0.5} y={i * 18 + 6} width={W * (0.2 + rnd(seed + i + 70) * 0.8)} height={3} fill={ink === C.red ? C.black : C.red} opacity={0.9} />
         ))}
       </svg>
     )}
@@ -205,16 +223,16 @@ const Tear: React.FC<{ s: Scene; b: Box; seed: number; t: number }> = ({ s, b, s
   const strips = 40;
   const sh = H / strips;
   return (
-    <AbsoluteFill style={{ background: C.black }}>
+    <AbsoluteFill style={{ background: BG }}>
       {Array.from({ length: strips }).map((_, i) => {
         const big = rnd(seed * 7 + i) > 0.6;
         const dx = (rnd(seed * 13 + i + t * 3) - 0.5) * (big ? 1100 : 160);
         return (
           <div key={i} style={{ position: "absolute", left: 0, top: i * sh, width: W, height: sh + 1, overflow: "hidden" }}>
             <div style={{ position: "absolute", left: dx, top: -i * sh, width: W, height: H }}>
-              <Photo src={img(s)} b={b} />
+              <Photo src={cut(s)} b={b} />
             </div>
-            {rnd(seed + i * 3) > 0.5 && <div style={{ position: "absolute", left: rnd(i + seed) * W * 0.4, top: sh / 2, width: W * rnd(i * 5 + seed), height: 2, background: C.white }} />}
+            {rnd(seed + i * 3) > 0.5 && <div style={{ position: "absolute", left: rnd(i + seed) * W * 0.4, top: sh / 2, width: W * rnd(i * 5 + seed), height: 2, background: INK }} />}
           </div>
         );
       })}
@@ -240,8 +258,8 @@ const Brackets: React.FC = () => {
     <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
       {pts.map(([x, y, dx, dy], k) =>
         Array.from({ length: 6 }).flatMap((_, i) => [
-          <rect key={`${k}h${i}`} x={x + dx * i * s - (dx < 0 ? s : 0)} y={y - (dy < 0 ? s : 0)} width={s * 0.8} height={s * 0.8} fill={C.white} />,
-          <rect key={`${k}v${i}`} x={x - (dx < 0 ? s : 0)} y={y + dy * i * s - (dy < 0 ? s : 0)} width={s * 0.8} height={s * 0.8} fill={C.white} />,
+          <rect key={`${k}h${i}`} x={x + dx * i * s - (dx < 0 ? s : 0)} y={y - (dy < 0 ? s : 0)} width={s * 0.8} height={s * 0.8} fill={INK} />,
+          <rect key={`${k}v${i}`} x={x - (dx < 0 ? s : 0)} y={y + dy * i * s - (dy < 0 ? s : 0)} width={s * 0.8} height={s * 0.8} fill={INK} />,
         ]),
       )}
     </svg>
@@ -257,9 +275,8 @@ const Readout: React.FC<{ text: string; t: number; corner: "tl" | "tr" | "br" }>
       fontFamily: K.monoFont,
       fontSize: 20,
       letterSpacing: "0.08em",
-      color: C.white,
+      color: INK,
       whiteSpace: "pre",
-      textShadow: "0 0 6px rgba(0,0,0,0.9)",
     }}
   >
     {text.slice(0, Math.max(0, Math.floor(t * 1.5)))}
@@ -289,9 +306,9 @@ const AnnoView: React.FC<{ a: Anno; t: number; frame: number }> = ({ a, t, frame
   const draw = Math.min(1, (local + 1) / A.lineFrames);
   const typed = (txt: string, d = 0) => txt.slice(0, Math.max(0, Math.floor((local - d) * 2.4)));
   const label = a.label.replace("{f}", String(frame).padStart(4, "0"));
-  const st = { stroke: C.white, strokeWidth: A.stroke, fill: "none" } as const;
+  const st = { stroke: INK, strokeWidth: A.stroke, fill: "none" } as const;
   const txt = (x: number, y: number, v: string, anchor: "start" | "end" | "middle", size = A.fontSize) => (
-    <text x={x} y={y} fill={C.white} fontFamily={K.monoFont} fontSize={size} letterSpacing="0.06em" textAnchor={anchor}>{v}</text>
+    <text x={x} y={y} fill={INK} fontFamily={K.monoFont} fontSize={size} letterSpacing="0.06em" textAnchor={anchor}>{v}</text>
   );
   if (a.kind === "callout") {
     const ex = a.x + a.dir * 80, ey = a.y - 80, hx = ex + a.dir * 210;
@@ -313,7 +330,7 @@ const AnnoView: React.FC<{ a: Anno; t: number; frame: number }> = ({ a, t, frame
           const c = Math.cos((d * Math.PI) / 180), s2 = Math.sin((d * Math.PI) / 180);
           return <line key={d} x1={a.x + c * (r - 10)} y1={a.y + s2 * (r - 10)} x2={a.x + c * (r + 12)} y2={a.y + s2 * (r + 12)} {...st} />;
         })}
-        <rect x={a.x - 2} y={a.y - 2} width={4} height={4} fill={C.white} />
+        <rect x={a.x - 2} y={a.y - 2} width={4} height={4} fill={INK} />
         {txt(a.x + r + 18, a.y + 5, typed(`TRK ${label}`), "start")}
       </g>
     );
@@ -361,7 +378,7 @@ const NodesLayer: React.FC<{ s: Scene; b: Box; t: number }> = ({ s, b, t }) => {
       const r = rnd(i * 7 + side * 131);
       if (r < 0.25) continue;
       const h = 16 + rnd(i * 3 + side * 17) * 54;
-      const fill = r > 0.85 ? "#8A8A8A" : C.white;
+      const fill = r > 0.85 ? "#8A8A8A" : INK;
       out.push(<rect key={`${i}-${side}`} x={X(x) - step / 2} y={side ? Y(yb) - h : Y(yt)} width={step * 0.92} height={h} fill={fill} />);
     }
     return out;
@@ -381,7 +398,7 @@ const NodesLayer: React.FC<{ s: Scene; b: Box; t: number }> = ({ s, b, t }) => {
         const draw = interpolate(t, [start, start + N.wireFrames], [0, 1], clamp);
         if (draw <= 0) return null;
         const d = `M${p.x} ${p.y} C${p.x + 160} ${cy + (i % 2 ? -140 : 140)} ${q.x - 160} ${cy + (i % 2 ? 140 : -140)} ${q.x} ${q.y}`;
-        return <path key={i} d={d} fill="none" stroke={C.white} strokeWidth={2.5} pathLength={1} strokeDasharray={`${draw} 1`} opacity={0.9} />;
+        return <path key={i} d={d} fill="none" stroke={INK} strokeWidth={2.5} pathLength={1} strokeDasharray={`${draw} 1`} opacity={0.9} />;
       })}
       {showName && (
         <g>
@@ -397,8 +414,8 @@ const NodesLayer: React.FC<{ s: Scene; b: Box; t: number }> = ({ s, b, t }) => {
         const ly = p.side === "top" ? p.y - 64 : p.y + 24;
         return (
           <g key={`n${i}`}>
-            <rect x={p.x - 9} y={p.y - 9} width={18} height={18} fill={C.white} />
-            <line x1={p.x} y1={p.y} x2={p.x + 22} y2={ly + 20} stroke={C.white} strokeWidth={2} />
+            <rect x={p.x - 9} y={p.y - 9} width={18} height={18} fill={INK} />
+            <line x1={p.x} y1={p.y} x2={p.x + 22} y2={ly + 20} stroke={INK} strokeWidth={2} />
             <rect x={p.x + 22} y={ly} width={150} height={40} fill={C.red} />
             <text x={p.x + 34} y={ly + 28} fill={C.white} fontFamily={K.monoFont} fontSize={24}>
               {N.labels[i].slice(0, Math.max(0, Math.floor((t - at) * 2.5)))}
@@ -407,7 +424,7 @@ const NodesLayer: React.FC<{ s: Scene; b: Box; t: number }> = ({ s, b, t }) => {
         );
       })}
       {N.code.map((lines, j) => (
-        <text key={`c${j}`} fill={C.white} fontFamily={K.monoFont} fontSize={17} opacity={0.92}>
+        <text key={`c${j}`} fill={INK} fontFamily={K.monoFont} fontSize={17} opacity={0.92}>
           {codeLines(lines, 6 + j * 8).map((ln, i) => (
             <tspan key={i} x={j === 0 ? W - 520 : W - 560} y={(j === 0 ? 150 : 700) + i * 24}>
               {ln}
@@ -448,16 +465,16 @@ const Shot: React.FC<{ s: Scene; t: number; events: Ev[]; n: number; frame: numb
       case "pattern": return <PatternFull key={i} s={s} b={b} v={e.v ?? 1} />;
       case "patternZoom": return <PatternFull key={i} s={s} b={b} v={e.v ?? 1} zoom={e.zoom} fx={e.fx} fy={e.fy} />;
       case "brackets": return <Brackets key={i} />;
-      case "dots": return <svg key={i} width={W} height={H} style={{ position: "absolute", inset: 0 }}><PixelText text={e.text ?? "PD"} cell={40} cx={W / 2} cy={H / 2} ink={C.white} /></svg>;
-      case "brand": return <svg key={i} width={W} height={H} style={{ position: "absolute", inset: 0 }}><PixelText text={K.words.brand} cell={20} cx={W / 2} cy={H / 2} ink={C.white} /></svg>;
+      case "dots": return <svg key={i} width={W} height={H} style={{ position: "absolute", inset: 0 }}><PixelText text={e.text ?? "PD"} cell={40} cx={W / 2} cy={H / 2} ink={INK} /></svg>;
+      case "brand": return <svg key={i} width={W} height={H} style={{ position: "absolute", inset: 0 }}><PixelText text={K.words.brand} cell={20} cx={W / 2} cy={H / 2} ink={C.red} /></svg>;
       default: return null;
     }
   };
   return (
     <AbsoluteFill style={{ filter: inverted ? "grayscale(1) invert(1) contrast(1.5)" : undefined }}>
       <AbsoluteFill style={{ transform: `translate(${sx}px, ${sy}px) scale(${punch})` }}>
-        <AbsoluteFill style={{ background: C.black }} />
-        <Photo src={img(s)} b={b} style={s.nodes ? { filter: `brightness(${K.nodes.dim}) contrast(1.2)` } : undefined} />
+        <AbsoluteFill style={{ background: BG }} />
+        <Photo src={cut(s)} b={b} style={{ filter: SHADOW }} />
         {!s.nodes && !full && <JitterBands s={s} b={b} frame={frame} />}
         {s.nodes && <NodesLayer s={s} b={b} t={t} />}
         {active.map(({ e, i }) => layer(e, i))}
@@ -465,7 +482,7 @@ const Shot: React.FC<{ s: Scene; t: number; events: Ev[]; n: number; frame: numb
       {showUi && !full && (
         <>
           {!s.nodes && (
-            <svg width={W} height={H} style={{ position: "absolute", inset: 0, filter: "drop-shadow(0 0 3px rgba(0,0,0,0.85))" }}>
+            <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
               {annosFor(annoLen, n).map((a, i) => <AnnoView key={i} a={a} t={t} frame={frame} />)}
             </svg>
           )}
@@ -486,7 +503,7 @@ const montageSlots = (() => {
   for (let k = 0, a = 0; a < total; k++) {
     const next = Math.round((k + 1) * 4.5);
     const kind = M.kinds[Math.floor(rnd(k * 19 + 5) * M.kinds.length)];
-    slots.push({ at: a, len: next - a, scene: sceneByName(M.order[k % M.order.length]), ev: { kind, at: 0, len: next - a, v: 1 + (k % 2), ink: k % 2 ? "white" : "red", lines: true } });
+    slots.push({ at: a, len: next - a, scene: sceneByName(M.order[k % M.order.length]), ev: { kind, at: 0, len: next - a, v: 1 + (k % 2), ink: k % 2 ? "black" : "red", lines: true } });
     a = next;
   }
   return slots;
@@ -508,7 +525,7 @@ const Dissolve: React.FC<{ f: number }> = ({ f }) => {
           {Array.from({ length: rows * cols }).map((_, k) => (rnd(k * 3.7) >= drop ? <rect key={k} x={(k % cols) * bs} y={Math.floor(k / cols) * bs} width={bs + 1} height={bs + 1} fill="#fff" /> : null))}
         </mask>
       </defs>
-      <image href={staticFile(img(s, `-mosaic_${stage}`))} x={b.x} y={b.y} width={b.w} height={b.h} mask="url(#drop)" preserveAspectRatio="none" />
+      <image href={staticFile(cut(s, `-mosaic_${stage}`))} x={b.x} y={b.y} width={b.w} height={b.h} mask="url(#drop)" preserveAspectRatio="none" />
     </svg>
   );
 };
@@ -519,19 +536,30 @@ const EndMark: React.FC<{ f: number }> = ({ f }) => {
   const glitching = t < E.glitchFrames;
   if (glitching && !burstOn(t)) return null;
   const shift = (r: number) => (glitching ? (rnd(r * 11 + t * 5) - 0.5) * 160 * (rnd(r + t) > 0.45 ? 1 : 0) : 0);
-  const ink = glitching && t % 3 === 1 ? C.white : C.red;
+  const ink = glitching && t % 3 === 1 ? INK : C.red;
   return (
     <>
       <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
         <PixelText text="PHILLIPS" cell={E.pixel} cx={W / 2} cy={H / 2 - 95} ink={ink} rowShift={shift} />
         <PixelText text="DIGITAL" cell={E.pixel} cx={W / 2} cy={H / 2 + 95} ink={ink} rowShift={(r) => shift(r + 9)} />
       </svg>
-      <div style={{ position: "absolute", left: 0, right: 0, top: H / 2 + 235, textAlign: "center", fontFamily: K.monoFont, fontSize: 26, letterSpacing: "0.3em", color: C.white }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: H / 2 + 235, textAlign: "center", fontFamily: K.monoFont, fontSize: 26, letterSpacing: "0.3em", color: INK }}>
         {K.words.restored.slice(0, Math.max(0, Math.floor((t - E.restoredDelay) * 1.2)))}
       </div>
     </>
   );
 };
+
+// Faint paper grain over everything (static, like printed stock).
+const PaperGrain: React.FC = () => (
+  <svg width={W} height={H} style={{ position: "absolute", inset: 0, opacity: 0.16, mixBlendMode: "multiply", pointerEvents: "none" }}>
+    <filter id="grainP" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves={1} seed={3} />
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1.2 0 0 0 0.9" />
+    </filter>
+    <rect width={W} height={H} filter="url(#grainP)" />
+  </svg>
+);
 
 export const RedGlitch: React.FC = () => {
   const f = useCurrentFrame();
@@ -539,12 +567,13 @@ export const RedGlitch: React.FC = () => {
   const slot = f >= TL.montage && f < TL.dissolve ? montageSlots.find((sl) => f - TL.montage >= sl.at && f - TL.montage < sl.at + sl.len) : undefined;
   const fade = interpolate(f, [TL.dissolve, TL.end], [0, 1], clamp);
   return (
-    <AbsoluteFill style={{ background: C.black }}>
+    <AbsoluteFill style={{ background: BG }}>
       <ChannelDefs />
       {n >= 0 && <Shot s={K.scenes[n]} t={f - TL.starts[n]} events={K.scenes[n].events} n={n} frame={f} annoLen={K.scenes[n].len} showUi />}
       {slot && <Shot s={slot.scene} t={f - TL.montage - slot.at} events={[slot.ev]} n={9} frame={f} annoLen={1} showUi={false} />}
       {f >= TL.dissolve && f < TL.end && <Dissolve f={f} />}
-      {f >= TL.dissolve && <AbsoluteFill style={{ background: C.black, opacity: fade }} />}
+      {f >= TL.dissolve && <AbsoluteFill style={{ background: BG, opacity: fade }} />}
+      <PaperGrain />
       {f >= TL.end && <EndMark f={f} />}
 
       <Audio src={staticFile(K.audio.music)} volume={K.audio.musicVolume} />
