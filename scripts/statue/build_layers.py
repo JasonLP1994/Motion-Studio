@@ -1,10 +1,10 @@
 # Build render layers from the SAM 2 masks (work/statue/mask, work/statue/face):
 #  public/statue/cut/NNNNN.webp   statue cut-out, 1920x1080 RGBA (type can sit behind her)
 #  public/statue/ring/NNNNN.png   yellow outline ring just outside her silhouette, 960x540 RGBA
-#  src/statue/track.json          per-frame anchors (head, hands, robe L/R, face box), smoothed, in 1920x1080 px
+#  src/kingz/track.json          per-frame anchors (head, hands, robe L/R, face box), smoothed, in 1920x1080 px
 import glob, json, os, subprocess, numpy as np
 from PIL import Image, ImageFilter
-os.makedirs("work/statue/hd", exist_ok=True); os.makedirs("public/statue/cut", exist_ok=True); os.makedirs("public/statue/ring", exist_ok=True)
+os.makedirs("work/statue/hd", exist_ok=True); os.makedirs("public/statue/cut", exist_ok=True); os.makedirs("public/statue/ring", exist_ok=True); os.makedirs("src/kingz", exist_ok=True)
 if not os.path.exists("work/statue/hd/f_00001.jpg"):
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", "public/statue/clip.mp4", "-q:v", "2", "work/statue/hd/f_%05d.jpg"], check=True)
 masks = sorted(glob.glob("work/statue/mask/*.png")); N = len(masks)
@@ -54,5 +54,5 @@ for k in keys + ["bbox", "face"]:
     vals = smooth([fr.get(k) if fr else None for fr in track])
     res.append((k, [[round(c * 2, 1) for c in v] if v else None for v in vals]))
 out = {"frames": N, "size": [1920, 1080], **{k: v for k, v in res}}
-json.dump(out, open("src/statue/track.json", "w"))
+json.dump(out, open("src/kingz/track.json", "w"))
 print("frames", N, "face frames", sum(1 for v in out["face"] if v))

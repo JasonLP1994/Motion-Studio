@@ -27,8 +27,8 @@ import { LostData } from "./car/LostData";
 import { carConfig as cc2 } from "./car/config";
 import { RedGlitch } from "./ferrari/RedGlitch";
 import { redConfig as rc } from "./ferrari/config";
-import { Kingz } from "./statue/Kingz";
-import { kingzConfig as kz } from "./statue/config";
+import { Kingz } from "./kingz/Kingz";
+import { kingzConfig as kz } from "./kingz/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
