@@ -33,7 +33,8 @@ const Wobble: React.FC<{ f: number }> = ({ f }) => (
 );
 
 // ---------- type ----------
-const Word: React.FC<{ w: (typeof K.words)[number]; f: number }> = ({ w, f }) => {
+type WordT = { text: string; at: number; out: number; x: number; y: number; size: number; font: string; rot: number; behind?: boolean; outlineOnly?: boolean };
+const Word: React.FC<{ w: WordT; f: number }> = ({ w, f }) => {
   const t = f - w.at;
   if (t < 0 || f >= w.out || (f >= w.out - 2 && f % 2 === 0)) return null;
   const s = interpolate(t, [0, K.slamFrames], [1.45, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
@@ -41,6 +42,7 @@ const Word: React.FC<{ w: (typeof K.words)[number]; f: number }> = ({ w, f }) =>
     position: "absolute", left: w.x, top: w.y, transform: `translate(-50%, -50%) rotate(${w.rot}deg) scale(${s})`,
     fontFamily: w.font, fontSize: w.size, lineHeight: 1, whiteSpace: "nowrap", letterSpacing: "0.01em",
   };
+  if (w.outlineOnly) return <div style={{ ...base, color: "transparent", WebkitTextStroke: `${K.ghost.stroke + 2}px ${P.yellow}` }}>{w.text}</div>;
   return (
     <>
       <div style={{ ...base, left: w.x + K.ghost.dx, top: w.y + K.ghost.dy, color: "transparent", WebkitTextStroke: `${K.ghost.stroke}px ${P.yellow}` }}>{w.text}</div>
@@ -188,13 +190,13 @@ export const Kingz: React.FC = () => {
       <Wobble f={f} />
       <AbsoluteFill style={{ transform: `translate(${sx}px, ${sy}px)` }}>
         <OffthreadVideo src={staticFile("statue/clip.mp4")} style={{ width: W, height: H, filter: K.grade }} muted />
-        {K.words.filter((w) => w.behind).map((w) => <Word key={w.text} w={w} f={f} />)}
+        {(K.words as WordT[]).filter((w) => w.behind).map((w, i) => <Word key={`b${i}`} w={w} f={f} />)}
         <Img src={staticFile(`statue/cut/${pad(f)}.webp`)} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, filter: K.grade }} />
         <Outline f={f} />
         <FaceMarks f={f} />
         <Nodes f={f} />
         {K.tape.bands.map((b, i) => <Tape key={i} b={b} f={f} />)}
-        {K.words.filter((w) => !w.behind).map((w) => <Word key={w.text} w={w} f={f} />)}
+        {(K.words as WordT[]).filter((w) => !w.behind).map((w, i) => <Word key={`f${i}`} w={w} f={f} />)}
         <Poster f={f} />
       </AbsoluteFill>
       <Grain f={f} />

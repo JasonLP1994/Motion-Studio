@@ -26,3 +26,8 @@ SAM 2 video mode (`facebook/sam2.1-hiera-large`, CPU), `scripts/statue_roto.py`:
 | 2.9–5.4 s | 70–130 | She turns side/back | COMING (f70) right; NODE_1–5 tags pinned to head, hands, robe, wired together |
 | 5.4–7.1 s | 130–170 | Turns back to camera | FOR THE (f130); XXX marks pop on beats; tape band 2 crosses the other way |
 | 7.0–10.0 s | 169–241 | Push-in, smile | Crown, X eyes and smile doodle drawn onto her face (tracked); KINGZ slams behind her (f190) with outline ghost + drips; hold |
+
+## Render checks
+- v1: COMING behind her read "CO..NG" and KINGZ behind her lost its N → COMING moved to the front (open left side); KINGZ split into a solid front word low across her hands + a giant outline KINGZ behind her. First letters of COMING / FOR THE were clipped at the left edge (readability 7.5) → moved right, rendered v2.
+- v2 (renders/kingz-v2.mp4): 10.05 s, 1920x1080, 24 fps. Frames checked across the whole video. -14.0 LUFS, peak -6.7 dBFS; KINGZ hit measured at 7.92 s = picture. Measured, not heard.
+- Score 8.5/10: layout 8.5, timing 9, readability 8.5, polish 8.5. Weakest: COMING overlaps the edge of her robe and NODE_2 for ~1 s.

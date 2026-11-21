@@ -15,11 +15,12 @@ export const kingzConfig = {
   words: [
     { text: "ARE", at: 10, out: 60, x: 330, y: 330, size: 230, font: "PermanentMarker", rot: -6 },
     { text: "YOU", at: 20, out: 60, x: 380, y: 560, size: 230, font: "PermanentMarker", rot: -3 },
-    { text: "COMING", at: 70, out: 126, x: 960, y: 520, size: 300, font: "PermanentMarker", rot: -4, behind: true },
-    { text: "FOR THE", at: 130, out: 176, x: 470, y: 440, size: 210, font: "PermanentMarker", rot: -5 },
-    { text: "KINGZ", at: 190, out: 999, x: 960, y: 520, size: 520, font: "RubikWetPaint", rot: -3, behind: true },
+    { text: "COMING", at: 70, out: 126, x: 600, y: 600, size: 250, font: "PermanentMarker", rot: -4 },
+    { text: "FOR THE", at: 130, out: 176, x: 560, y: 440, size: 210, font: "PermanentMarker", rot: -5 },
+    { text: "KINGZ", at: 190, out: 999, x: 960, y: 880, size: 330, font: "RubikWetPaint", rot: -3 }, // solid, in front, all letters readable
+    { text: "KINGZ", at: 190, out: 999, x: 960, y: 470, size: 600, font: "RubikWetPaint", rot: -3, behind: true, outlineOnly: true }, // giant outline behind her for depth
   ],
-  ghost: { dx: 16, dy: 13, stroke: 4 }, // outline copy behind each word (poster grammar)
+  ghost: { dx: 16, dy: 13, stroke: 4 }, // words with outlineOnly draw just this outline // outline copy behind each word (poster grammar)
   slamFrames: 4,
   shake: { frames: 5, px: 16 },
 
