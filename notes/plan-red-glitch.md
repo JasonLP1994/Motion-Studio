@@ -28,3 +28,8 @@ Reference: `references/car-ref.mp4` (same file as LostData, checksum match) + th
 | 14.1–16.5 s | 423–495 | Rapid montage: a photo every 16th, each with a random glitch |
 | 16.5–17.0 s | 495–510 | Pixel dissolve |
 | 17.0–19.2 s | 510–576 | Red PHILLIPS DIGITAL wordmark glitches in and holds, "DATA RESTORED" |
+
+## v1 render check (renders/red-glitch-v1.mp4)
+- 19.2 s, 1920x1080, 30 fps. Frames checked across the whole video (2.5 fps sheet) plus a 5 fps sheet of the montage and ending.
+- Loudness -14.0 LUFS, peak -3.8 dBFS (measured gain + limiter). Measured, not heard.
+- Score 8.5/10: layout 8.5, timing 8.5, readability 8, polish 9. Weakest: "DATA RESTORED" under the wordmark is small; a couple of montage slots are full black (black strobe / negative), which reads as a hard flash on the paper look.
