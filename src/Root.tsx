@@ -19,6 +19,8 @@ import { c4dConfig as cc } from "./c4d/config";
 import { stingConfig as sc } from "./sting/config";
 import { IonadeSting } from "./ionade/Ionade";
 import { ionadeConfig as ion } from "./ionade/config";
+import { KineticSymbols } from "./kinetic/KineticSymbols";
+import { kineticConfig as kc } from "./kinetic/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -35,6 +37,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="C4DMoGraph" component={MoGraph} durationInFrames={cc.output.fps * cc.output.durationInSeconds} fps={cc.output.fps} width={cc.output.width} height={cc.output.height} />
       <Composition id="PaintedStatue" component={PaintedStatue} durationInFrames={stc.output.fps * stc.output.durationInSeconds} fps={stc.output.fps} width={stc.output.width} height={stc.output.height} />
       <Composition id="IonadeSting" component={IonadeSting} durationInFrames={ion.output.durationInFrames} fps={ion.output.fps} width={ion.output.width} height={ion.output.height} />
+      <Composition id="KineticSymbols" component={KineticSymbols} durationInFrames={kc.output.durationInFrames} fps={kc.output.fps} width={kc.output.width} height={kc.output.height} />
     </>
   );
 };
