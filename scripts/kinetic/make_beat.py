@@ -19,7 +19,7 @@ def clap(d=0.18):
 def bass(freq,d):
     tt=np.arange(int(SR*d))/SR; s=np.tanh(2.2*np.sin(2*np.pi*freq*tt))
     return s*np.minimum(1,tt*200)*np.exp(-tt*3.5)*0.35
-drums_end=9*2*beat/2  # 4.5 s = eighth 18 (logo starts)
+drums_end=6.5  # beat runs under the strip and the three name tricks
 notes=[55.0,55.0,65.41,49.0]
 for i in range(int(drums_end/beat)):
     at=i*beat; add(kick(),at,0.9)
@@ -27,11 +27,10 @@ for i in range(int(drums_end/beat)):
     add(bass(notes[(i//2)%4],beat*0.9),at)
 for j in range(int(drums_end/(beat/2))):
     add(hat(),j*beat/2+beat/4,0.8 if j%2 else 0.5)
-# P, D, P hits (4.5, 4.75, 5.0 s), then air until the name lands at 6.35 s.
-add(kick(),4.5,1.0); add(kick(),4.75,1.0); add(kick(),5.0,1.0)
+# Beat stops under the lockup; one sub boom when it lands.
 tt=np.arange(int(SR*2.2))/SR
 boom=np.sin(2*np.pi*41*tt)*np.exp(-tt*1.6)*0.8
-add(boom,6.35)
+add(boom,6.63)  # lockup lands (frame 199)
 out=np.tanh(out*1.2)/np.tanh(1.2)
 out/=np.max(np.abs(out))*1.12
 pcm=(out*32767).astype(np.int16)

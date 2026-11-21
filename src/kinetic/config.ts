@@ -1,82 +1,92 @@
 // Kinetic Symbols -> Phillips Digital Project. Every word, colour, size and timing lives here.
-// Grammar from references/kt-ref.mp4 (giant cropped glyphs, colour->grey fields, quarter-second cuts).
+// Grammar from references/kt-ref.mp4: a count of giant cropped glyphs on a sideways-pushing strip,
+// rotated-glyph walls, a multiply shade darkening every frame toward the bottom, then words that
+// each get their own trick (scatter, weight pulse, heavy-italic typing).
 
 const C = {
   blue: "#3346F2",
   pink: "#FBB8F2",
-  cyan: "#12A6DE",
+  cyan: "#0FA8E2",
   orange: "#FF5F0F",
-  black: "#0A0A0A",
-  grey: "#E6E6E8",
-  white: "#F4F4F5",
-  navy: "#0F161E", // logo file background
-  teal: "#82BCC7", // logo accent
+  black: "#050505",
+  grey: "#E4E4E6", // light-grey ink and background, shaded darker at the bottom
 };
 
-export type Enter = "scale" | "slideL" | "slideR" | "slideU" | "rot";
+export type Panel =
+  | { kind: "glyph"; ch: string; bg: string; ink: string; size: number; x: number; y: number; weight?: number }
+  | { kind: "wall"; ch: string; bg: string; ink: string; cell: number; size: number; weight: number }
+  | { kind: "scatter"; ch: string; bg: string; ink: string; size: number; count: number; stroke: number };
 
 export const kineticConfig = {
   output: { width: 1920, height: 1080, fps: 30, durationInFrames: 240 },
-  bpm: 120, // 15 frames per beat, 7.5 per eighth (always computed from the index, then rounded)
+  bpm: 120, // 15 frames a beat; the strip moves on every eighth (7.5 f, rounded from the index)
   colors: C,
-  font: "Inter",
-  // Background = colour on top fading to grey at the bottom (fadeStart..100%), like the reference.
-  fadeStart: 0.42,
 
-  // 0.0-1.5 s: giant glyphs, one per eighth. x/y = glyph centre offset from frame centre (px), size in px.
-  glyphs: [
-    { ch: "7", bg: C.blue, fade: true, ink: C.grey, size: 1650, x: 120, y: 60, rot: 0, enter: "scale" as Enter },
-    { ch: "#", bg: C.grey, fade: false, ink: C.black, size: 1500, x: -260, y: 40, rot: 0, enter: "slideR" as Enter },
-    { ch: "@", bg: C.grey, fade: false, ink: C.blue, size: 1550, x: 300, y: -30, rot: -8, enter: "rot" as Enter },
-    { ch: "&", bg: C.orange, fade: true, ink: C.black, size: 1500, x: -180, y: 30, rot: 0, enter: "slideU" as Enter },
-    { ch: "9", bg: C.pink, fade: true, ink: C.black, size: 1750, x: 380, y: 140, rot: 0, enter: "slideL" as Enter },
-    { ch: "?", bg: C.black, fade: false, ink: C.white, size: 1600, x: -340, y: 20, rot: 6, enter: "rot" as Enter },
-  ],
-  glyphEnterFrames: 6,
+  // Multiply shade over every frame (the reference's darkening toward the bottom).
+  shade: { from: 0.36, to: "#A6A6AC" },
 
-  // 1.5-2.5 s: wall of outlined glyphs.
-  wall1: { ch: "8", bg: C.cyan, ink: C.black, cell: 300, fontSize: 330, stroke: 12, flipAtFrame: 15, speed: [3.2, 1.6] },
-  // 2.5-3.5 s: rows alternating thin/heavy, shifting one row per eighth.
-  stack: { rows: ["#&@%?!*", "&@%?!*#", "@%?!*#&", "%?!*#&@", "?!*#&@%", "!*#&@%?"], bg: C.black, ink: C.white, fontSize: 172, lineHeight: 1.0, tracking: 0.14, weights: [300, 900] },
-  // 3.5-4.0 s: sliced glyphs (3 bands slide in from alternating sides and lock).
-  slices: [
-    { ch: "%", bg: C.orange, fade: true, ink: C.black, size: 1500, x: 60, y: 30, offsets: [-520, 640, -380] },
-    { ch: "§", bg: C.pink, fade: true, ink: C.black, size: 1450, x: -40, y: 20, offsets: [600, -480, 420] },
-  ],
-  sliceEnterFrames: 6,
-  // 4.0-4.5 s: wall of spinning asterisks.
-  wall2: { ch: "*", bg: C.blue, ink: C.white, cell: 280, fontSize: 440, spinPerBeat: 90 },
+  // 0-4 s: the strip. One panel per eighth; the camera whips sideways into each one.
+  whipFrames: 4, // frames per sideways push (centred on the beat)
+  glyphFont: "Inter",
+  panels: [
+    { kind: "glyph", ch: "1", bg: C.pink, ink: C.black, size: 2100, x: 120, y: 240 },
+    { kind: "wall", ch: "2", bg: C.cyan, ink: C.grey, cell: 175, size: 210, weight: 500 },
+    { kind: "glyph", ch: "3", bg: C.grey, ink: C.black, size: 2000, x: -60, y: 150 },
+    { kind: "scatter", ch: "4", bg: C.blue, ink: C.grey, size: 300, count: 9, stroke: 9 },
+    { kind: "glyph", ch: "5", bg: C.black, ink: C.orange, size: 2050, x: 40, y: 300 },
+    { kind: "glyph", ch: "6", bg: C.black, ink: C.grey, size: 2000, x: 220, y: 330, weight: 400 },
+    { kind: "glyph", ch: "7", bg: C.blue, ink: C.grey, size: 2100, x: 60, y: 220 },
+    { kind: "wall", ch: "8", bg: C.cyan, ink: C.black, cell: 165, size: 200, weight: 600 },
+    { kind: "glyph", ch: "9", bg: C.pink, ink: C.black, size: 2200, x: -80, y: 380 },
+    { kind: "glyph", ch: "0", bg: C.grey, ink: C.black, size: 2100, x: 300, y: 120 },
+    { kind: "glyph", ch: "#", bg: C.black, ink: C.grey, size: 1900, x: -40, y: 80 },
+    { kind: "glyph", ch: "@", bg: C.grey, ink: C.blue, size: 1900, x: 260, y: 260 },
+    { kind: "glyph", ch: "£", bg: C.cyan, ink: C.grey, size: 1900, x: -200, y: 140 },
+    { kind: "glyph", ch: "%", bg: C.pink, ink: C.grey, size: 2000, x: 160, y: 120 },
+    { kind: "glyph", ch: "&", bg: C.grey, ink: C.black, size: 1900, x: -120, y: 120, weight: 500 },
+    { kind: "glyph", ch: "€", bg: C.black, ink: C.grey, size: 1900, x: 200, y: 100 },
+  ] as Panel[],
+  glyphWeight: 600,
+  glyphPush: 0.07, // slow scale push across each panel's life
 
-  // Section starts in eighths (7.5 frames each).
-  sections: { glyphs: 0, wall1: 6, stack: 10, slices: 14, wall2: 16, initials: 18, end: 21 },
-
-  // 4.5 s on: giant initials, then the name assembles from scattered letters.
-  initials: [
-    { ch: "P", bg: C.black, fade: false, ink: C.white, size: 1500, x: 80, y: 40, rot: 0, enter: "scale" as Enter },
-    { ch: "D", bg: C.grey, fade: false, ink: C.blue, size: 1500, x: -120, y: 30, rot: 0, enter: "slideL" as Enter },
-    { ch: "P", bg: C.pink, fade: true, ink: C.black, size: 1500, x: 140, y: 40, rot: 0, enter: "slideU" as Enter },
-  ],
-  end: {
-    lines: ["PHILLIPS", "DIGITAL", "PROJECT"], // the exact words on the end card
-    bg: C.black,
-    ink: C.white,
-    accent: C.blue, // the short bar above the name
-    fontSize: 250,
-    lineHeight: 0.92,
-    tracking: -0.02,
-    barWidth: 280, barHeight: 22, barGap: 56, barFrames: 9,
-    letterStagger: 1, // frames between letters (across all lines)
-    letterFrames: 11,
-    scatter: { x: 620, y: 360, rot: 55, scaleMin: 0.45, scaleMax: 2.0 },
+  // 4 s on: the name, each word with its own trick. Frames are absolute.
+  name: {
+    phillips: {
+      text: "Phillips", start: 120, end: 150, bg: C.black, ink: C.grey,
+      font: "Montserrat", weight: 500, size: 230,
+      blackFrames: 3, // a beat of black before letters arrive (the reference's interstitials)
+      letterGap: 1.5, // frames between letters popping in (random order)
+      assembleAt: 19, assembleFrames: 9, // local frames: scattered letters fly into one line
+      scatter: { x: 520, y: 280, sizeMin: 0.8, sizeMax: 2.2 },
+    },
+    digital: {
+      text: "Digital", start: 150, end: 180, bg: C.pink, ink: C.black,
+      font: "Inter", size: 168, rows: 5, lineHeight: 1.04,
+      weights: [300, 500, 700, 900, 700, 500], stepFrames: 4, // each row's weight steps every 4 f
+    },
+    project: {
+      text: "Project", start: 180, end: 199, bg: C.black, ink: C.grey,
+      font: "Montserrat", weight: 900, italic: true, size: 250,
+      framesPerLetter: 2, letterEnter: 4,
+    },
+    lockup: {
+      start: 199, bg: C.grey, ink: C.black,
+      // Each word keeps the style it was introduced in.
+      lines: [
+        { text: "Phillips", font: "Montserrat", weight: 500, italic: false, size: 205 },
+        { text: "Digital", font: "Inter", weight: 900, italic: false, size: 205 },
+        { text: "Project", font: "Montserrat", weight: 900, italic: true, size: 205 },
+      ],
+      lineHeight: 1.0,
+      lineStagger: 2, enterFrames: 8, enterFrom: 1100, // lines push in from the right like the strip
+    },
   },
-
-  motionBlur: { shutterAngle: 180, samples: 8 },
 
   audio: {
     beat: "kinetic/beat.wav", beatVolume: 0.9,
     sfx: [
-      { frame: 156, file: "sfx/kit_whoosh.ogg", volume: 0.7 },
-      { frame: 190, file: "sfx/kit_impact.ogg", volume: 0.9 },
+      { frame: 197, file: "sfx/kit_whoosh.ogg", volume: 0.6 },
+      { frame: 210, file: "sfx/kit_impact.ogg", volume: 0.85 },
     ],
   },
 };

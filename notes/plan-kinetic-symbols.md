@@ -16,14 +16,13 @@ Reference: `references/kt-ref.mp4` (Pinterest screen recording; grammar only: gi
 | logo-animation (typed) | Giant P, D, P initials, then PHILLIPS / DIGITAL / PROJECT letters fly in scattered and snap into place | Name at the end (no logo file) |
 | sound-effects | Code-made 120 BPM beat + bundled whoosh/impact on the pull-out and landing, -14 LUFS | Beat cuts need a beat; silent copy also delivered |
 
-## Second by second (30 fps, 240 frames)
-| Time | Frames | What you see | Move | Beat |
-|---|---|---|---|---|
-| 0.0–1.5 s | 0–45 | 6 giant cropped glyphs: 7 # @ & 9 ? on alternating colour fields | each snaps in (scale / slide / rotate, 6 f, exp ease-out), then dead still | one per eighth |
-| 1.5–2.5 s | 45–75 | Wall of outlined 8s on cyan | wall scrolls diagonally; on the beat at 2.0 s every tile flips 90° | bar |
-| 2.5–3.5 s | 75–105 | Black: 6 rows of symbols alternating thin/heavy | weights shift one row per eighth | eighths |
-| 3.5–4.0 s | 105–120 | Giant % (orange), giant § (pink) cut in 3 bands | bands slide in from opposite sides and lock | eighths |
-| 4.0–4.5 s | 120–135 | Wall of white asterisks on blue | each spins; rows offset | beats |
-| 4.5–5.25 s | 135–157 | Giant cropped initials P (black), D (grey/blue), P (pink) | snap in, hard cuts | eighths |
-| 5.25–6.4 s | 157–192 | Black: blue bar grows; PHILLIPS / DIGITAL / PROJECT letters fly in scattered and lock (1 f stagger) | whoosh in, impact on lock | |
-| 6.4–8.0 s | 192–240 | Name holds dead still | none | |
+## Second by second (v2, "more like the reference")
+Reference details matched: the count 1-9, 0, # @ £ % & € on a strip the camera whips sideways across (half of each glyph beside the next), walls of randomly rotated 2s and 8s, a few big tumbling outlined 4s, a multiply shade that darkens every frame toward the bottom, crisp pushes (no motion blur), and words that each get their own trick.
+
+| Time | Frames | What you see | Move |
+|---|---|---|---|
+| 0.0–4.0 s | 0–120 | Strip of 16 panels: 1 (pink), wall of 2s (cyan), 3, tumbling 4s (blue), 5 (orange on black), 6, 7 (blue), wall of 8s, 9 (pink), 0, #, @ (blue), £ (cyan), %, &, € | 4-frame sideways whip on every eighth (120 BPM); each glyph slowly pushes in |
+| 4.0–5.0 s | 120–150 | Black: "Phillips" (Montserrat 500) letters pop in big and scattered, P first, then fly into one line | "Machine" trick |
+| 5.0–6.0 s | 150–180 | Pink: five rows of "Digital", weights stepping thin→heavy | "Analogue" trick |
+| 6.0–6.63 s | 180–199 | Black: "Project" in heavy italic typed letter by letter | "Razor" trick |
+| 6.63–8.0 s | 199–240 | Grey: Phillips / Digital / Project, each in its own style, lines push in from the right, then hold | whoosh + impact, sub boom |

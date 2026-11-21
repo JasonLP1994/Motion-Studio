@@ -1,21 +1,18 @@
 import React from "react";
 import { AbsoluteFill, Audio, Easing, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { loadFont } from "@remotion/fonts";
-import { CameraMotionBlur } from "@remotion/motion-blur";
-import { kineticConfig as K, eighth, Enter } from "./config";
+import { kineticConfig as K, eighth, Panel } from "./config";
 
-for (const w of [300, 600, 900]) {
-  loadFont({ family: K.font, url: staticFile(`fonts/inter-latin-${w}-normal.woff2`), weight: String(w) });
+for (const w of [300, 500, 600, 700, 800, 900]) {
+  loadFont({ family: "Inter", url: staticFile(`fonts/inter-latin-${w}-normal.woff2`), weight: String(w) });
 }
+loadFont({ family: "Montserrat", url: staticFile("fonts/montserrat-latin-500-normal.woff2"), weight: "500" });
+loadFont({ family: "Montserrat", url: staticFile("fonts/montserrat-latin-900-italic.woff2"), weight: "900", style: "italic" });
 
 const W = K.output.width;
 const H = K.output.height;
 const outExp = Easing.out(Easing.exp);
-
-const field = (bg: string, fade: boolean) =>
-  fade
-    ? `linear-gradient(180deg, ${bg} 0%, ${bg} ${K.fadeStart * 100}%, ${K.colors.grey} 100%)`
-    : bg;
+const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
 // Deterministic pseudo-random in [0,1).
 const rnd = (n: number) => {
@@ -23,127 +20,123 @@ const rnd = (n: number) => {
   return s - Math.floor(s);
 };
 
-const Glyph: React.FC<{ ch: string; ink: string; size: number; x: number; y: number; weight?: number; style?: React.CSSProperties }> = ({ ch, ink, size, x, y, weight = 900, style }) => (
-  <div
-    style={{
-      position: "absolute",
-      left: W / 2 + x,
-      top: H / 2 + y,
-      transform: "translate(-50%, -50%)",
-      fontFamily: K.font,
-      fontWeight: weight,
-      fontSize: size,
-      lineHeight: 1,
-      color: ink,
-      letterSpacing: "-0.03em",
-      whiteSpace: "nowrap",
-      ...style,
-    }}
-  >
-    {ch}
-  </div>
-);
+// All scenes read the absolute frame (scene starts live in config), so none sit inside a Sequence.
 
-// One giant glyph that snaps in, then holds dead still.
-const GlyphShot: React.FC<{ g: (typeof K.glyphs)[number] }> = ({ g }) => {
-  const f = useCurrentFrame();
-  const p = interpolate(f, [0, K.glyphEnterFrames], [0, 1], { extrapolateRight: "clamp", easing: outExp });
-  const q = 1 - p;
-  const moves: Record<Enter, string> = {
-    scale: `scale(${1 + 0.35 * q})`,
-    slideL: `translateX(${-700 * q}px)`,
-    slideR: `translateX(${700 * q}px)`,
-    slideU: `translateY(${600 * q}px)`,
-    rot: `rotate(${-38 * q}deg) scale(${1 + 0.15 * q})`,
-  };
+// ---------- The strip (0-4 s) ----------
+
+const GlyphPanel: React.FC<{ p: Extract<Panel, { kind: "glyph" }>; t: number }> = ({ p, t }) => {
+  const push = 1 + K.glyphPush * interpolate(t, [0, 12], [0, 1], { ...clamp, easing: Easing.out(Easing.quad) });
   return (
-    <AbsoluteFill style={{ background: field(g.bg, g.fade), overflow: "hidden" }}>
-      <AbsoluteFill style={{ transform: moves[g.enter] }}>
-        <Glyph ch={g.ch} ink={g.ink} size={g.size} x={g.x} y={g.y} style={{ rotate: `${g.rot}deg` }} />
-      </AbsoluteFill>
+    <AbsoluteFill style={{ background: p.bg, overflow: "hidden" }}>
+      <div
+        style={{
+          position: "absolute",
+          left: W / 2 + p.x,
+          top: H / 2 + p.y,
+          transform: `translate(-50%, -50%) scale(${push})`,
+          fontFamily: K.glyphFont,
+          fontWeight: p.weight ?? K.glyphWeight,
+          fontSize: p.size,
+          lineHeight: 1,
+          letterSpacing: "-0.04em",
+          color: p.ink,
+        }}
+      >
+        {p.ch}
+      </div>
     </AbsoluteFill>
   );
 };
 
-// Wall of outlined glyphs: scrolls diagonally, every tile flips 90 deg on the beat.
-const Wall1: React.FC = () => {
-  const f = useCurrentFrame();
-  const w = K.wall1;
-  const flip = interpolate(f, [w.flipAtFrame - 2, w.flipAtFrame + 5], [0, 90], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
-  const ox = (f * w.speed[0]) % w.cell;
-  const oy = (f * w.speed[1]) % w.cell;
-  const cols = Math.ceil(W / w.cell) + 2;
-  const rows = Math.ceil(H / w.cell) + 2;
+// Grid of the same glyph, every tile at its own random angle (the reference's 2 and 8 walls).
+const WallPanel: React.FC<{ p: Extract<Panel, { kind: "wall" }>; t: number; seed: number }> = ({ p, t, seed }) => {
+  const cols = Math.ceil(W / p.cell) + 2;
+  const rows = Math.ceil(H / p.cell) + 2;
+  const drift = t * 2.5;
   const tiles = [];
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
+      const k = seed * 1000 + r * 50 + c;
+      const ang = Math.floor(rnd(k) * 8) * 45 + (rnd(k + 7) - 0.5) * 30;
       tiles.push(
         <div
           key={`${r}-${c}`}
           style={{
             position: "absolute",
-            left: (c - 1) * w.cell + ox + (r % 2) * (w.cell / 2),
-            top: (r - 1) * w.cell + oy,
-            width: w.cell,
-            height: w.cell,
+            left: (c - 1) * p.cell + (r % 2) * (p.cell * 0.45) - drift,
+            top: (r - 1) * p.cell * 0.92,
+            width: p.cell,
+            height: p.cell,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: K.font,
-            fontWeight: 900,
-            fontSize: w.fontSize,
+            fontFamily: K.glyphFont,
+            fontWeight: p.weight,
+            fontSize: p.size,
             lineHeight: 1,
-            color: "transparent",
-            WebkitTextStroke: `${w.stroke}px ${w.ink}`,
-            transform: `rotate(${flip + (r + c) % 2 * 180}deg)`,
+            color: p.ink,
+            transform: `rotate(${ang + t * (rnd(k + 3) - 0.5) * 3}deg)`,
           }}
         >
-          {w.ch}
+          {p.ch}
         </div>,
       );
     }
-  return <AbsoluteFill style={{ background: field(w.bg, true), overflow: "hidden" }}>{tiles}</AbsoluteFill>;
+  return <AbsoluteFill style={{ background: p.bg, overflow: "hidden" }}>{tiles}</AbsoluteFill>;
 };
 
-// Rows of symbols alternating thin/heavy, the pattern stepping one row per eighth.
-const Stack: React.FC = () => {
-  const f = useCurrentFrame();
-  const s = K.stack;
-  const step = Math.floor((f * 2) / 15);
-  return (
-    <AbsoluteFill style={{ background: s.bg, alignItems: "center", justifyContent: "center" }}>
-      {s.rows.map((row, i) => (
+// A few big outlined glyphs tumbling (the reference's 4s).
+const ScatterPanel: React.FC<{ p: Extract<Panel, { kind: "scatter" }>; t: number; seed: number }> = ({ p, t, seed }) => (
+  <AbsoluteFill style={{ background: p.bg, overflow: "hidden" }}>
+    {Array.from({ length: p.count }).map((_, i) => {
+      const k = seed * 100 + i;
+      const col = i % 5;
+      const row = Math.floor(i / 5);
+      const x = ((col + 0.5) / 5) * W + (rnd(k) - 0.5) * 160 + (row % 2) * 150;
+      const y = (row === 0 ? 0.3 : 0.72) * H + (rnd(k + 1) - 0.5) * 140;
+      const ang = rnd(k + 2) * 360 + t * (rnd(k + 4) > 0.5 ? 9 : -9);
+      return (
         <div
           key={i}
           style={{
-            fontFamily: K.font,
-            fontWeight: s.weights[(i + step) % s.weights.length],
-            fontSize: s.fontSize,
-            lineHeight: s.lineHeight,
-            letterSpacing: `${s.tracking}em`,
-            color: s.ink,
+            position: "absolute",
+            left: x,
+            top: y,
+            transform: `translate(-50%, -50%) rotate(${ang}deg) scale(${0.75 + rnd(k + 5) * 0.5})`,
+            fontFamily: K.glyphFont,
+            fontWeight: 300,
+            fontSize: p.size,
+            lineHeight: 1,
+            color: "transparent",
+            WebkitTextStroke: `${p.stroke}px ${p.ink}`,
           }}
         >
-          {row}
+          {p.ch}
         </div>
-      ))}
-    </AbsoluteFill>
-  );
-};
+      );
+    })}
+  </AbsoluteFill>
+);
 
-// A giant glyph in three horizontal bands that slide in from alternating sides and lock.
-const SliceShot: React.FC<{ s: (typeof K.slices)[number] }> = ({ s }) => {
-  const f = useCurrentFrame();
-  const bands = s.offsets.length;
+const Strip: React.FC<{ f: number }> = ({ f }) => {
+  const n = K.panels.length;
+  // Camera position in panels: whip into panel i around its beat.
+  let cam = 0;
+  for (let i = 1; i < n; i++) {
+    const s = eighth(i);
+    cam += interpolate(f, [s - K.whipFrames / 2, s + K.whipFrames / 2], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  }
+  const lo = Math.max(0, Math.floor(cam));
   return (
-    <AbsoluteFill style={{ background: field(s.bg, s.fade), overflow: "hidden" }}>
-      {s.offsets.map((off, i) => {
-        const p = interpolate(f, [i, i + K.sliceEnterFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: outExp });
-        const top = (i / bands) * 100;
-        const bottom = 100 - ((i + 1) / bands) * 100;
+    <AbsoluteFill style={{ overflow: "hidden" }}>
+      {[lo, lo + 1].filter((i) => i < n).map((i) => {
+        const p = K.panels[i];
+        const t = f - eighth(i);
         return (
-          <AbsoluteFill key={i} style={{ clipPath: `inset(${top}% 0 ${bottom}% 0)`, transform: `translateX(${off * (1 - p)}px)` }}>
-            <Glyph ch={s.ch} ink={s.ink} size={s.size} x={s.x} y={s.y} />
+          <AbsoluteFill key={i} style={{ transform: `translateX(${(i - cam) * W}px)` }}>
+            {p.kind === "glyph" && <GlyphPanel p={p} t={t} />}
+            {p.kind === "wall" && <WallPanel p={p} t={t} seed={i} />}
+            {p.kind === "scatter" && <ScatterPanel p={p} t={t} seed={i} />}
           </AbsoluteFill>
         );
       })}
@@ -151,120 +144,139 @@ const SliceShot: React.FC<{ s: (typeof K.slices)[number] }> = ({ s }) => {
   );
 };
 
-// Wall of spinning asterisks; each row spins the other way.
-const Wall2: React.FC = () => {
-  const f = useCurrentFrame();
-  const w = K.wall2;
-  const cols = Math.ceil(W / w.cell) + 1;
-  const rows = Math.ceil(H / w.cell) + 1;
-  const tiles = [];
-  for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++) {
-      // Spin in steps: each beat a quick 90 deg turn that settles.
-      const beat = Math.floor(f / 15);
-      const local = interpolate(f % 15, [0, 6], [0, 1], { extrapolateRight: "clamp", easing: outExp });
-      const ang = (beat + local) * w.spinPerBeat * (r % 2 ? -1 : 1);
-      tiles.push(
-        <div
-          key={`${r}-${c}`}
-          style={{
-            position: "absolute",
-            left: c * w.cell + (r % 2) * (w.cell / 2) - w.cell / 2,
-            top: r * w.cell - w.cell / 4,
-            width: w.cell,
-            height: w.cell,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: K.font,
-            fontWeight: 900,
-            fontSize: w.fontSize,
-            lineHeight: 1,
-            color: w.ink,
-            transform: `rotate(${ang}deg)`,
-          }}
-        >
-          <span style={{ transform: "translateY(18%)" }}>{w.ch}</span>
-        </div>,
-      );
-    }
-  return <AbsoluteFill style={{ background: field(w.bg, true), overflow: "hidden" }}>{tiles}</AbsoluteFill>;
+// ---------- The name (4-8 s) ----------
+
+// "Phillips": letters pop in at random sizes and places in random order, then fly into one line.
+const PhillipsScene: React.FC<{ f: number }> = ({ f }) => {
+  const P = K.name.phillips;
+  const t = f - P.start;
+  const letters = P.text.split("");
+  // First letter first (like the reference's M), the rest in random order.
+  const order = [0, ...letters.map((_, i) => i).slice(1).sort((a, b) => rnd(a + 71) - rnd(b + 71))];
+  const asm = interpolate(t, [P.assembleAt, P.assembleAt + P.assembleFrames], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  const q = 1 - asm;
+  return (
+    <AbsoluteFill style={{ background: P.bg, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", fontFamily: P.font, fontWeight: P.weight, fontSize: P.size, lineHeight: 1, color: P.ink }}>
+        {letters.map((ch, i) => {
+          const appear = P.blackFrames + order.indexOf(i) * P.letterGap;
+          const sx = (rnd(i * 3 + 5) * 2 - 1) * P.scatter.x;
+          const sy = (rnd(i * 5 + 2) * 2 - 1) * P.scatter.y;
+          const ss = P.scatter.sizeMin + rnd(i + 37) * (P.scatter.sizeMax - P.scatter.sizeMin);
+          return (
+            <span key={i} style={{ display: "inline-block", opacity: t >= appear ? 1 : 0, transform: `translate(${sx * q}px, ${sy * q}px) scale(${1 + (ss - 1) * q})` }}>
+              {ch}
+            </span>
+          );
+        })}
+      </div>
+    </AbsoluteFill>
+  );
 };
 
-// End card: the name flies in as scattered letters that snap into place, then holds dead still.
-const EndCard: React.FC = () => {
-  const f = useCurrentFrame();
-  const E = K.end;
-  const bar = interpolate(f, [0, E.barFrames], [0, 1], { extrapolateRight: "clamp", easing: outExp });
-  let n = 0;
+// "Digital": rows of the word, each row stepping through weights (the reference's Analogue stack).
+const DigitalScene: React.FC<{ f: number }> = ({ f }) => {
+  const D = K.name.digital;
+  const step = Math.floor((f - D.start) / D.stepFrames);
   return (
-    <AbsoluteFill style={{ background: E.bg, alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: E.barWidth, height: E.barHeight, background: E.accent, transform: `scaleX(${bar})`, marginBottom: E.barGap }} />
-      {E.lines.map((line, li) => (
-        <div key={li} style={{ display: "flex", fontFamily: K.font, fontWeight: 900, fontSize: E.fontSize, lineHeight: E.lineHeight, letterSpacing: `${E.tracking}em`, color: E.ink }}>
-          {line.split("").map((ch, ci) => {
-            const i = n++;
-            const start = i * E.letterStagger;
-            const p = interpolate(f, [start, start + E.letterFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: outExp });
-            const q = 1 - p;
-            const sx = (rnd(i + 1) * 2 - 1) * E.scatter.x;
-            const sy = (rnd(i + 10) * 2 - 1) * E.scatter.y;
-            const sr = (rnd(i + 20) * 2 - 1) * E.scatter.rot;
-            const ss = E.scatter.scaleMin + rnd(i + 30) * (E.scatter.scaleMax - E.scatter.scaleMin);
-            return (
-              <span key={ci} style={{ display: "inline-block", opacity: f >= start ? 1 : 0, transform: `translate(${sx * q}px, ${sy * q}px) rotate(${sr * q}deg) scale(${1 + (ss - 1) * q})` }}>
-                {ch}
-              </span>
-            );
-          })}
+    <AbsoluteFill style={{ background: D.bg, alignItems: "center", justifyContent: "center" }}>
+      {Array.from({ length: D.rows }).map((_, r) => (
+        <div key={r} style={{ fontFamily: D.font, fontWeight: D.weights[(r * 2 + step) % D.weights.length], fontSize: D.size, lineHeight: D.lineHeight, letterSpacing: "-0.02em", color: D.ink }}>
+          {D.text}
         </div>
       ))}
     </AbsoluteFill>
   );
 };
 
-export const KineticSymbols: React.FC = () => {
-  const S = K.sections;
+// "Project": heavy italic typed letter by letter, each letter snapping in (the reference's Razor).
+const ProjectScene: React.FC<{ f: number }> = ({ f }) => {
+  const R = K.name.project;
+  const t = f - R.start;
   return (
-    <AbsoluteFill style={{ background: K.colors.black }}>
-      <CameraMotionBlur shutterAngle={K.motionBlur.shutterAngle} samples={K.motionBlur.samples}>
-        <AbsoluteFill>
-          {K.glyphs.map((g, i) => (
-            <Sequence key={i} from={eighth(S.glyphs + i)} durationInFrames={eighth(S.glyphs + i + 1) - eighth(S.glyphs + i)}>
-              <GlyphShot g={g} />
-            </Sequence>
-          ))}
-          <Sequence from={eighth(S.wall1)} durationInFrames={eighth(S.stack) - eighth(S.wall1)}>
-            <Wall1 />
-          </Sequence>
-          <Sequence from={eighth(S.stack)} durationInFrames={eighth(S.slices) - eighth(S.stack)}>
-            <Stack />
-          </Sequence>
-          {K.slices.map((s, i) => (
-            <Sequence key={i} from={eighth(S.slices + i)} durationInFrames={eighth(S.slices + i + 1) - eighth(S.slices + i)}>
-              <SliceShot s={s} />
-            </Sequence>
-          ))}
-          <Sequence from={eighth(S.wall2)} durationInFrames={eighth(S.initials) - eighth(S.wall2)}>
-            <Wall2 />
-          </Sequence>
-          {K.initials.map((g, i) => (
-            <Sequence key={`i${i}`} from={eighth(S.initials + i)} durationInFrames={eighth(S.initials + i + 1) - eighth(S.initials + i)}>
-              <GlyphShot g={g} />
-            </Sequence>
-          ))}
-          <Sequence from={eighth(S.end)}>
-            <EndCard />
-          </Sequence>
-        </AbsoluteFill>
-      </CameraMotionBlur>
-      <Audio src={staticFile(K.audio.beat)} volume={K.audio.beatVolume} />
-      {K.audio.sfx.map((s, i) => (
-        <Sequence key={i} from={s.frame}>
-          <Audio src={staticFile(s.file)} volume={s.volume} />
-        </Sequence>
-      ))}
+    <AbsoluteFill style={{ background: R.bg, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", fontFamily: R.font, fontWeight: R.weight, fontStyle: "italic", fontSize: R.size, lineHeight: 1, color: R.ink }}>
+        {R.text.split("").map((ch, i) => {
+          const s = i * R.framesPerLetter;
+          const p = interpolate(t, [s, s + R.letterEnter], [0, 1], { ...clamp, easing: outExp });
+          return (
+            <span key={i} style={{ display: "inline-block", opacity: t >= s ? 1 : 0, transform: `translateX(${(1 - p) * 60}px) scaleX(${1 + (1 - p) * 0.6})`, transformOrigin: "left center" }}>
+              {ch}
+            </span>
+          );
+        })}
+      </div>
     </AbsoluteFill>
   );
 };
 
+// Lockup: the three words, each in the style it was introduced in, pushed in from the right.
+const Lockup: React.FC<{ f: number }> = ({ f }) => {
+  const L = K.name.lockup;
+  const t = f - L.start;
+  return (
+    <AbsoluteFill style={{ background: L.bg, alignItems: "center", justifyContent: "center" }}>
+      {L.lines.map((ln, i) => {
+        const s = i * L.lineStagger;
+        const p = interpolate(t, [s, s + L.enterFrames], [0, 1], { ...clamp, easing: outExp });
+        return (
+          <div
+            key={i}
+            style={{
+              fontFamily: ln.font,
+              fontWeight: ln.weight,
+              fontStyle: ln.italic ? "italic" : "normal",
+              fontSize: ln.size,
+              lineHeight: L.lineHeight,
+              letterSpacing: "-0.03em",
+              color: L.ink,
+              transform: `translateX(${(1 - p) * L.enterFrom}px)`,
+            }}
+          >
+            {ln.text}
+          </div>
+        );
+      })}
+    </AbsoluteFill>
+  );
+};
+
+// Multiply shade: every frame darkens toward the bottom, like the reference.
+const Shade: React.FC = () => (
+  <AbsoluteFill
+    style={{
+      background: `linear-gradient(180deg, #FFFFFF 0%, #FFFFFF ${K.shade.from * 100}%, ${K.shade.to} 100%)`,
+      mixBlendMode: "multiply",
+      pointerEvents: "none",
+    }}
+  />
+);
+
+const Scenes: React.FC = () => {
+  const f = useCurrentFrame();
+  const N = K.name;
+  const stripEnd = eighth(K.panels.length);
+  const inRange = (a: number, b: number) => f >= a && f < b;
+  return (
+    <AbsoluteFill>
+      {f < stripEnd && <Strip f={f} />}
+      {inRange(N.phillips.start, N.phillips.end) && <PhillipsScene f={f} />}
+      {inRange(N.digital.start, N.digital.end) && <DigitalScene f={f} />}
+      {inRange(N.project.start, N.project.end) && <ProjectScene f={f} />}
+      {f >= N.lockup.start && <Lockup f={f} />}
+      <Shade />
+    </AbsoluteFill>
+  );
+};
+
+export const KineticSymbols: React.FC = () => (
+  <AbsoluteFill style={{ background: K.colors.black }}>
+    <Scenes />
+    <Audio src={staticFile(K.audio.beat)} volume={K.audio.beatVolume} />
+    {K.audio.sfx.map((s, i) => (
+      <Sequence key={i} from={s.frame}>
+        <Audio src={staticFile(s.file)} volume={s.volume} />
+      </Sequence>
+    ))}
+  </AbsoluteFill>
+);
