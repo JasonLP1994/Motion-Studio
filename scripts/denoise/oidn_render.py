@@ -29,6 +29,7 @@ ap.add_argument("--end", type=int, required=True)
 ap.add_argument("--pct", type=int, default=None)
 ap.add_argument("--spp", type=int, default=None)
 ap.add_argument("--keep-exr", action="store_true")
+ap.add_argument("--persistent", action="store_true", help="keep static scene data between frames (faster sequences)")
 args = ap.parse_args(argv)
 
 OUT = os.path.abspath(args.out)
@@ -40,6 +41,8 @@ if args.pct:
     sc.render.resolution_percentage = args.pct
 if args.spp:
     sc.cycles.samples = args.spp
+if args.persistent:
+    sc.render.use_persistent_data = True
 sc.cycles.device = "CPU"
 sc.cycles.use_denoising = False
 vl = sc.view_layers[0]

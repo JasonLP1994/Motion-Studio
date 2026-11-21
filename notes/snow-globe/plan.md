@@ -44,3 +44,14 @@ Soft sparkle chimes on the glints, a quiet train chug. Mixed to about -14 LUFS, 
 
 ## Note
 The shoe HQ render is using this machine's CPU until about 22 Nov. Test stills for this project slow it a little.
+
+## Update (21 Nov): current state and render queue
+- Now: 15 s seamless loop (450 frames at 30 fps), camera orbits 360 deg once per loop, connected blue clay town, no train,
+  one hidden softbox above-right (plastic highlights), shadow sun on the floor only (soft back shadow), colour grade in
+  config (+15% saturation on blues). Soundtrack: renders/audio/snow-globe-sound-v3.wav (original waltz, 15.0 s, -14 LUFS).
+- Queue (user, 21 Nov): 1) finish the 3 max-quality stills v5 (globe-hq5.blend, frames 1/151/301, 100% / 128 spp);
+  2) render the FULL loop "highest possible but quickest": time a few frames at 100% with low spp + OIDN + --persistent,
+     pick the best quality that finishes in a sensible time, run with scripts/denoise/render_resume.sh as TRACKED
+     background tasks (2 h each, chained) into renders/frames/snow-globe-full-v1/, then mux the sound -> renders/snow-globe-full-v1.mp4,
+     check the loop seam, score, send;
+  3) then resume the shoe: bash scripts/denoise/render_resume.sh renders/farm/shoe-slime-v5/shoe-slime.blend renders/frames/shoe-slime-local-hq-v1 1 600 50 32
