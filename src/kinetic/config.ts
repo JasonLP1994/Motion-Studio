@@ -1,6 +1,5 @@
-// Kinetic Symbols -> Phillips English. Every word, colour, size and timing lives here.
+// Kinetic Symbols -> Phillips Digital Project. Every word, colour, size and timing lives here.
 // Grammar from references/kt-ref.mp4 (giant cropped glyphs, colour->grey fields, quarter-second cuts).
-import pieces from "../../public/logo/pieces.json";
 
 const C = {
   blue: "#3346F2",
@@ -49,24 +48,26 @@ export const kineticConfig = {
   wall2: { ch: "*", bg: C.blue, ink: C.white, cell: 280, fontSize: 440, spinPerBeat: 90 },
 
   // Section starts in eighths (7.5 frames each).
-  sections: { glyphs: 0, wall1: 6, stack: 10, slices: 14, wall2: 16, p: 18, e: 19, pull: 20 },
+  sections: { glyphs: 0, wall1: 6, stack: 10, slices: 14, wall2: 16, initials: 18, end: 21 },
 
-  // 4.5 s on: the real logo (public/logo pieces, positions in logo-file px).
-  logo: {
-    pieces: pieces.pieces,
-    box: { x0: 294, y0: 272, x1: 968, y1: 1005 },
-    heightOnScreen: 640,
-    zoomOnGlyph: 3.4, // camera zoom while the giant P / E fill the frame
-    pullFrames: 18,
-    barStart: 160, barFrames: 9,
-    // Letter columns measured from the PNG alpha (px inside each wordmark PNG).
-    phillipsCols: [[8, 96], [111, 205], [223, 252], [269, 344], [354, 428], [442, 470], [486, 573], [580, 666]],
-    englishCols: [[8, 83], [98, 187], [199, 291], [305, 371], [383, 408], [417, 497], [507, 591]],
-    lettersStart: 162, // PHILLIPS
-    englishDelay: 5,
-    letterStagger: 1.5,
+  // 4.5 s on: giant initials, then the name assembles from scattered letters.
+  initials: [
+    { ch: "P", bg: C.black, fade: false, ink: C.white, size: 1500, x: 80, y: 40, rot: 0, enter: "scale" as Enter },
+    { ch: "D", bg: C.grey, fade: false, ink: C.blue, size: 1500, x: -120, y: 30, rot: 0, enter: "slideL" as Enter },
+    { ch: "P", bg: C.pink, fade: true, ink: C.black, size: 1500, x: 140, y: 40, rot: 0, enter: "slideU" as Enter },
+  ],
+  end: {
+    lines: ["PHILLIPS", "DIGITAL", "PROJECT"], // the exact words on the end card
+    bg: C.black,
+    ink: C.white,
+    accent: C.blue, // the short bar above the name
+    fontSize: 250,
+    lineHeight: 0.92,
+    tracking: -0.02,
+    barWidth: 280, barHeight: 22, barGap: 56, barFrames: 9,
+    letterStagger: 1, // frames between letters (across all lines)
     letterFrames: 11,
-    scatter: { x: 520, y: 300, rot: 50, scaleMin: 0.5, scaleMax: 1.9 },
+    scatter: { x: 620, y: 360, rot: 55, scaleMin: 0.45, scaleMax: 2.0 },
   },
 
   motionBlur: { shutterAngle: 180, samples: 8 },
@@ -74,8 +75,8 @@ export const kineticConfig = {
   audio: {
     beat: "kinetic/beat.wav", beatVolume: 0.9,
     sfx: [
-      { frame: 149, file: "sfx/kit_whoosh.ogg", volume: 0.7 },
-      { frame: 186, file: "sfx/kit_impact.ogg", volume: 0.9 },
+      { frame: 156, file: "sfx/kit_whoosh.ogg", volume: 0.7 },
+      { frame: 190, file: "sfx/kit_impact.ogg", volume: 0.9 },
     ],
   },
 };

@@ -27,11 +27,11 @@ for i in range(int(drums_end/beat)):
     add(bass(notes[(i//2)%4],beat*0.9),at)
 for j in range(int(drums_end/(beat/2))):
     add(hat(),j*beat/2+beat/4,0.8 if j%2 else 0.5)
-# P and E hits (4.5 s, 4.75 s), then air until the logo lands at 6.2 s.
-add(kick(),4.5,1.0); add(kick(),4.75,1.0)
+# P, D, P hits (4.5, 4.75, 5.0 s), then air until the name lands at 6.35 s.
+add(kick(),4.5,1.0); add(kick(),4.75,1.0); add(kick(),5.0,1.0)
 tt=np.arange(int(SR*2.2))/SR
 boom=np.sin(2*np.pi*41*tt)*np.exp(-tt*1.6)*0.8
-add(boom,6.2)
+add(boom,6.35)
 out=np.tanh(out*1.2)/np.tanh(1.2)
 out/=np.max(np.abs(out))*1.12
 pcm=(out*32767).astype(np.int16)

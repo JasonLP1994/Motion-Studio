@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Audio, Easing, Img, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Easing, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { loadFont } from "@remotion/fonts";
 import { CameraMotionBlur } from "@remotion/motion-blur";
 import { kineticConfig as K, eighth, Enter } from "./config";
@@ -191,103 +191,42 @@ const Wall2: React.FC = () => {
   return <AbsoluteFill style={{ background: field(w.bg, true), overflow: "hidden" }}>{tiles}</AbsoluteFill>;
 };
 
-// One wordmark letter, cut from the real logo PNG by its measured column.
-const Letter: React.FC<{ src: string; col: number[]; pngH: number; seed: number; start: number }> = ({ src, col, pngH, seed, start }) => {
+// End card: the name flies in as scattered letters that snap into place, then holds dead still.
+const EndCard: React.FC = () => {
   const f = useCurrentFrame();
-  const L = K.logo;
-  const p = interpolate(f, [start, start + L.letterFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: outExp });
-  const q = 1 - p;
-  const sx = (rnd(seed) * 2 - 1) * L.scatter.x;
-  const sy = (rnd(seed + 9) * 2 - 1) * L.scatter.y;
-  const sr = (rnd(seed + 17) * 2 - 1) * L.scatter.rot;
-  const ss = L.scatter.scaleMin + rnd(seed + 23) * (L.scatter.scaleMax - L.scatter.scaleMin);
-  const vis = f >= start ? 1 : 0;
-  const pad = 4;
-  const w = col[1] - col[0] + pad * 2;
+  const E = K.end;
+  const bar = interpolate(f, [0, E.barFrames], [0, 1], { extrapolateRight: "clamp", easing: outExp });
+  let n = 0;
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: col[0] - pad,
-        top: 0,
-        width: w,
-        height: pngH,
-        overflow: "hidden",
-        opacity: vis,
-        transform: `translate(${sx * q}px, ${sy * q}px) rotate(${sr * q}deg) scale(${1 + (ss - 1) * q})`,
-      }}
-    >
-      <Img src={staticFile(src)} style={{ position: "absolute", left: -(col[0] - pad), top: 0 }} />
-    </div>
-  );
-};
-
-// The real logo: giant P, giant E, camera pull-out, bar grows, letters assemble.
-const Logo: React.FC = () => {
-  const f = useCurrentFrame(); // absolute frame (rendered outside any Sequence)
-  const L = K.logo;
-  const P = L.pieces;
-  const s0 = L.heightOnScreen / (L.box.y1 - L.box.y0);
-  const boxCx = (L.box.x0 + L.box.x1) / 2;
-  const boxCy = (L.box.y0 + L.box.y1) / 2;
-  const tE = eighth(K.sections.e);
-  const tPull = eighth(K.sections.pull);
-
-  const centre = (k: "p" | "e") => ({ x: P[k].x + P[k].w / 2, y: P[k].y + P[k].h / 2 });
-  const pull = interpolate(f, [tPull, tPull + L.pullFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: outExp });
-  const focus = f < tE ? centre("p") : centre("e");
-  const zoom = interpolate(pull, [0, 1], [L.zoomOnGlyph, 1]);
-  const fx = interpolate(pull, [0, 1], [focus.x, boxCx]);
-  const fy = interpolate(pull, [0, 1], [focus.y, boxCy]);
-  const scale = s0 * zoom;
-
-  const showP = f < tE || f >= tPull;
-  const showE = f >= tE;
-  const bar = interpolate(f, [L.barStart, L.barStart + L.barFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: outExp });
-
-  const piece = (k: keyof typeof P, child: React.ReactNode, style?: React.CSSProperties) => (
-    <div style={{ position: "absolute", left: P[k].x, top: P[k].y, width: P[k].w, height: P[k].h, ...style }}>{child}</div>
-  );
-
-  return (
-    <AbsoluteFill style={{ background: K.colors.navy, overflow: "hidden" }}>
-      <div
-        style={{
-          position: "absolute",
-          left: W / 2,
-          top: H / 2,
-          width: 0,
-          height: 0,
-          transform: `scale(${scale}) translate(${-fx}px, ${-fy}px)`,
-          transformOrigin: "0 0",
-        }}
-      >
-        {showP && piece("p", <Img src={staticFile("logo/p.png")} />)}
-        {showE && piece("e", <Img src={staticFile("logo/e.png")} />)}
-        {piece("bar", <Img src={staticFile("logo/bar.png")} />, { transform: `scaleX(${bar})`, opacity: bar > 0 ? 1 : 0 })}
-        {piece(
-          "phillips",
-          L.phillipsCols.map((c, i) => (
-            <Letter key={i} src="logo/phillips.png" col={c} pngH={P.phillips.h} seed={i + 1} start={L.lettersStart + i * L.letterStagger} />
-          )),
-        )}
-        {piece(
-          "english",
-          L.englishCols.map((c, i) => (
-            <Letter key={i} src="logo/english.png" col={c} pngH={P.english.h} seed={i + 40} start={L.lettersStart + L.englishDelay + i * L.letterStagger} />
-          )),
-        )}
-      </div>
+    <AbsoluteFill style={{ background: E.bg, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: E.barWidth, height: E.barHeight, background: E.accent, transform: `scaleX(${bar})`, marginBottom: E.barGap }} />
+      {E.lines.map((line, li) => (
+        <div key={li} style={{ display: "flex", fontFamily: K.font, fontWeight: 900, fontSize: E.fontSize, lineHeight: E.lineHeight, letterSpacing: `${E.tracking}em`, color: E.ink }}>
+          {line.split("").map((ch, ci) => {
+            const i = n++;
+            const start = i * E.letterStagger;
+            const p = interpolate(f, [start, start + E.letterFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: outExp });
+            const q = 1 - p;
+            const sx = (rnd(i + 1) * 2 - 1) * E.scatter.x;
+            const sy = (rnd(i + 10) * 2 - 1) * E.scatter.y;
+            const sr = (rnd(i + 20) * 2 - 1) * E.scatter.rot;
+            const ss = E.scatter.scaleMin + rnd(i + 30) * (E.scatter.scaleMax - E.scatter.scaleMin);
+            return (
+              <span key={ci} style={{ display: "inline-block", opacity: f >= start ? 1 : 0, transform: `translate(${sx * q}px, ${sy * q}px) rotate(${sr * q}deg) scale(${1 + (ss - 1) * q})` }}>
+                {ch}
+              </span>
+            );
+          })}
+        </div>
+      ))}
     </AbsoluteFill>
   );
 };
 
 export const KineticSymbols: React.FC = () => {
   const S = K.sections;
-  const frame = useCurrentFrame();
-  const tLogo = eighth(S.p);
   return (
-    <AbsoluteFill style={{ background: K.colors.navy }}>
+    <AbsoluteFill style={{ background: K.colors.black }}>
       <CameraMotionBlur shutterAngle={K.motionBlur.shutterAngle} samples={K.motionBlur.samples}>
         <AbsoluteFill>
           {K.glyphs.map((g, i) => (
@@ -306,11 +245,17 @@ export const KineticSymbols: React.FC = () => {
               <SliceShot s={s} />
             </Sequence>
           ))}
-          <Sequence from={eighth(S.wall2)} durationInFrames={eighth(S.p) - eighth(S.wall2)}>
+          <Sequence from={eighth(S.wall2)} durationInFrames={eighth(S.initials) - eighth(S.wall2)}>
             <Wall2 />
           </Sequence>
-          {/* Logo reads absolute frames, so it is gated here instead of wrapped in a Sequence. */}
-          {frame >= tLogo ? <Logo /> : null}
+          {K.initials.map((g, i) => (
+            <Sequence key={`i${i}`} from={eighth(S.initials + i)} durationInFrames={eighth(S.initials + i + 1) - eighth(S.initials + i)}>
+              <GlyphShot g={g} />
+            </Sequence>
+          ))}
+          <Sequence from={eighth(S.end)}>
+            <EndCard />
+          </Sequence>
         </AbsoluteFill>
       </CameraMotionBlur>
       <Audio src={staticFile(K.audio.beat)} volume={K.audio.beatVolume} />
