@@ -55,3 +55,6 @@ The shoe HQ render is using this machine's CPU until about 22 Nov. Test stills f
      background tasks (2 h each, chained) into renders/frames/snow-globe-full-v1/, then mux the sound -> renders/snow-globe-full-v1.mp4,
      check the loop seam, score, send;
   3) then resume the shoe: bash scripts/denoise/render_resume.sh renders/farm/shoe-slime-v5/shoe-slime.blend renders/frames/shoe-slime-local-hq-v1 1 600 50 32
+- 21 Nov 03:27 UTC: stills v5 done (~38 min/frame at 128 spp; sent). Speed test: 100% / 16 spp + OIDN = ~5 min/frame and
+  visually matches 128 spp (mean diff <1/255; reflections a touch softer). --persistent saved almost nothing.
+  FULL render running at 100% / 16 spp into renders/frames/snow-globe-full-v1 (ETA ~37 h, about 23 Nov 16:00 UTC), shoe after.
