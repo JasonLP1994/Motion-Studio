@@ -40,3 +40,8 @@ v6 (user: keep the glow but follow the growth, smoother growth, smoother + thick
 - Colours: tangerine oil (orange -> gold -> magenta at grazing) on a petrol-teal infinite set with a teal accent light (complementary
   contrast; v1's lime on green had none). Warm gold growth edge, compositor fog glow.
 - Pipeline: Cycles 96 spp (adaptive) + OIDN (scripts/denoise/oidn_render.py on case_v2.blend), 720x1280 then AI 2x upscale.
+- Final settings (user chose Cycles): 48 spp adaptive 0.03 + OIDN, clamp indirect 3, diffuse 2 / glossy 4 / transmission 2, light tree,
+  persistent data. Fixes from the comparison: right strip 320 -> 170 and glare threshold 10 / mix -0.2 (edge blow-out); engraving deeper
+  (extrude 0.007) and darker. 145 real frames (every other frame on smooth shots, every frame 141-180, first/last of each shot);
+  RIFE fills the other 95; compact AI 2x upscale to 1080x1920. Comparison: notes/frames/phone-case-compare*.jpg.
+- Queue: scripts/master_queue.sh (copy of work/master_queue.sh), run as a tracked background task and relaunched after each 2 h limit.

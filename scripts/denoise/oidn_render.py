@@ -8,7 +8,7 @@ look (view transform + compositor glare) and saves a PNG per frame.
 Setup (once): bash scripts/denoise/setup_oidn.sh
 Usage:
   blender -b <file.blend> -P scripts/denoise/oidn_render.py -- \
-      --out <dir> --start 300 --end 300 [--pct 33] [--spp 16] [--keep-exr]
+      --out <dir> --start 300 --end 300 [--frames 1,3,5] [--pct 33] [--spp 16] [--keep-exr]
 Frames that already exist in <dir> are skipped, so a stopped run can resume.
 """
 import argparse
@@ -29,6 +29,7 @@ ap.add_argument("--end", type=int, required=True)
 ap.add_argument("--pct", type=int, default=None)
 ap.add_argument("--spp", type=int, default=None)
 ap.add_argument("--keep-exr", action="store_true")
+ap.add_argument("--frames", default=None, help="comma list of frames to render instead of start..end (e.g. every other frame for RIFE)")
 ap.add_argument("--persistent", action="store_true", help="keep static scene data between frames (faster sequences)")
 args = ap.parse_args(argv)
 
@@ -136,7 +137,8 @@ def float_image(rgb, w, h):
     return im
 
 
-for f in range(args.start, args.end + 1):
+FRAMES = [int(x) for x in args.frames.split(",")] if args.frames else range(args.start, args.end + 1)
+for f in FRAMES:
     png = os.path.join(OUT, f"d_{f:04d}.png")
     if os.path.exists(png):
         continue

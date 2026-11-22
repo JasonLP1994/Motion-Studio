@@ -199,12 +199,12 @@ case.data.materials.append(m_case)
 # engraving: PHILLIPS / DIGITAL cut into the back in a typewriter ("analog") face, darker lime in the grooves
 m_engrave = lime_oil("MAT_Engrave", metal=0.6, rough=0.45, grow=True)
 er = m_engrave.node_tree.nodes["Color Ramp"].color_ramp
-for el in er.elements: el.color = (el.color[0] * 0.35, el.color[1] * 0.35, el.color[2] * 0.35, 1)
+for el in er.elements: el.color = (el.color[0] * 0.18, el.color[1] * 0.18, el.color[2] * 0.18, 1)
 font = bpy.data.fonts.load("/home/user/Motion-Studio/public/fonts/SpecialElite-Regular.ttf")
 bpy.ops.object.text_add(location=(0, -0.42, z0 - 0.0015), rotation=(0, math.pi, 0))
 eng = bpy.context.object; eng.name = "CUT_Engraving"
-eng.data.body = "PHILLIPS\nDIGITAL"; eng.data.font = font; eng.data.size = 0.08
-eng.data.align_x = 'CENTER'; eng.data.align_y = 'CENTER'; eng.data.space_line = 0.95; eng.data.extrude = 0.004
+eng.data.body = "PHILLIPS\nDIGITAL"; eng.data.font = font; eng.data.size = 0.085
+eng.data.align_x = 'CENTER'; eng.data.align_y = 'CENTER'; eng.data.space_line = 0.95; eng.data.extrude = 0.007
 eng.data.materials.append(m_engrave)
 bpy.context.view_layer.objects.active = eng; bpy.ops.object.convert(target='MESH')
 bm_e = case.modifiers.new("B_Engrave", 'BOOLEAN'); bm_e.object = eng; bm_e.operation = 'DIFFERENCE'; bm_e.solver = 'EXACT'
@@ -277,7 +277,7 @@ def light(name, loc, energy, size, size_y=None, col=(1, 1, 1), look=(0, 0, 1)):
     d = Vector(look) - Vector(loc); Lg.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler(); return Lg
 light("LGT_Key_Softbox", (0.4, 3.0, 3.4), 300, 2.2, 1.4, (1.0, 0.98, 0.95))
 light("LGT_Strip_Left", (-2.2, 1.2, 1.1), 320, 0.25, 3.2, (1.0, 1.0, 1.0))
-light("LGT_Strip_Right", (2.2, 1.0, 1.1), 320, 0.25, 3.2, (1.0, 1.0, 1.0))
+light("LGT_Strip_Right", (2.2, 1.0, 1.1), 170, 0.25, 3.2, (1.0, 1.0, 1.0))
 light("LGT_Rim_Top", (0, -1.2, 3.2), 300, 1.6, 0.4, (0.9, 0.95, 1.0))
 light("LGT_Accent_Teal", (-1.5, -1.5, 0.4), 160, 1.5, 1.5, (0.1, 0.75, 0.85))
 W = bpy.data.worlds.new("WLD"); S.world = W; W.use_nodes = True
@@ -312,8 +312,11 @@ S.camera = bpy.data.objects["CAM_Chip"]
 
 # ---------------------------------------------------------------- render
 S.render.engine = 'CYCLES'; cy_ = S.cycles
-cy_.device = 'CPU'; cy_.samples = 96; cy_.use_denoising = False; cy_.use_adaptive_sampling = True; cy_.adaptive_threshold = 0.02
-cy_.max_bounces = 8; cy_.transparent_max_bounces = 24; cy_.glossy_bounces = 4; cy_.transmission_bounces = 4
+cy_.device = 'CPU'; cy_.samples = 48; cy_.use_denoising = False; cy_.use_adaptive_sampling = True; cy_.adaptive_threshold = 0.03
+cy_.max_bounces = 8; cy_.transparent_max_bounces = 24; cy_.glossy_bounces = 4; cy_.transmission_bounces = 2; cy_.diffuse_bounces = 2
+cy_.sample_clamp_indirect = 3.0; cy_.caustics_reflective = False; cy_.caustics_refractive = False
+try: cy_.use_light_tree = True
+except AttributeError: pass
 S.render.use_motion_blur = True; S.render.motion_blur_shutter = 0.4
 S.render.resolution_x, S.render.resolution_y, S.render.resolution_percentage = *RES, 100
 try:
@@ -323,7 +326,7 @@ except TypeError:
 S.use_nodes = True; ct = S.node_tree
 for n in list(ct.nodes): ct.nodes.remove(n)
 _rl = ct.nodes.new("CompositorNodeRLayers"); _gl = ct.nodes.new("CompositorNodeGlare"); _co_ = ct.nodes.new("CompositorNodeComposite")
-_gl.glare_type = 'FOG_GLOW'; _gl.threshold = 3.0; _gl.mix = 0.0; _gl.quality = 'HIGH'; _gl.size = 7
+_gl.glare_type = 'FOG_GLOW'; _gl.threshold = 10.0; _gl.mix = -0.2; _gl.quality = 'HIGH'; _gl.size = 7
 ct.links.new(_rl.outputs["Image"], _gl.inputs["Image"]); ct.links.new(_gl.outputs["Image"], _co_.inputs["Image"])
 if os.environ.get("CASE_ENGINE") == "EEVEE":      # fast option: same scene in Eevee (compositor glare still applies)
     S.render.engine = 'BLENDER_EEVEE'; e = S.eevee
