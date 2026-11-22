@@ -1,41 +1,41 @@
-// Flat 2D endless-zoom portrait (grammar learned from a Malika Favre reference: flat vector, 5-colour palette,
-// negative-space light, a seamless zoom through a reflection -> building -> window -> face). All scenes are original.
+// Flat 2D "Phillips Digital" film (v2). Grammar learned from a Malika Favre reference: flat vector, a 5-colour red palette,
+// light as negative space, a seamless zoom through a portal. Story: a designer at their PC -> zoom into the screen ->
+// a 3D motion world (flat-shaded) -> zoom back out to the designer -> the screen floods the frame -> Phillips Digital logo.
 // Every word, colour, timing and anchor lives here, so a change is one line.
+const fps = 30, bpm = 96;
+const beat = (n: number) => Math.round((n * fps * 60) / bpm); // frame of beat n (never accumulate rounded beats)
+
 export const flatConfig = {
-  output: { width: 1920, height: 1080, fps: 30, durationInFrames: 450 }, // 15 s, loops: frame 450 = frame 0
-  music: { bpm: 96 }, // 1 bar = 75 frames; every zoom lands on a bar line (150, 300, 450)
+  output: { width: 1920, height: 1080, fps, durationInFrames: 450 }, // 15 s
+  music: { bpm },
 
   col: {
-    red: "#D3131B",      // ground
-    redDeep: "#A30E14",  // shadow bands
-    maroon: "#6B0A10",   // skin in shadow
-    maroonDeep: "#4A070B",
-    ink: "#170405",      // hair, frames, deepest shadow
-    peach: "#F2A27E",    // facade, pattern lines
-    cream: "#F6E6D0",    // light (negative space), sun, glints
-    lips: "#E52A2F",
-    window: "#BE1119",
+    red: "#D3131B", redDeep: "#A30E14", maroon: "#6B0A10", maroonDeep: "#4A070B",
+    ink: "#170405", peach: "#F2A27E", cream: "#F6E6D0", lips: "#E52A2F",
   },
 
-  // timeline (frames): hold, then a 45-frame zoom that lands on the bar
   t: {
-    zoom: 45,
-    push: 1.08, // slow push towards the next portal while holding
-    A: [0, 150], B: [150, 300], C: [300, 450],
-    glint: [52, 78],        // light sweep across the sunglasses
-    birds: [168, 250],      // birds cross the dusk sky
-    lights: [170, 186, 205, 224, 243], // hotel windows switch on (on the beats)
-    glass: [318, 352],      // she raises her glass
-    title: { in: 322, out: 392 },
-    dissolve: 0.45,         // C->A: A fades in over the last 45% of the zoom
+    push: 1.06,                       // slow push towards the screen while holding
+    zoomIn: [beat(4), beat(6)],       // 75 -> 113: into the monitor, lands on beat 6
+    zoomOut: [beat(14), beat(16)],    // 263 -> 300: back out to the designer, lands on the bar
+    click: beat(3),                   // she clicks the mouse (the cue that starts the zoom)
+    cursor: { in: beat(7), grab: beat(8), drop: beat(10), out: beat(12) }, // her cursor drags the cube into place
+    pops: [beat(6), beat(7), beat(8)],     // octahedron, ring, sphere pop in on the beats
+    flood: [beat(18), beat(18) + 14],      // 338: the screen's red floods the frame
+    logo: { circle: beat(18) + 12, p: beat(18) + 20, word: beat(19) + 10, tag: beat(20) + 6 },
   },
 
-  // portals (in their scene's own 1920x1080 coordinates)
-  lensNear: { cx: 1215, cy: 478, rx: 112, ry: 80 }, // portal A->B
-  lensFar: { cx: 992, cy: 478, rx: 90, ry: 72 },
-  window: { x: 924, y: 562, w: 144, h: 81 },          // portal B->C, exactly 16:9
-  head: { x: 1150, y: 340, s: 0.33 },                 // where scene A's head sits inside scene C (portal C->A)
+  screen: { x: 410, y: 240, w: 576, h: 324 }, // the monitor screen (exactly 16:9): the portal into the 3D world
 
-  title: { text: "TITLE HERE", sub: "", font: "Cinzel", size: 92, x: 150, y: 470, color: "#F6E6D0" },
+  // 3D world camera: slow orbit across the whole film (radians), so the monitor and the full-screen view agree
+  cam: { yaw: [-0.45, 0.5], pitch: 0.5, dist: 12, focal: 950, cx: 960, cy: 620, light: [-0.55, 0.75, -0.5] },
+
+  // logo pieces (masks cut from inputs/phillips-digital-logo-scene.jpg), placed on a 1920x1080 card
+  logo: {
+    circle: { src: "flat2d/pd-circle.png", x: 785, y: 243, w: 352, h: 352, col: "#F6E6D0" },
+    p: { src: "flat2d/pd-p.png", x: 877, y: 366, w: 182, h: 170, col: "#170405" },
+    word: { src: "flat2d/pd-word.png", x: 565, y: 644, w: 793, h: 124, col: "#F6E6D0" },
+    tag: { src: "flat2d/pd-tag.png", x: 484, y: 830, w: 934, h: 25, col: "#F2A27E" },
+  },
 };
 export type FlatConfig = typeof flatConfig;

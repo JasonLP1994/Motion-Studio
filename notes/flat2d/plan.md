@@ -28,3 +28,17 @@ Never her character, the theatre or her compositions.
 | 405-450 | zoom into her head (x3), portrait dissolves in over the last 45% | lands on frame 0 = seamless loop |
 
 Render speed: ~3 frames/s here (61 frames in 20 s while the shoe renders), so the full 15 s takes about 2-3 minutes.
+
+## v2 (22 Nov): user's new direction
+"a person designing something on their PC in a 3D motion world and then it zooms out back to the person. And the logo Phillips
+digital with the same colour palette as the reference." Logo: inputs/phillips-digital-logo-scene.jpg (user's file), cut into
+recolourable masks in public/flat2d/ (circle, p., wordmark, services line) -> cream circle, ink p., cream wordmark, peach line.
+| Frames | Shot |
+|---|---|
+| 0-75 | designer at the desk, screen-lit profile (cream negative space), big wall shadow; she clicks (beat 3); push 1 -> 1.06 |
+| 75-113 | zoom into the monitor (x3.3), lands on beat 6 |
+| 113-263 | flat-shaded 3D world (real projection, palette shading, infinite floor): shapes pop on beats 6-8, her cursor drags the cube, a ball rides a keyframe curve, timeline playhead |
+| 263-300 | zoom back out to the designer, lands on the bar |
+| 338-352 | the screen's deep red floods the frame (iris from the monitor) |
+| 350-450 | logo builds: circle springs, p. rotates in, wordmark rises, services line blurs in; holds |
+Bugs fixed: BLEED rects used w/h (never drew); 3D pitch sign; back-face culling; light moved to the camera side.

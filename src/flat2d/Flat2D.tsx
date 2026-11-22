@@ -1,246 +1,265 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, staticFile, useCurrentFrame } from "remotion";
-import { loadFont } from "@remotion/fonts";
+import { AbsoluteFill, Easing, interpolate, spring, staticFile, useCurrentFrame } from "remotion";
 import { flatConfig as cfg } from "./config";
 
-loadFont({ family: "Cinzel", url: staticFile("fonts/Cinzel.ttf") });
-
-const W = cfg.output.width, H = cfg.output.height, CX = W / 2, CY = H / 2;
-const c = cfg.col;
-const MAXD = 3; // recursion depth cap (A -> B -> C -> A ...)
-const BLEED = { x: -1400, y: -1400, w: W + 2800, h: H + 2800 };
-
-// ---------- camera: hold with a slow push on the portal, then zoom through it ----------
-// screen position of portal point P moves from P to the frame centre while the scale goes 1 -> push -> K
-const camera = (f: number, start: number, end: number, P: { x: number; y: number }, K: number) => {
-  const zs = end - cfg.t.zoom;
-  let z: number, g: number;
-  if (f < zs) {
-    z = interpolate(f, [start, zs], [1, cfg.t.push], { easing: Easing.inOut(Easing.quad), extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    g = 0;
-  } else {
-    const e = interpolate(f, [zs, end], [0, 1], { easing: Easing.inOut(Easing.cubic), extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    const l0 = Math.log(cfg.t.push), l1 = Math.log(K);
-    z = Math.exp(l0 + (l1 - l0) * e);
-    g = (Math.log(z) - l0) / (l1 - l0);
-  }
-  const sx = P.x + (CX - P.x) * g, sy = P.y + (CY - P.y) * g;
-  return { z, tr: `translate(${sx} ${sy}) scale(${z}) translate(${-P.x} ${-P.y})`, zoomT: f < zs ? 0 : (f - zs) / cfg.t.zoom };
-};
-// draw a full scene shrunk into a portal centred on P at scale 1/K
-const into = (P: { x: number; y: number }, K: number) => `translate(${P.x} ${P.y}) scale(${1 / K}) translate(${-CX} ${-CY})`;
-
-const L = cfg.lensNear, LF = cfg.lensFar, WN = cfg.window, HD = cfg.head;
-const K_A = Math.sqrt((CX / L.rx) ** 2 + (CY / L.ry) ** 2) * 1.02;
-const K_F = Math.sqrt((CX / LF.rx) ** 2 + (CY / LF.ry) ** 2) * 1.02;
-const K_B = W / WN.w;
-const K_C = 1 / HD.s;
-const P_A = { x: L.cx, y: L.cy }, P_F = { x: LF.cx, y: LF.cy };
-const P_B = { x: WN.x + WN.w / 2, y: WN.y + WN.h / 2 };
-const P_C = { x: HD.x, y: HD.y };
+const W = cfg.output.width, H = cfg.output.height, CX = W / 2, CY = H / 2, FPS = cfg.output.fps;
+const c = cfg.col, T = cfg.t, SC = cfg.screen;
+const BLEED = { x: -1400, y: -1400, width: W + 2800, height: H + 2800 };
+const P_S = { x: SC.x + SC.w / 2, y: SC.y + SC.h / 2 };
+const K_S = W / SC.w;
 
 const ease = (f: number, a: number, b: number, from = 0, to = 1, e = Easing.inOut(Easing.cubic)) =>
   interpolate(f, [a, b], [from, to], { easing: e, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+// draw a full scene shrunk into a portal centred on P at scale 1/K
+const into = (P: { x: number; y: number }, K: number) => `translate(${P.x} ${P.y}) scale(${1 / K}) translate(${-CX} ${-CY})`;
+// camera on scene A: z = scale, g = how far the portal centre has travelled to the frame centre
+const camTr = (z: number, g: number) => {
+  const sx = P_S.x + (CX - P_S.x) * g, sy = P_S.y + (CY - P_S.y) * g;
+  return `translate(${sx} ${sy}) scale(${z}) translate(${-P_S.x} ${-P_S.y})`;
+};
+const zoomState = (e: number) => { // e: 0 = scene A at the push scale, 1 = screen fills the frame
+  const l0 = Math.log(T.push), l1 = Math.log(K_S);
+  const z = Math.exp(l0 + (l1 - l0) * e);
+  return { z, g: (Math.log(z) - l0) / (l1 - l0) };
+};
 
-type SP = { f: number; d: number; id: string; live?: boolean };
+// ---------------- 3D world (flat-shaded) ----------------
+type V = [number, number, number];
+const norm = (v: V): V => { const l = Math.hypot(...v); return [v[0] / l, v[1] / l, v[2] / l]; };
+const LIGHT = norm(cfg.cam.light as V);
+const rotY = (v: V, a: number): V => [v[0] * Math.cos(a) + v[2] * Math.sin(a), v[1], -v[0] * Math.sin(a) + v[2] * Math.cos(a)];
+const rotX = (v: V, a: number): V => [v[0], v[1] * Math.cos(a) - v[2] * Math.sin(a), v[1] * Math.sin(a) + v[2] * Math.cos(a)];
+const sub = (a: V, b: V): V => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const cross = (a: V, b: V): V => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const shade = (n: V) => { const v = dot(n, LIGHT); return v > 0.55 ? c.cream : v > 0.15 ? c.peach : v > -0.35 ? c.maroon : c.ink; };
 
-// ---------- Scene A pieces: the head (reused, shrunk, inside scene C) ----------
-const Head: React.FC<SP> = ({ f, d, id, live }) => {
-  const sw = live ? Math.sin(Math.max(0, f - cfg.t.glint[0]) / 9) * Math.exp(-Math.max(0, f - cfg.t.glint[0]) / 40) * 6 : 0; // earring settles after the head catches the light
-  const glOn = live && f >= cfg.t.glint[0] && f <= cfg.t.glint[1];
-  const gl = glOn ? ease(f, cfg.t.glint[0], cfg.t.glint[1], -280, 460, Easing.inOut(Easing.quad)) : -999;
+const makeCam = (f: number) => {
+  const yaw = interpolate(f, [0, cfg.output.durationInFrames], cfg.cam.yaw as [number, number]);
+  const P = cfg.cam;
+  const proj = (w: V): [number, number, number] => {
+    let v = rotY(sub(w, [0, 1, 0]), yaw);
+    v = rotX(v, -P.pitch);
+    const z = v[2] + P.dist;
+    return [P.cx + (P.focal * v[0]) / z, P.cy - (P.focal * v[1]) / z, z];
+  };
+  return proj;
+};
+const ptsStr = (ps: [number, number, number][]) => ps.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+
+const CUBE_V: V[] = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
+const CUBE_F = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 4, 7, 3]];
+const OCT_V: V[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+const OCT_F = [[0, 2, 4], [4, 2, 1], [1, 2, 5], [5, 2, 0], [4, 3, 0], [1, 3, 4], [5, 3, 1], [0, 3, 5]];
+
+const Solid: React.FC<{ proj: ReturnType<typeof makeCam>; verts: V[]; faces: number[][]; pos: V; s: number; ry: number; rx: number }> = ({ proj, verts, faces, pos, s, ry, rx }) => {
+  const wv = verts.map((v) => { const r = rotX(rotY(v, ry), rx); return [pos[0] + r[0] * s, pos[1] + r[1] * s, pos[2] + r[2] * s] as V; });
+  const pv = wv.map(proj);
+  const out = faces.map((fc, i) => {
+    const n = norm(cross(sub(wv[fc[1]], wv[fc[0]]), sub(wv[fc[2]], wv[fc[0]])));
+    const a = pv[fc[0]], b = pv[fc[1]], cc = pv[fc[2]];
+    const area = (b[0] - a[0]) * (cc[1] - a[1]) - (b[1] - a[1]) * (cc[0] - a[0]);
+    if (area <= 0) return null; // back face
+    return <polygon key={i} points={ptsStr(fc.map((k) => pv[k]))} fill={shade(n)} stroke={c.ink} strokeWidth={1.5} strokeLinejoin="round" />;
+  });
+  return <g>{out}</g>;
+};
+const Shadow: React.FC<{ proj: ReturnType<typeof makeCam>; x: number; z: number; r: number }> = ({ proj, x, z, r }) => {
+  const ps = Array.from({ length: 28 }, (_, i) => proj([x + Math.cos((i / 28) * 6.283) * r, 0, z + Math.sin((i / 28) * 6.283) * r * 0.85]));
+  return <polygon points={ptsStr(ps)} fill={c.maroonDeep} />;
+};
+const popS = (f: number, at: number) => spring({ frame: f - at, fps: FPS, config: { damping: 11, stiffness: 160, mass: 0.7 } });
+
+const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
+  const proj = makeCam(f);
+  // floor + grid
+  // infinite floor: the floor and the sky are the same deep red, so only the grid shows (no horizon line)
+  const RF = 10;
+  const grid: React.ReactNode[] = [];
+  for (let i = -9; i <= 9; i++) {
+    const h = Math.sqrt(RF * RF - i * i);
+    const a = proj([i, 0, -h]), b = proj([i, 0, h]), d = proj([-h, 0, i]), e = proj([h, 0, i]);
+    grid.push(<line key={`x${i}`} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={c.maroon} strokeWidth={2} />);
+    grid.push(<line key={`z${i}`} x1={d[0]} y1={d[1]} x2={e[0]} y2={e[1]} stroke={c.maroon} strokeWidth={2} />);
+  }
+  // the cube the cursor drags into place
+  const cu = T.cursor;
+  const cubeX = ease(f, cu.grab, cu.drop, -4.4, -2.4, Easing.inOut(Easing.cubic));
+  const cubeLift = f > cu.grab && f < cu.drop ? Math.sin(((f - cu.grab) / (cu.drop - cu.grab)) * Math.PI) * 0.7 : 0;
+  const cubePos: V = [cubeX, 1.1 + cubeLift, 0.6];
+  const items: { z: number; el: React.ReactNode }[] = [];
+  const s1 = popS(f, T.pops[0]), s2 = popS(f, T.pops[1]), s3 = popS(f, T.pops[2]);
+  items.push({ z: proj(cubePos)[2], el: <Solid key="cube" proj={proj} verts={CUBE_V} faces={CUBE_F} pos={cubePos} s={1.05} ry={f * 0.012 + 0.5} rx={0.25} /> });
+  if (s1 > 0.01) items.push({ z: proj([2.4, 1.6, -0.4])[2], el: <Solid key="oct" proj={proj} verts={OCT_V} faces={OCT_F} pos={[2.4, 1.6, -0.4]} s={1.4 * s1} ry={f * 0.03} rx={0.3} /> });
+  // sphere with a flat crescent shadow
+  if (s3 > 0.01) {
+    const sp = proj([0.2, 1.4, -3.4]); const r = (1.25 * cfg.cam.focal / sp[2]) * s3;
+    items.push({ z: sp[2], el: (
+      <g key="sph">
+        <defs><clipPath id="sphc"><circle cx={sp[0]} cy={sp[1]} r={r} /></clipPath></defs>
+        <circle cx={sp[0]} cy={sp[1]} r={r} fill={c.cream} />
+        <circle cx={sp[0] + r * 0.45} cy={sp[1] + r * 0.35} r={r * 1.05} fill={c.peach} clipPath="url(#sphc)" />
+        <circle cx={sp[0] + r * 0.85} cy={sp[1] + r * 0.7} r={r * 1.05} fill={c.maroon} clipPath="url(#sphc)" />
+      </g>) });
+  }
+  // ring (a tilted 3D circle)
+  if (s2 > 0.01) {
+    const ps = Array.from({ length: 48 }, (_, i) => {
+      const a = (i / 48) * 6.283; let v: V = [Math.cos(a) * 1.5 * s2, Math.sin(a) * 1.5 * s2, 0];
+      v = rotY(rotX(v, 1.1), f * 0.02);
+      return proj([v[0] - 0.6, v[1] + 3.1, v[2] + 1.6]);
+    });
+    items.push({ z: proj([-0.6, 3.1, 1.6])[2] - 2, el: <polygon key="ring" points={ptsStr(ps)} fill="none" stroke={c.peach} strokeWidth={16} strokeLinejoin="round" /> });
+  }
+  items.sort((a, b) => b.z - a.z);
+  // keyframe curve with handles and a ball travelling along it
+  const bez = (t: number, p: V[]): V => {
+    const u = 1 - t;
+    return [0, 1, 2].map((k) => u * u * u * p[0][k] + 3 * u * u * t * p[1][k] + 3 * u * t * t * p[2][k] + t * t * t * p[3][k]) as V;
+  };
+  const CP: V[] = [[-5, 0.4, 3.2], [-2.5, 4.2, 3.6], [2.5, -0.6, 3.0], [5, 2.8, 2.4]];
+  const curve = Array.from({ length: 40 }, (_, i) => proj(bez(i / 39, CP)));
+  const bt = ease(f, 120, 290, 0, 1, Easing.inOut(Easing.quad));
+  const ball = proj(bez(bt, CP)); const br = 0.32 * cfg.cam.focal / ball[2];
+  const hp = CP.map(proj);
+  // cursor (screen space)
+  const cp0 = proj([-4.4, 2.3, 0.6]), cp1 = proj([cubeX, 2.3 + cubeLift, 0.6]);
+  const curX = f < cu.grab ? ease(f, cu.in, cu.grab, 1500, cp0[0], Easing.out(Easing.cubic)) : f < cu.drop ? cp1[0] : ease(f, cu.drop + 6, cu.out, cp1[0], 1700, Easing.in(Easing.cubic));
+  const curY = f < cu.grab ? ease(f, cu.in, cu.grab, 900, cp0[1], Easing.out(Easing.cubic)) : f < cu.drop ? cp1[1] : ease(f, cu.drop + 6, cu.out, cp1[1], 1000, Easing.in(Easing.cubic));
+  const curOn = f >= cu.in && f <= cu.out;
+  const grabbing = f >= cu.grab && f <= cu.drop;
+  // timeline strip with a playhead
+  const ph = interpolate(f, [0, 450], [260, 1700]);
+  return (
+    <g>
+      <rect {...BLEED} fill={c.redDeep} />
+      <circle cx={1480} cy={230} r={150} fill={c.red} />
+      {grid}
+      <Shadow proj={proj} x={cubeX} z={0.6} r={1.25 - cubeLift * 0.3} />
+      {s1 > 0.01 && <Shadow proj={proj} x={2.4} z={-0.4} r={1.1 * s1} />}
+      {s3 > 0.01 && <Shadow proj={proj} x={0.2} z={-3.4} r={1.2 * s3} />}
+      <polyline points={ptsStr(curve)} fill="none" stroke={c.cream} strokeWidth={4} strokeDasharray="14 10" />
+      <line x1={hp[0][0]} y1={hp[0][1]} x2={hp[1][0]} y2={hp[1][1]} stroke={c.peach} strokeWidth={3} />
+      <line x1={hp[3][0]} y1={hp[3][1]} x2={hp[2][0]} y2={hp[2][1]} stroke={c.peach} strokeWidth={3} />
+      {hp.map((p, i) => <rect key={i} x={p[0] - 9} y={p[1] - 9} width={18} height={18} fill={i % 3 === 0 ? c.cream : c.peach} stroke={c.ink} strokeWidth={3} />)}
+      {items.map((it) => it.el)}
+      <circle cx={ball[0]} cy={ball[1]} r={br} fill={c.ink} />
+      <circle cx={ball[0] - br * 0.3} cy={ball[1] - br * 0.3} r={br * 0.35} fill={c.cream} />
+      {ui && (
+        <g>
+          <rect x={BLEED.x} y={984} width={BLEED.width} height={1600} fill={c.ink} />
+          <rect x={260} y={1028} width={1440} height={4} fill={c.maroon} />
+          {[300, 520, 800, 1080, 1360, 1620].map((x) => <rect key={x} x={x - 9} y={1021} width={18} height={18} fill={x < ph ? c.cream : c.peach} transform={`rotate(45 ${x} 1030)`} />)}
+          <rect x={ph - 2} y={996} width={4} height={70} fill={c.cream} />
+          <path d={`M${ph - 12} 992 L${ph + 12} 992 L${ph} 1006 Z`} fill={c.cream} />
+        </g>
+      )}
+      {ui && curOn && (
+        <g transform={`translate(${curX} ${curY}) scale(${grabbing ? 0.9 : 1})`}>
+          <path d="M0 0 L0 46 L12 35 L21 56 L30 52 L21 32 L37 32 Z" fill={c.cream} stroke={c.ink} strokeWidth={4} strokeLinejoin="round" />
+        </g>
+      )}
+    </g>
+  );
+};
+
+// ---------------- Scene A: the designer at the desk ----------------
+const Designer: React.FC<{ f: number }> = ({ f }) => {
+  const click = f >= T.click && f < T.click + 5 ? 3 : 0; // the finger presses on the click
   return (
     <g>
       <defs>
-        <pattern id={`stripe${id}`} width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(28)">
-          <rect width="26" height="26" fill={c.ink} />
-          <rect width="7" height="26" fill={c.peach} />
+        <pattern id="stripeA" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(28)">
+          <rect width="26" height="26" fill={c.ink} /><rect width="7" height="26" fill={c.peach} />
         </pattern>
-        <clipPath id={`lensN${id}`}><ellipse cx={L.cx} cy={L.cy} rx={L.rx} ry={L.ry} /></clipPath>
-        <clipPath id={`lensF${id}`}><ellipse cx={LF.cx} cy={LF.cy} rx={LF.rx} ry={LF.ry} /></clipPath>
-        <clipPath id={`lenses${id}`}>
-          <ellipse cx={L.cx} cy={L.cy} rx={L.rx} ry={L.ry} /><ellipse cx={LF.cx} cy={LF.cy} rx={LF.rx} ry={LF.ry} />
-        </clipPath>
+        <clipPath id="screenClip"><rect x={SC.x} y={SC.y} width={SC.w} height={SC.h} /></clipPath>
       </defs>
-      {/* hair, back */}
-      <path d="M770 330 C760 170 900 78 1100 70 C1330 62 1482 190 1492 380 L1502 772 C1440 792 1380 792 1330 772 L1330 560 L900 560 L882 772 C830 788 790 782 760 762 Z" fill={c.ink} />
-      {/* neck + coat with pinstripe and a scalloped collar */}
-      <path d="M1030 700 L1030 960 L1236 960 L1236 690 Z" fill={c.maroonDeep} />
-      <path d="M1236 800 L1236 960 L1160 960 Z" fill={c.ink} opacity={0.55} />
-      <path d="M540 1110 C600 965 760 905 905 892 L1032 884 L1132 968 L1246 884 L1380 892 C1525 905 1680 965 1730 1110 Z" fill={`url(#stripe${id})`} />
-      <path d="M1032 884 L1132 968 L1246 884 L1300 890 L1132 1020 L980 890 Z" fill={c.ink} />
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <path key={i} d={`M${975 + i * 52} ${905 + Math.abs(i - 2.5) * 6} a26 26 0 0 0 52 0`} fill="none" stroke={c.peach} strokeWidth={7} />
-      ))}
-      {/* face in shadow, light falling from the right as negative space */}
-      <path d="M905 360 C895 520 915 650 985 745 C1040 815 1120 842 1190 816 C1275 786 1325 680 1335 540 L1335 360 Z" fill={c.maroon} />
-      <path d="M1210 556 C1282 556 1330 586 1335 600 C1328 702 1282 792 1196 816 C1168 770 1206 722 1186 672 C1170 632 1176 590 1210 556 Z" fill={c.cream} />
-      <path d="M1062 520 C1042 590 1030 622 1046 642 C1062 652 1084 650 1100 640" fill="none" stroke={c.ink} strokeWidth={8} strokeLinecap="round" />
-      <path d="M1008 700 C1040 680 1064 690 1080 698 C1100 686 1126 690 1142 703 C1110 714 1040 716 1008 700 Z" fill={c.lips} />
-      <path d="M1014 703 C1050 738 1112 738 1140 705 C1102 714 1050 714 1014 703 Z" fill={c.lips} />
-      <path d="M1010 701 C1050 712 1100 712 1142 703" fill="none" stroke={c.ink} strokeWidth={4} />
-      {/* blunt fringe */}
-      <path d="M876 362 C896 250 1000 188 1120 186 C1252 184 1342 250 1352 362 L1352 408 L872 408 Z" fill={c.ink} />
-      {/* reflections in the sunglasses: scene B (the near lens is the portal) */}
-      <g clipPath={`url(#lensN${id})`}>
-        <ellipse cx={L.cx} cy={L.cy} rx={L.rx} ry={L.ry} fill={c.red} />
-        {d < MAXD && <g transform={into(P_A, K_A)}><SceneB f={f} d={d + 1} id={`${id}n`} /></g>}
-      </g>
-      <g clipPath={`url(#lensF${id})`}>
-        <ellipse cx={LF.cx} cy={LF.cy} rx={LF.rx} ry={LF.ry} fill={c.red} />
-        {d < MAXD && <g transform={into(P_F, K_F)}><SceneB f={f} d={d + 2} id={`${id}f`} /></g>}
-      </g>
-      {glOn && (
-        <g clipPath={`url(#lenses${id})`}>
-          <path d={`M${1050 + gl} 380 L${1100 + gl} 380 L${1000 + gl} 580 L${950 + gl} 580 Z`} fill={c.cream} opacity={0.85} />
-          <path d={`M${1120 + gl} 380 L${1135 + gl} 380 L${1035 + gl} 580 L${1020 + gl} 580 Z`} fill={c.cream} opacity={0.85} />
-        </g>
-      )}
-      {/* cat-eye frames */}
-      <ellipse cx={L.cx} cy={L.cy} rx={L.rx} ry={L.ry} fill="none" stroke={c.ink} strokeWidth={16} />
-      <ellipse cx={LF.cx} cy={LF.cy} rx={LF.rx} ry={LF.ry} fill="none" stroke={c.ink} strokeWidth={14} />
-      <path d="M1290 418 L1362 384 L1330 458 Z" fill={c.ink} />
-      <path d="M912 436 L872 404 L900 470 Z" fill={c.ink} />
-      <path d="M1080 470 C1092 452 1108 452 1104 470" fill="none" stroke={c.ink} strokeWidth={12} />
-      <path d="M1327 470 L1352 470" stroke={c.ink} strokeWidth={10} />
-      {/* earring */}
-      <g transform={`rotate(${sw} 1440 772)`}>
-        <line x1={1440} y1={772} x2={1440} y2={792} stroke={c.peach} strokeWidth={6} />
-        <circle cx={1440} cy={826} r={34} fill="none" stroke={c.peach} strokeWidth={11} />
-      </g>
+      <rect {...BLEED} fill={c.red} />
+      {/* her big shadow on the wall, thrown by the monitor */}
+      <path d="M1360 120 C1360 10 1450 -40 1560 -40 C1700 -40 1790 50 1790 170 L1800 520 C1760 545 1700 545 1660 520 L1640 600 L1720 640 C1800 700 1840 820 1860 1100 L1400 1100 C1400 900 1440 760 1500 700 L1440 520 Z" fill={c.redDeep} />
+      {/* monitor */}
+      <rect x={SC.x - 16} y={SC.y - 16} width={SC.w + 32} height={SC.h + 32} rx={10} fill={c.ink} />
+      <g clipPath="url(#screenClip)"><g transform={into(P_S, K_S)}><World f={f} /></g></g>
+      <rect x={SC.x + SC.w / 2 - 24} y={SC.y + SC.h + 16} width={48} height={150} fill={c.ink} />
+      <path d={`M${SC.x + SC.w / 2 - 120} 800 L${SC.x + SC.w / 2 + 120} 800 L${SC.x + SC.w / 2 + 90} 780 L${SC.x + SC.w / 2 - 90} 780 Z`} fill={c.ink} />
+      {/* light from the screen pooling on the desk */}
+      <path d={`M${SC.x - 40} 812 L${SC.x + SC.w + 120} 812 L${SC.x + SC.w + 260} 1100 L${SC.x - 180} 1100 Z`} fill={c.redDeep} />
+      {/* her: sweater with stripes, neck, profile face lit by the screen, bob, glasses, earring */}
+      <path d="M1170 1100 C1180 790 1240 660 1335 648 C1445 640 1545 700 1590 820 L1650 1100 Z" fill="url(#stripeA)" />
+      <path d="M1312 540 L1300 660 L1392 660 L1386 520 Z" fill={c.maroonDeep} />
+      <path d="M1212 300 L1206 362 C1197 382 1186 402 1170 424 C1180 434 1195 436 1201 444 C1196 458 1191 468 1197 476 C1190 484 1189 494 1199 502 C1197 518 1201 534 1216 548 C1242 564 1282 568 1312 558 L1332 600 L1386 600 L1394 440 L1384 300 Z" fill={c.maroon} />
+      <path d="M1212 300 L1206 362 C1197 382 1186 402 1170 424 C1180 434 1195 436 1201 444 C1196 458 1191 468 1197 476 C1190 484 1189 494 1199 502 C1197 518 1201 534 1216 548 C1242 564 1272 567 1292 562 C1262 522 1256 472 1264 432 C1270 382 1252 332 1242 300 Z" fill={c.cream} />
+      <path d="M1194 476 C1188 482 1188 494 1200 501 C1206 494 1206 484 1194 476 Z" fill={c.lips} />
+      <path d="M1180 300 C1180 196 1262 146 1344 146 C1446 146 1508 218 1508 322 L1514 566 C1476 582 1434 582 1404 566 L1394 470 L1384 330 L1196 336 C1196 322 1186 312 1180 300 Z" fill={c.ink} />
+      <path d="M1192 338 C1196 250 1262 186 1346 182 L1350 340 Z" fill={c.ink} />
+      <ellipse cx={1234} cy={376} rx={20} ry={26} fill={c.red} stroke={c.ink} strokeWidth={8} />
+      <path d="M1250 368 L1392 352" stroke={c.ink} strokeWidth={8} />
+      <circle cx={1404} cy={606} r={26} fill="none" stroke={c.peach} strokeWidth={9} />
+      {/* desk, keyboard, mug */}
+      <rect x={BLEED.x} y={800} width={BLEED.width} height={18} fill={c.peach} />
+      <rect x={BLEED.x} y={818} width={BLEED.width} height={1600} fill={c.ink} />
+      <path d={`M${SC.x + 60} 798 L${SC.x + 420} 798 L${SC.x + 400} 784 L${SC.x + 80} 784 Z`} fill={c.maroon} />
+      <rect x={210} y={712} width={74} height={88} rx={8} fill={c.cream} />
+      <path d="M284 730 C318 730 318 784 284 784" fill="none" stroke={c.cream} strokeWidth={12} />
+      <rect x={210} y={712} width={36} height={88} fill={c.peach} />
+      {/* arm resting on the desk, hand on the mouse */}
+      <path d="M1330 690 C1250 720 1160 760 1090 782 L1098 800 L1350 800 C1380 760 1370 710 1330 690 Z" fill="url(#stripeA)" />
+      <ellipse cx={1066} cy={792 + click * 0.3} rx={30} ry={10} fill={c.peach} />
+      <path d={`M1046 ${784 + click} C1050 ${764 + click} 1086 ${762 + click} 1100 ${780 + click} L1100 800 L1046 800 Z`} fill={c.maroon} />
     </g>
   );
 };
 
-const SceneA: React.FC<SP> = (p) => (
-  <g>
-    <rect {...BLEED} fill={c.red} />
-    <rect x={BLEED.x} y={BLEED.y} width={330 - BLEED.x} height={BLEED.h} fill={c.redDeep} />
-    <rect x={352} y={BLEED.y} width={14} height={BLEED.h} fill={c.ink} />
-    <rect x={1740} y={BLEED.y} width={W + 2000} height={BLEED.h} fill={c.redDeep} />
-    <Head {...p} />
-  </g>
+// ---------------- the logo card (pieces masked from the real logo, recoloured to the palette) ----------------
+const Piece: React.FC<{ p: { src: string; x: number; y: number; w: number; h: number; col: string }; style?: React.CSSProperties }> = ({ p, style }) => (
+  <div style={{ position: "absolute", left: p.x, top: p.y, width: p.w, height: p.h, backgroundColor: p.col,
+    WebkitMaskImage: `url(${staticFile(p.src)})`, maskImage: `url(${staticFile(p.src)})`, WebkitMaskSize: "100% 100%", maskSize: "100% 100%", ...style }} />
 );
-
-// ---------- Scene B: art-deco hotel at dusk ----------
-const SceneB: React.FC<SP> = ({ f, d, id, live }) => {
-  if (d > MAXD) return <rect {...BLEED} fill={c.red} />;
-  const cols = [690, 770, 905, 1095, 1175];
-  const rows = Array.from({ length: 16 }, (_, i) => 330 + i * 112);
-  const lit = (k: number) => live && f >= cfg.t.lights[k % cfg.t.lights.length];
-  const litSet: Record<string, number> = { "1-3": 0, "4-5": 1, "0-6": 2, "3-2": 3, "1-7": 4 };
-  const bx = live ? ease(f, cfg.t.birds[0], cfg.t.birds[1], -200, 2100, (x) => x) : -500;
+const Logo: React.FC<{ f: number }> = ({ f }) => {
+  const L = cfg.logo, t = T.logo;
+  const sc = spring({ frame: f - t.circle, fps: FPS, config: { damping: 12, stiffness: 150, mass: 0.8 } });
+  const sp = spring({ frame: f - t.p, fps: FPS, config: { damping: 11, stiffness: 170, mass: 0.6 } });
+  const wy = ease(f, t.word, t.word + 14, 1, 0, Easing.out(Easing.exp));
+  const tg = ease(f, t.tag, t.tag + 10, 0, 1, Easing.out(Easing.quad));
   return (
-    <g>
-      <defs><clipPath id={`win${id}`}><rect x={WN.x} y={WN.y} width={WN.w} height={WN.h} /></clipPath></defs>
-      <rect {...BLEED} fill={c.red} />
-      <circle cx={1500} cy={330} r={165} fill={c.cream} />
-      {/* tower: setbacks, spire, shadow side */}
-      <rect x={942} y={10} width={36} height={100} fill={c.peach} />
-      <rect x={820} y={100} width={280} height={80} fill={c.peach} />
-      <path d="M1100 100 L1150 118 L1150 180 L1100 180 Z" fill={c.maroon} />
-      <rect x={720} y={170} width={480} height={100} fill={c.peach} />
-      <path d="M1200 170 L1270 192 L1270 270 L1200 270 Z" fill={c.maroon} />
-      <rect x={640} y={260} width={640} height={2400} fill={c.peach} />
-      <path d="M1280 260 L1410 300 L1410 2660 L1280 2660 Z" fill={c.maroon} />
-      {[660, 850, 1070, 1260].map((x) => <rect key={x} x={x} y={280} width={10} height={2380} fill={c.maroonDeep} />)}
-      {[100, 170, 260].map((y) => <rect key={y} x={y === 100 ? 820 : y === 170 ? 720 : 640} y={y} width={y === 100 ? 280 : y === 170 ? 480 : 640} height={8} fill={c.maroonDeep} />)}
-      {rows.map((y, r) => cols.map((x, k) => {
-        if (x + 70 > WN.x - 20 && x < WN.x + WN.w + 20 && y + 60 > WN.y - 30 && y < WN.y + WN.h + 30) return null;
-        const key = `${k}-${r}`; const on = key in litSet && lit(litSet[key]);
-        return (
-          <g key={key}>
-            <rect x={x} y={y} width={x === 905 ? 110 : 60} height={62} fill={on ? c.cream : c.window} />
-            <rect x={x} y={y} width={x === 905 ? 110 : 60} height={12} fill={c.maroonDeep} />
-          </g>
-        );
-      }))}
-      {/* the portal window with a little balcony: scene C lives inside */}
-      <rect x={WN.x - 12} y={WN.y - 12} width={WN.w + 24} height={WN.h + 24} fill={c.maroonDeep} />
-      <g clipPath={`url(#win${id})`}>
-        <rect x={WN.x} y={WN.y} width={WN.w} height={WN.h} fill={c.window} />
-        {d < MAXD && <g transform={into(P_B, K_B)}><SceneC f={f} d={d + 1} id={`${id}c`} /></g>}
-      </g>
-      <rect x={WN.x - 26} y={WN.y + WN.h + 8} width={WN.w + 52} height={10} fill={c.ink} />
-      {[0, 1, 2, 3, 4, 5, 6].map((i) => <rect key={i} x={WN.x - 20 + i * 31} y={WN.y + WN.h + 18} width={5} height={30} fill={c.ink} />)}
-      <rect x={WN.x - 26} y={WN.y + WN.h + 46} width={WN.w + 52} height={8} fill={c.ink} />
-      {/* street and a low wall in the foreground */}
-      <rect x={BLEED.x} y={1010} width={BLEED.w} height={2400} fill={c.maroonDeep} />
-      {/* birds */}
-      {live && [0, 1, 2].map((i) => {
-        const x = bx - i * 70, y = 210 + i * 34 + Math.sin((f + i * 7) / 4) * 4, w = Math.sin((f + i * 5) / 3) > 0 ? 14 : 4;
-        return <path key={i} d={`M${x - 22} ${y - w} L${x} ${y} L${x + 22} ${y - w}`} fill="none" stroke={c.ink} strokeWidth={6} strokeLinejoin="round" />;
-      })}
-    </g>
+    <AbsoluteFill>
+      <Piece p={L.circle} style={{ transform: `scale(${sc})` }} />
+      <Piece p={L.p} style={{ transform: `rotate(${(1 - sp) * -50}deg) scale(${0.4 + 0.6 * sp})`, opacity: sp > 0.02 ? 1 : 0 }} />
+      <div style={{ position: "absolute", left: L.word.x, top: L.word.y - 10, width: L.word.w, height: L.word.h + 40, overflow: "hidden" }}>
+        <Piece p={{ ...L.word, x: 0, y: 10 }} style={{ transform: `translateY(${wy * 190}px)` }} />
+      </div>
+      <Piece p={L.tag} style={{ opacity: tg, filter: `blur(${(1 - tg) * 6}px)` }} />
+    </AbsoluteFill>
   );
 };
 
-// ---------- Scene C: inside the window, she raises a glass ----------
-const SceneC: React.FC<SP> = ({ f, d, id, live }) => {
-  if (d > MAXD) return <rect {...BLEED} fill={c.window} />;
-  const gy = live ? ease(f, cfg.t.glass[0], cfg.t.glass[1], 90, 0, Easing.bezier(0.33, 1, 0.68, 1)) : 0;
-  const hs = `translate(${HD.x} ${HD.y}) scale(${HD.s}) translate(${-CX} ${-CY})`;
-  return (
-    <g>
-      <rect {...BLEED} fill={c.red} />
-      {/* a tall cream light pool on the back wall, the room's one light */}
-      <path d="M1000 -100 L1500 -100 L1640 1300 L860 1300 Z" fill={c.redDeep} />
-      {/* dress, then the shared head (identical to scene A, shrunk) */}
-      <path d="M1022 520 C1000 640 960 820 930 1500 L1490 1500 C1460 820 1420 640 1398 520 Z" fill={c.ink} />
-      <path d="M1200 540 L1270 540 L1236 640 Z" fill={c.maroonDeep} />
-      <g transform={hs}><Head f={f} d={d} id={`${id}h`} /></g>
-      {/* arm and cocktail glass */}
-      <g transform={`translate(0 ${gy})`}>
-        <path d="M1035 760 C1060 700 1090 650 1110 610 L1140 622 C1120 668 1096 720 1076 774 Z" fill={c.maroon} />
-        <path d="M1062 512 L1158 512 L1110 566 Z" fill={c.lips} stroke={c.cream} strokeWidth={6} strokeLinejoin="round" />
-        <line x1={1110} y1={566} x2={1110} y2={614} stroke={c.cream} strokeWidth={6} />
-        <line x1={1088} y1={616} x2={1132} y2={616} stroke={c.cream} strokeWidth={6} strokeLinecap="round" />
-        <circle cx={1128} cy={606} r={18} fill={c.maroon} />
-      </g>
-      {/* curtain on the right with peach folds */}
-      <path d="M1640 -200 C1700 300 1660 700 1730 1400 L2600 1400 L2600 -200 Z" fill={c.maroonDeep} />
-      {[0, 1, 2, 3].map((i) => <path key={i} d={`M${1720 + i * 60} -200 C${1770 + i * 60} 300 ${1730 + i * 60} 700 ${1800 + i * 60} 1400`} fill="none" stroke={c.peach} strokeWidth={6} />)}
-      {/* window sill in the foreground */}
-      <rect x={BLEED.x} y={980} width={BLEED.w} height={40} fill={c.ink} />
-      <rect x={BLEED.x} y={1020} width={BLEED.w} height={2400} fill={c.peach} />
-    </g>
-  );
-};
-
-// ---------- the film ----------
+// ---------------- the film ----------------
 export const Flat2D: React.FC = () => {
   const f = useCurrentFrame();
-  const { A, B, C } = cfg.t;
-  let content: React.ReactNode;
-  if (f < A[1]) {
-    const cam = camera(f, A[0], A[1], P_A, K_A);
-    content = <g transform={cam.tr}><SceneA f={f} d={0} id="a" live /></g>;
-  } else if (f < B[1]) {
-    const cam = camera(f, B[0], B[1], P_B, K_B);
-    content = <g transform={cam.tr}><SceneB f={f} d={0} id="b" live /></g>;
+  const [zi0, zi1] = T.zoomIn, [zo0, zo1] = T.zoomOut;
+  let tr: string | null = null; // null = full-screen 3D world
+  if (f < zi0) {
+    const z = ease(f, 0, zi0, 1, T.push, Easing.inOut(Easing.quad));
+    tr = camTr(z, 0);
+  } else if (f < zi1) {
+    const s = zoomState(ease(f, zi0, zi1, 0, 1, Easing.inOut(Easing.cubic))); tr = camTr(s.z, s.g);
+  } else if (f < zo0) {
+    tr = null;
+  } else if (f < zo1) {
+    const e = ease(f, zo0, zo1, 1, 0, Easing.inOut(Easing.cubic));
+    const l1 = Math.log(K_S); const z = Math.exp(l1 * e); tr = camTr(z, e); // back to scale 1, centred as at rest
   } else {
-    const cam = camera(f, C[0], C[1], P_C, K_C);
-    const op = ease(cam.zoomT, 1 - cfg.t.dissolve, 1, 0, 1, Easing.inOut(Easing.quad));
-    content = (
-      <g transform={cam.tr}>
-        <SceneC f={f} d={0} id="c" live />
-        {op > 0 && <g opacity={op} transform={into(P_C, K_C)}><SceneA f={0} d={1} id="ca" /></g>}
-      </g>
-    );
+    tr = camTr(1, 0);
   }
-  const T = cfg.title, ti = cfg.t.title;
-  const tIn = ease(f, ti.in, ti.in + 10, 0, 1, Easing.out(Easing.exp));
-  const tOut = ease(f, ti.out, ti.out + 6, 1, 0, Easing.in(Easing.cubic));
-  const tOp = Math.min(tIn, tOut);
+  const fl = ease(f, T.flood[0], T.flood[1], 0, 1, Easing.in(Easing.cubic));
+  const floodR = fl * Math.hypot(W, H);
   return (
     <AbsoluteFill style={{ backgroundColor: c.red }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%">{content}</svg>
-      {T.text && tOp > 0 && (
-        <div style={{ position: "absolute", left: T.x, top: T.y, color: T.color, fontFamily: T.font, fontSize: T.size, letterSpacing: "0.12em", lineHeight: 1, opacity: tOp, filter: `blur(${(1 - tIn) * 6 + (1 - tOut) * 6}px)` }}>
-          {T.text}
-          {T.sub && <div style={{ fontSize: T.size * 0.32, letterSpacing: "0.4em", marginTop: 24 }}>{T.sub}</div>}
-        </div>
-      )}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%">
+        {tr === null ? <World f={f} /> : <g transform={tr}><Designer f={f} /></g>}
+        {fl > 0 && <circle cx={P_S.x} cy={P_S.y} r={floodR} fill={c.redDeep} />}
+      </svg>
+      {f >= T.logo.circle - 2 && <Logo f={f} />}
     </AbsoluteFill>
   );
 };
