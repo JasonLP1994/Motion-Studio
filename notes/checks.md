@@ -62,3 +62,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO merge vertices (remove doubles) on imported glTF/Objaverse meshes before shading: split vertices make chrome look faceted.
 - DO on the Mutant cover: type glitches in, flickers, then glitches out and stays out; the last shot is the head alone, central.
 - DO run every 3D render through the free local AI tools for the best look (notes/ai-enhance.md): Cycles + OIDN denoise where it's used, render 720p and AI-upscale (compact 2x; Real-ESRGAN for hero stills), RIFE in-betweens on smooth shots. Free tools only, never paid or cloud enhancers. RIFE never across cuts, glitch/strobe frames or beat hits.
+- DO light glossy products by their reflections (gradient key + grazing edge strips + black cards + light-linked backdrop pool); never put a light or coloured accent in front of a big glossy face; fill with visible_glossy off. Guide: .claude/skills/lighting/references/product-lighting.md

@@ -128,3 +128,4 @@ Anisotropy: 0.3–0.8 for visible light shafts
 |-------|-----------|-----------|
 | Horror setups | `references/horror-lighting-setups.md` | Horror scenes |
 | Cinematic rigs | `references/cinematic-light-rigs.md` | Portfolio renders |
+| Glossy product lighting (learned in this workspace) | `references/product-lighting.md` | Any product / packshot / glossy object |

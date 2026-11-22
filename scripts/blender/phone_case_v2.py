@@ -104,7 +104,7 @@ def lime_oil(name, metal=0.85, rough=0.16, grow=False):
     nt.links.new(lw.outputs["Facing"], ramp.inputs["Fac"]); nt.links.new(ramp.outputs["Color"], b.inputs["Base Color"])
     # metallic flakes under the clear coat
     nz = nt.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 900.0; nz.inputs["Detail"].default_value = 1.0
-    bump = nt.nodes.new("ShaderNodeBump"); bump.inputs["Strength"].default_value = 0.08; bump.inputs["Distance"].default_value = 0.002
+    bump = nt.nodes.new("ShaderNodeBump"); bump.inputs["Strength"].default_value = 0.025; bump.inputs["Distance"].default_value = 0.002
     nt.links.new(nz.outputs["Fac"], bump.inputs["Height"]); nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
     if grow:
         # grow-on: alpha cut where the growth clock has not reached this point yet, thin glowing lime edge
@@ -142,7 +142,7 @@ BG_GREEN = TEAL
 m_cyc = principled("MAT_Cyclorama", BG_GREEN, 0.95)
 _cb = m_cyc.node_tree.nodes["Principled BSDF"]
 _cb.inputs["Specular IOR Level"].default_value = 0.0
-_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.5  # mostly self-lit = flat, seamless
+_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.35  # mostly self-lit = flat, seamless
 
 # ---------------------------------------------------------------- product (local axes: X width, Y height, Z depth, back = -Z)
 PROD = bpy.data.objects.new("PRODUCT", None); S.collection.objects.link(PROD)
@@ -275,11 +275,49 @@ def light(name, loc, energy, size, size_y=None, col=(1, 1, 1), look=(0, 0, 1)):
     bpy.ops.object.light_add(type='AREA', location=loc); Lg = bpy.context.object; Lg.name = name
     Lg.data.energy = energy; Lg.data.color = col; Lg.data.shape = 'RECTANGLE'; Lg.data.size = size; Lg.data.size_y = size_y or size
     d = Vector(look) - Vector(loc); Lg.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler(); return Lg
-light("LGT_Key_Softbox", (0.4, 3.0, 3.4), 300, 2.2, 1.4, (1.0, 0.98, 0.95))
-light("LGT_Strip_Left", (-2.2, 1.2, 1.1), 320, 0.25, 3.2, (1.0, 1.0, 1.0))
-light("LGT_Strip_Right", (2.2, 1.0, 1.1), 170, 0.25, 3.2, (1.0, 1.0, 1.0))
-light("LGT_Rim_Top", (0, -1.2, 3.2), 300, 1.6, 0.4, (0.9, 0.95, 1.0))
-light("LGT_Accent_Teal", (-1.5, -1.5, 0.4), 160, 1.5, 1.5, (0.1, 0.75, 0.85))
+# --- product lighting (see notes/product-lighting.md): light the REFLECTIONS. A gradient softbox panel gives the flat glossy back a
+# smooth bright-to-dark sheen, grazing strips draw the edge highlights, black cards add contrast in the reflections, a weak fill
+# keeps the form, a teal kick ties the case to the set. Product lights are light-linked to the product only; the backdrop gets
+# its own soft pool, so neither washes the other out.
+COL_P = bpy.data.collections.new("COL_ProductLit"); S.collection.children.link(COL_P)
+for o in [case, ring, hinge, phone]: COL_P.objects.link(o)
+COL_BG = bpy.data.collections.new("COL_Backdrop"); S.collection.children.link(COL_BG); COL_BG.objects.link(cyc)
+def link_to(o, col):
+    try: o.light_linking.receiver_collection = col
+    except AttributeError: pass
+def aim(o, look=(0, 0, 1.0)): o.rotation_euler = (Vector(look) - o.location).to_track_quat('-Z', 'Y').to_euler()
+def card(name, loc, sx, sy, emit=0.0, gradient=False, look=(0, 0, 1.0)):
+    bpy.ops.mesh.primitive_plane_add(size=1, location=loc); o = bpy.context.object; o.name = name; o.scale = (sx, sy, 1); aim(o, look)
+    m = bpy.data.materials.new("MAT_" + name); m.use_nodes = True; nt = m.node_tree; N_ = nt.nodes
+    for n in list(N_): 
+        if n.type != 'OUTPUT_MATERIAL': N_.remove(n)
+    em = N_.new("ShaderNodeEmission"); nt.links.new(em.outputs[0], N_["Material Output"].inputs["Surface"])
+    if gradient:   # bright top edge fading to dark: the classic gradient-softbox reflection
+        tc = N_.new("ShaderNodeTexCoord"); sp = N_.new("ShaderNodeSeparateXYZ"); mr = N_.new("ShaderNodeMapRange")
+        mr.inputs["From Min"].default_value = -0.5; mr.inputs["From Max"].default_value = 0.5; mr.inputs["To Min"].default_value = 0.0
+        mr.inputs["To Max"].default_value = emit; pw = N_.new("ShaderNodeMath"); pw.operation = 'POWER'; pw.inputs[1].default_value = 1.6
+        nt.links.new(tc.outputs["Generated"], sp.inputs[0]); nt.links.new(sp.outputs["Y"], mr.inputs["Value"])
+        nt.links.new(mr.outputs["Result"], pw.inputs[0]); nt.links.new(pw.outputs[0], em.inputs["Strength"])
+    else:
+        em.inputs["Strength"].default_value = emit
+    if emit == 0.0: em.inputs["Color"].default_value = (0, 0, 0, 1)
+    o.data.materials.append(m)
+    o.visible_camera = False; o.visible_shadow = False        # seen only in reflections, never blocks light
+    return o
+# key = broad softbox + a thin brighter strip on its top edge: reads as a gradient sheen, and area lights sample cleanly (no blotches)
+KEY = light("LGT_Key_Softbox", (0.4, 4.2, 2.7), 85, 2.6, 1.2, (1.0, 0.98, 0.95)); link_to(KEY, COL_P)
+KEYT = light("LGT_Key_TopStrip", (0.4, 4.0, 3.45), 150, 2.6, 0.14, (1.0, 1.0, 1.0)); link_to(KEYT, COL_P)
+NEG1 = card("LGT_NegFill_LowFront", (-0.5, 3.6, 0.15), 2.8, 1.2)                        # black card: dark band low in the back's reflection
+NEG2 = card("LGT_NegFill_Right", (2.4, 1.6, 1.2), 1.6, 2.6)                             # black card: contrast on the right edge
+L1 = light("LGT_Strip_Left_Grazing", (-2.0, -0.45, 1.15), 480, 0.18, 3.2, (1.0, 1.0, 1.0)); link_to(L1, COL_P)
+L2 = light("LGT_Strip_Right_Grazing", (2.0, -0.3, 1.15), 380, 0.18, 3.2, (1.0, 0.98, 0.95)); link_to(L2, COL_P)
+L3 = light("LGT_Rim_Top", (0, -1.4, 3.0), 260, 1.6, 0.22, (0.92, 0.96, 1.0)); link_to(L3, COL_P)
+L4 = light("LGT_Fill_Soft", (2.6, 1.6, 0.9), 22, 2.0, 2.0, (1.0, 0.96, 0.92)); link_to(L4, COL_P)
+L4.visible_glossy = False          # fill lifts the shading only: no hard rectangle in the glossy back
+L5 = light("LGT_Kick_Teal", (-1.9, -0.7, 0.55), 160, 0.3, 2.0, (0.1, 0.75, 0.85))   # behind-left, grazing: a teal edge line, not a front reflection; link_to(L5, COL_P)
+bpy.ops.object.light_add(type='SPOT', location=(0, -1.2, 4.2)); BGP = bpy.context.object; BGP.name = "LGT_Backdrop_Pool"
+BGP.data.energy = 900; BGP.data.spot_size = math.radians(55); BGP.data.spot_blend = 1.0; BGP.data.color = (0.6, 0.95, 1.0)
+aim(BGP, (0, -4.0, 1.6)); link_to(BGP, COL_BG)
 W = bpy.data.worlds.new("WLD"); S.world = W; W.use_nodes = True
 # studio gradient environment: bright overhead, dark below, so the clear coat carries a smooth oily reflection
 wt = W.node_tree; bgn = wt.nodes["Background"]
@@ -320,7 +358,7 @@ except AttributeError: pass
 S.render.use_motion_blur = True; S.render.motion_blur_shutter = 0.4
 S.render.resolution_x, S.render.resolution_y, S.render.resolution_percentage = *RES, 100
 try:
-    S.view_settings.view_transform = "AgX"; S.view_settings.look = "AgX - Medium High Contrast"; S.view_settings.exposure = 0.0
+    S.view_settings.view_transform = "AgX"; S.view_settings.look = "AgX - Medium High Contrast"; S.view_settings.exposure = -0.05
 except TypeError:
     S.view_settings.view_transform = "Filmic"; S.view_settings.look = "Medium High Contrast"
 S.use_nodes = True; ct = S.node_tree
