@@ -62,5 +62,28 @@ export const kingzConfig = {
     sfx: "car/sfx/kenney-interface-glitch-002.ogg", sfxVolume: 0.6,
   },
 
+  // v4 speed ramps (user: "slow motion and speeding up"): [output frame, playback speed]. Speed eases
+  // linearly between keys; the map is scaled so the whole clip still plays in 241 output frames.
+  // Words, effects and music stay on output frames (the beat); footage + matte layers follow the map.
+  speedKeys: [[0, 1], [45, 1], [55, 2.2], [85, 2.2], [95, 0.45], [125, 0.45], [132, 1.6], [146, 1.6], [152, 0.38], [196, 0.38], [204, 1], [241, 1]] as [number, number][],
+
   audio: { music: "statue/music.wav", volume: 1 },
 };
+
+// Output frame -> source frame (float), from the speed keys.
+export const timeMap = (() => {
+  const keys = kingzConfig.speedKeys;
+  const n = kingzConfig.output.durationInFrames;
+  const speed = (o: number) => {
+    for (let i = 0; i < keys.length - 1; i++) {
+      const [a, sa] = keys[i];
+      const [b, sb] = keys[i + 1];
+      if (o >= a && o <= b) return sa + ((o - a) / (b - a)) * (sb - sa);
+    }
+    return 1;
+  };
+  const src = [0];
+  for (let o = 1; o < n; o++) src.push(src[o - 1] + speed(o - 0.5));
+  const k = (n - 1) / src[n - 1];
+  return src.map((v) => v * k);
+})();

@@ -1,7 +1,7 @@
 import React from "react";
-import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Easing, Freeze, Img, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { loadFont } from "@remotion/fonts";
-import { kingzConfig as K, P } from "./config";
+import { kingzConfig as K, P, timeMap } from "./config";
 import TRACK from "./track.json";
 
 loadFont({ family: "PermanentMarker", url: staticFile("fonts/graffiti/PermanentMarker.woff2") });
@@ -31,6 +31,31 @@ const Wobble: React.FC<{ f: number }> = ({ f }) => (
     <filter id="toWhite"><feColorMatrix type="matrix" values="0 0 0 0 0.96  0 0 0 0 0.96  0 0 0 0 0.95  0 0 0 1 0" /></filter>
   </svg>
 );
+
+// ---------- v4 speed ramps: footage and cut-out follow the time map, blending neighbouring frames ----------
+const Footage: React.FC<{ s: number; filter: string }> = ({ s, filter }) => {
+  const a = Math.floor(s);
+  const b = Math.min(K.output.durationInFrames - 1, a + 1);
+  const t = s - a;
+  return (
+    <>
+      <Freeze frame={a}><OffthreadVideo src={staticFile("statue/clip.mp4")} style={{ position: "absolute", width: W, height: H, filter }} muted /></Freeze>
+      {t > 0.08 && <Freeze frame={b}><OffthreadVideo src={staticFile("statue/clip.mp4")} style={{ position: "absolute", width: W, height: H, filter, opacity: t }} muted /></Freeze>}
+    </>
+  );
+};
+const Cutout: React.FC<{ s: number; filter: string }> = ({ s, filter }) => {
+  const a = Math.floor(s);
+  const b = Math.min(K.output.durationInFrames - 1, a + 1);
+  const t = s - a;
+  const st: React.CSSProperties = { position: "absolute", left: 0, top: 0, width: W, height: H, filter };
+  return (
+    <>
+      <Img src={staticFile(`statue/cut/${pad(a)}.webp`)} style={st} />
+      {t > 0.08 && <Img src={staticFile(`statue/cut/${pad(b)}.webp`)} style={{ ...st, opacity: t }} />}
+    </>
+  );
+};
 
 // ---------- v3 effects ----------
 const inSpan = (f: number, spans: [number, number][]) => spans.some(([a, b]) => f >= a && f < b);
@@ -134,25 +159,25 @@ const Poster: React.FC<{ f: number; inv: boolean }> = ({ f, inv }) => {
 };
 
 // ---------- matte-driven layers ----------
-const Outline: React.FC<{ f: number; inv: boolean }> = ({ f, inv }) => {
+const Outline: React.FC<{ f: number; sf: number; inv: boolean }> = ({ f, sf, inv }) => {
   const O = K.outline;
   const reveal = interpolate(f, [0, O.drawFrames], [0, 100], clamp);
   const style: React.CSSProperties = { position: "absolute", left: 0, top: 0, width: W, height: H, clipPath: `inset(${100 - reveal}% 0 0 0)` };
   return (
     <>
-      {!inv && <Img src={staticFile(`statue/ring/${pad(f)}.png`)} style={{ ...style, left: O.shadow[0], top: O.shadow[1], filter: "url(#toWhite) url(#wob)", opacity: 0.9 }} />}
-      <Img src={staticFile(`statue/ring/${pad(f)}.png`)} style={{ ...style, filter: inv ? "brightness(0) url(#wob)" : "url(#wob)" }} />
+      {!inv && <Img src={staticFile(`statue/ring/${pad(sf)}.png`)} style={{ ...style, left: O.shadow[0], top: O.shadow[1], filter: "url(#toWhite) url(#wob)", opacity: 0.9 }} />}
+      <Img src={staticFile(`statue/ring/${pad(sf)}.png`)} style={{ ...style, filter: inv ? "brightness(0) url(#wob)" : "url(#wob)" }} />
     </>
   );
 };
 
-const Nodes: React.FC<{ f: number; inv: boolean }> = ({ f, inv }) => {
+const Nodes: React.FC<{ f: number; sf: number; inv: boolean }> = ({ f, sf, inv }) => {
   const fg = inv ? P.black : P.white;
   const N = K.nodes;
   if (f < N.at || f >= N.out) return null;
   const t = f - N.at;
-  const bb = T.bbox[f];
-  const pts = [T.head[f], T.hands[f], T.robeL[f], T.robeR[f], bb ? ([bb[2], (bb[1] + bb[3]) / 2] as XY) : null];
+  const bb = T.bbox[sf];
+  const pts = [T.head[sf], T.hands[sf], T.robeL[sf], T.robeR[sf], bb ? ([bb[2], (bb[1] + bb[3]) / 2] as XY) : null];
   const live = pts.map((p, i) => (p && t >= i * N.every && !(t === i * N.every + 1) ? p : null));
   return (
     <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
@@ -175,9 +200,9 @@ const Nodes: React.FC<{ f: number; inv: boolean }> = ({ f, inv }) => {
 };
 
 // Crown, X eyes and smile doodle drawn onto her face in the close-up (follows the tracked face box).
-const FaceMarks: React.FC<{ f: number; ink: string }> = ({ f, ink }) => {
+const FaceMarks: React.FC<{ f: number; sf: number; ink: string }> = ({ f, sf, ink }) => {
   const F = K.face;
-  const box = T.face[f];
+  const box = T.face[sf];
   if (f < F.at || !box) return null;
   const [x0, y0, x1, y1] = box;
   const w = x1 - x0, h = y1 - y0;
@@ -221,17 +246,19 @@ export const Kingz: React.FC = () => {
   const dx = rgbOn ? (rnd(f * 3.3) > 0.5 ? 1 : -1) * X.rgbAmount * (0.6 + rnd(f) * 0.8) : 0;
   const jolt = rgbOn ? (rnd(f * 5.1) - 0.5) * 2 * X.jolt : 0;
   const footFilter = K.grade + (inv ? " invert(1)" : "");
+  const src = timeMap[f];
+  const sf = Math.round(src);
   return (
     <AbsoluteFill style={{ background: P.black }}>
       <Wobble f={f} />
       <RGBDefs dx={dx} dy={dx * 0.25} />
       <AbsoluteFill style={{ transform: `translate(${sx + jolt}px, ${sy}px)`, filter: rgbOn ? "url(#rgb)" : undefined }}>
-        <OffthreadVideo src={staticFile("statue/clip.mp4")} style={{ width: W, height: H, filter: footFilter }} muted />
+        <Footage s={src} filter={footFilter} />
         {(K.words as WordT[]).filter((w) => w.behind).map((w, i) => <Word key={`b${i}`} w={w} f={f} ink={ink} />)}
-        <Img src={staticFile(`statue/cut/${pad(f)}.webp`)} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, filter: footFilter }} />
-        <Outline f={f} inv={inv} />
-        <FaceMarks f={f} ink={ink} />
-        <Nodes f={f} inv={inv} />
+        <Cutout s={src} filter={footFilter} />
+        <Outline f={f} sf={sf} inv={inv} />
+        <FaceMarks f={f} sf={sf} ink={ink} />
+        <Nodes f={f} sf={sf} inv={inv} />
         {K.tape.bands.map((b, i) => <Tape key={i} b={b} f={f} />)}
         {(K.words as WordT[]).filter((w) => !w.behind).map((w, i) => <Word key={`f${i}`} w={w} f={f} ink={ink} />)}
         <Poster f={f} inv={inv} />
