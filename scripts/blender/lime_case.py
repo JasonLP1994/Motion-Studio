@@ -123,7 +123,23 @@ for i, by in enumerate((0.32, 0.18)):          # side button cut-outs
     bpy.context.view_layer.objects.active = c; bpy.ops.object.transform_apply(location=True); boolean(case, c)
 rm = case.modifiers.new("Remesh", 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = 0.0045; rm.use_smooth_shade = True
 bpy.context.view_layer.objects.active = case; bpy.ops.object.modifier_apply(modifier="Remesh")
-case.data.materials.append(m_case); case.parent = PROD
+case.data.materials.append(m_case)
+# engraving: PHILLIPS / DIGITAL cut into the back in a typewriter ("analog") face, darker lime in the grooves
+m_engrave = lime_oil("MAT_Engrave", metal=0.6, rough=0.45, grow=True)
+er = m_engrave.node_tree.nodes["Color Ramp"].color_ramp
+for el in er.elements: el.color = (el.color[0] * 0.35, el.color[1] * 0.35, el.color[2] * 0.35, 1)
+font = bpy.data.fonts.load("/home/user/Motion-Studio/public/fonts/SpecialElite-Regular.ttf")
+bpy.ops.object.text_add(location=(0, -0.45, -0.058), rotation=(0, math.pi, 0))
+eng = bpy.context.object; eng.name = "CUT_Engraving"
+eng.data.body = "PHILLIPS\nDIGITAL"; eng.data.font = font; eng.data.size = 0.085
+eng.data.align_x = 'CENTER'; eng.data.align_y = 'CENTER'; eng.data.space_line = 0.95; eng.data.extrude = 0.006
+eng.data.materials.append(m_engrave)
+bpy.context.view_layer.objects.active = eng; bpy.ops.object.convert(target='MESH')
+bm_e = case.modifiers.new("B_Engrave", 'BOOLEAN'); bm_e.object = eng; bm_e.operation = 'DIFFERENCE'; bm_e.solver = 'EXACT'
+bm_e.material_mode = 'TRANSFER'
+bpy.context.view_layer.objects.active = case; bpy.ops.object.modifier_apply(modifier="B_Engrave")
+bpy.data.objects.remove(eng, do_unlink=True)
+case.parent = PROD
 
 # grow-on: geometry nodes delete everything beyond a sweep front that travels diagonally over frames 6-80
 gn = bpy.data.node_groups.new("GN_GrowSweep", 'GeometryNodeTree')

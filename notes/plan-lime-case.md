@@ -11,5 +11,6 @@ Scene: `scripts/blender/lime_case.py` (copy of `work/blender/case/case.py`). 720
 | 6–7 s | 145–168 | Side buttons + edge macro |
 | 7–10 s | 169–240 | Hero: the case turns slowly in the strip lights |
 
+Engraving: "PHILLIPS / DIGITAL" cut into the back below the ring in Special Elite (typewriter, Apache 2.0, `public/fonts/SpecialElite-Regular.ttf`).
 Look: lime base with flakes under a glass clear coat, fake oil-slick hue shift at grazing angles (lime → acid yellow → teal), dark graphite cyclorama, softbox + two strip lights + top rim, gradient studio environment for the oily reflection, Standard / Medium High Contrast, exposure -0.35.
 Iterations: v1 pale mint + jagged GN delete edge + cameras too close → v2 shader sweep, reframed → v3 darker oily but forest green → v4 yellow-lime + gradient environment.
