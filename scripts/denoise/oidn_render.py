@@ -81,7 +81,9 @@ post.render.resolution_y = sc.render.resolution_y
 post.render.resolution_percentage = sc.render.resolution_percentage
 post.render.image_settings.file_format = "PNG"
 post.render.image_settings.color_depth = "16"
-post.render.film_transparent = False
+TRANSPARENT = sc.render.film_transparent          # keep alpha for overlays (composited later, e.g. in Remotion)
+post.render.film_transparent = TRANSPARENT
+if TRANSPARENT: post.render.image_settings.color_mode = "RGBA"
 for k in ("view_transform", "look", "exposure", "gamma"):
     setattr(post.view_settings, k, getattr(sc.view_settings, k))
 post.display_settings.display_device = sc.display_settings.display_device
@@ -90,7 +92,7 @@ pt = post.node_tree
 for n in list(pt.nodes):
     pt.nodes.remove(n)
 img_node = pt.nodes.new("CompositorNodeImage")
-pcomp = pt.nodes.new("CompositorNodeComposite")
+pcomp = pt.nodes.new("CompositorNodeComposite"); pcomp.use_alpha = True
 if GLARE:
     gl = pt.nodes.new("CompositorNodeGlare")
     for k, v in GLARE.items():
@@ -115,6 +117,15 @@ def load_rgb(path):
     return np.ascontiguousarray(px.reshape(h, w, 4)[:, :, :3]), w, h
 
 
+def load_alpha(path):
+    im = bpy.data.images.load(path, check_existing=False)
+    w, h = im.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    im.pixels.foreach_get(px)
+    bpy.data.images.remove(im)
+    return np.ascontiguousarray(px.reshape(h, w, 4)[:, :, 3:4])
+
+
 def denoise(color, albedo, normal, w, h):
     base = os.path.join(EXR, "tmp_")
     np.save(base + "color.npy", color)
@@ -127,12 +138,12 @@ def denoise(color, albedo, normal, w, h):
     return out
 
 
-def float_image(rgb, w, h):
+def float_image(rgb, w, h, alpha=None):
     """In-memory linear float image (saving it to EXR first made Blender apply an
     sRGB conversion, which washed the frame out)."""
     im = bpy.data.images.new("dn", w, h, alpha=True, float_buffer=True)
     im.colorspace_settings.name = "Linear Rec.709"
-    rgba = np.concatenate([rgb, np.ones((h, w, 1), np.float32)], axis=2)
+    rgba = np.concatenate([rgb, alpha if alpha is not None else np.ones((h, w, 1), np.float32)], axis=2)
     im.pixels.foreach_set(rgba.ravel())
     return im
 
@@ -148,7 +159,8 @@ for f in FRAMES:
     a, _, _ = load_rgb(os.path.join(EXR, f"albedo_{f:04d}.exr"))
     nrm, _, _ = load_rgb(os.path.join(EXR, f"normal_{f:04d}.exr"))
     dn = denoise(c, a, nrm, w, h)
-    im = float_image(dn, w, h)
+    alpha = load_alpha(os.path.join(EXR, f"color_{f:04d}.exr")) if TRANSPARENT else None
+    im = float_image(dn, w, h, alpha)
     img_node.image = im
     post.frame_set(f)
     post.render.filepath = png

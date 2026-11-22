@@ -23,3 +23,13 @@ to the profile hero as the visor lights and the blue page floods in -> 8-11 s HU
 callouts, barcodes, coordinates, micro-type) -> 11-13 s glitch to the Phillips Digital logo.
 Skill stack: motion-art-direction, hard-surface (decals/panels), lighting (product rig), camera-cinematography (product-camera),
 kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-effects, finishing (product_minimal / cover_punch).
+
+## Look development (work/cyber/pd01.py, copy scripts/blender/pd01_helmet.py)
+- Helmet recoloured in the shader from its own albedo: orange shell -> glossy black, dark parts -> gunmetal, small light-grey
+  plates on the helmet (z > 0.4) -> emissive hot pink; collar stays charcoal. Coat 0.7 / 0.05 for the glossy black.
+- Rendered on a TRANSPARENT background (scripts/denoise/oidn_render.py now keeps alpha) and composited over exact electric blue
+  #1A2BFF in Remotion: AgX had softened the blue to cornflower. Reflections see a dim navy studio (world: Light Path camera/other).
+- Lighting: product rig (key softbox + top strip, back-left cool strip, white side strip, pink back strip at a grazing angle for a
+  rim only, top rim, glossy-invisible fill, black cards). Lesson: a strong pink light washed magenta over the whole black shell;
+  pink belongs at grazing angles (rim) and on emissive accents.
+- Look frames: notes/frames/pd01-look4.jpg. Next: cleaner black shell, HUD layout comp, style frames, camera plan.
