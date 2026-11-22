@@ -13,3 +13,7 @@ v1 (single chip, one orbit) was rejected as "boring / very basic". v2 is built t
 Look: near-black PCB, copper traces, cyan + amber accents, AgX Punchy, bloom, SSR, GTAO, volumetric world haze.
 Sound: `scripts/chip_audio2.py` (numpy, original): whoosh + ticks, ripple swell, lock impact + spark crackle, logo hit + shimmer.
 Name and tagline are placeholders: change `logo.data.body` / `tag.data.body`.
+
+## Render checks
+- v2 (renders/novachip-v2.mp4 + -silent): 9.0 s, 1920x1080 (Lanczos upscale from 1280x720), 24 fps. -14.0 LUFS, peak -2.0 dBFS. Lid-lock impact measured at 5.84 s vs picture 5.83 s (f140). Frames checked across the whole video. Measured, not heard.
+- Score 8.4/10: layout 8.5, timing 8.5, readability 8.5, polish 8. Weakest: the first second has large near-black foreground blocks filling the frame edges; tagline is small at phone size.
