@@ -31,6 +31,8 @@ import { Kingz } from "./kingz/Kingz";
 import { kingzConfig as kz } from "./kingz/config";
 import { MutantCover } from "./mutant/MutantCover";
 import { mutantConfig as mu } from "./mutant/config";
+import { PixelSneaker } from "./pixel/PixelSneaker";
+import { pixelConfig as px } from "./pixel/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -53,6 +55,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="RedGlitch" component={RedGlitch} durationInFrames={rc.output.durationInFrames} fps={rc.output.fps} width={rc.output.width} height={rc.output.height} />
       <Composition id="Kingz" component={Kingz} durationInFrames={kz.output.durationInFrames} fps={kz.output.fps} width={kz.output.width} height={kz.output.height} />
       <Composition id="MutantCover" component={MutantCover} durationInFrames={mu.output.durationInFrames} fps={mu.output.fps} width={mu.output.width} height={mu.output.height} />
+      <Composition id="PixelSneaker" component={PixelSneaker} durationInFrames={px.output.durationInFrames} fps={px.output.fps} width={px.output.width} height={px.output.height} defaultProps={{ palette: "pop" }} />
     </>
   );
 };
