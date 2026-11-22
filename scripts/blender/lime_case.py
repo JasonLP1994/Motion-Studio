@@ -48,8 +48,8 @@ def smooth(o):
 # ---------------------------------------------------------------- growth field (shared by shader + geometry nodes)
 # Arrival time A(p) for each point of the case, in "growth units": the back spreads out from the bottom
 # centre, then the side walls rise, then the front lip, and the camera bump forms last as its own piece.
-GROW_EXPR = "2.55*(min(1,max(0,(frame-4)/80))*min(1,max(0,(frame-4)/80))*(3-2*min(1,max(0,(frame-4)/80))))"   # growth clock T: frames 4-84
-START = (0.0, -0.74, -0.053)
+GROW_EXPR = "2.8*(min(1,max(0,(frame-4)/80))*min(1,max(0,(frame-4)/80))*(3-2*min(1,max(0,(frame-4)/80))))"   # growth clock T: frames 4-84
+START = (0.36, -0.75, -0.055)   # one bottom corner (the reference starts from a corner chip)
 def arrival(nt, pos):
     def m(op, a, b=None, c=None, clamp=False):
         n = nt.nodes.new("ShaderNodeMath"); n.operation = op; n.use_clamp = clamp
@@ -67,18 +67,18 @@ def arrival(nt, pos):
     is_backz = m('LESS_THAN', z, -0.04)
     is_back = m('MULTIPLY', is_backz, m('SUBTRACT', 1.0, is_bump))
     is_side = m('SUBTRACT', m('SUBTRACT', 1.0, is_backz), is_lip, clamp=True)
-    a_back = m('MULTIPLY_ADD', d, 1.0, 0.08)
-    a_side = m('ADD', m('MULTIPLY', d, 0.92), m('MULTIPLY', m('ADD', z, 0.04), 1.2))
-    a_lip = m('MULTIPLY_ADD', d, 0.95, 0.16)
+    a_back = m('MULTIPLY_ADD', d, 1.0, 0.12)
+    a_side = m('ADD', m('MULTIPLY', d, 0.76), m('MULTIPLY', m('ADD', z, 0.04), 0.8))
+    a_lip = m('MULTIPLY_ADD', d, 0.82, 0.04)
     bx = m('SUBTRACT', x, -0.19); by = m('SUBTRACT', y, 0.55)
     db = m('SQRT', m('ADD', m('MULTIPLY', bx, bx), m('MULTIPLY', by, by)))
     a_bump = m('MULTIPLY_ADD', db, 2.0, 2.05)
     base = m('ADD', m('ADD', m('MULTIPLY', is_back, a_back), m('MULTIPLY', is_side, a_side)),
              m('ADD', m('MULTIPLY', is_lip, a_lip), m('MULTIPLY', is_bump, a_bump)))
     # torn edge: the same noise in both trees (same input, same settings) roughens the growth front
-    nz = nt.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 3.5; nz.inputs["Detail"].default_value = 0.0
+    nz = nt.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 11.0; nz.inputs["Detail"].default_value = 3.0
     nz.inputs["Roughness"].default_value = 0.5; nt.links.new(pos, nz.inputs["Vector"])
-    return m('ADD', base, m('MULTIPLY_ADD', nz.outputs["Fac"], 0.05, -0.025))
+    return m('ADD', base, m('MULTIPLY_ADD', nz.outputs["Fac"], 0.07, -0.035))
 
 # ---------------------------------------------------------------- materials
 def lime_oil(name, metal=0.85, rough=0.18, grow=False):
@@ -110,7 +110,7 @@ def lime_oil(name, metal=0.85, rough=0.18, grow=False):
         band = nt.nodes.new("ShaderNodeMapRange"); band.clamp = True
         band.inputs["From Min"].default_value = 0.022; band.inputs["From Max"].default_value = 0.0
         band.inputs["To Min"].default_value = 0.0; band.inputs["To Max"].default_value = 26.0
-        live = nt.nodes.new("ShaderNodeMath"); live.operation = 'LESS_THAN'; live.inputs[1].default_value = 2.48
+        live = nt.nodes.new("ShaderNodeMath"); live.operation = 'LESS_THAN'; live.inputs[1].default_value = 2.75
         glow = nt.nodes.new("ShaderNodeMath"); glow.operation = 'MULTIPLY'
         nt.links.new(age.outputs[0], band.inputs["Value"]); nt.links.new(T.outputs[0], live.inputs[0])
         nt.links.new(band.outputs[0], glow.inputs[0]); nt.links.new(live.outputs[0], glow.inputs[1])
@@ -130,8 +130,11 @@ m_glass = principled("MAT_PhoneGlass", (0.005, 0.006, 0.008), 0.05, coat=1.0)
 m_frame = principled("MAT_PhoneFrame", (0.08, 0.085, 0.09), 0.25, metal=1.0)
 m_lens = principled("MAT_Lens", (0.0, 0.0, 0.0), 0.02, coat=1.0)
 m_lensring = principled("MAT_LensRing", (0.6, 0.62, 0.65), 0.2, metal=1.0)
-m_cyc = principled("MAT_Cyclorama", (0.004, 0.016, 0.001), 0.9)
-m_cyc.node_tree.nodes["Principled BSDF"].inputs["Specular IOR Level"].default_value = 0.08   # matte: stop it mirroring the bright environment
+BG_GREEN = (0.24, 0.48, 0.1)
+m_cyc = principled("MAT_Cyclorama", BG_GREEN, 0.95)
+_cb = m_cyc.node_tree.nodes["Principled BSDF"]
+_cb.inputs["Specular IOR Level"].default_value = 0.0
+_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.22  # mostly self-lit = flat, seamless
 
 # ---------------------------------------------------------------- product (local axes: X width, Y height, Z depth, back = -Z)
 PROD = bpy.data.objects.new("PRODUCT", None); S.collection.objects.link(PROD)
@@ -230,8 +233,8 @@ key(PROD, "rotation_euler", 168, (math.radians(90), 0, math.radians(-10)))
 
 # ---------------------------------------------------------------- set + lights
 bm = bmesh.new()                                     # cyclorama: floor curving up into a back wall
-prof = [(0, y, 0) for y in (8, 4, 1.5)] + [(0, -1.5 - 1.5 * math.sin(a), 1.5 - 1.5 * math.cos(a)) for a in [i * math.pi / 2 / 10 for i in range(1, 11)]] + [(0, -3.0, 8)]
-verts_a = [bm.verts.new((-12, y, z)) for (_, y, z) in prof]; verts_b = [bm.verts.new((12, y, z)) for (_, y, z) in prof]
+prof = [(0, y, 0) for y in (14, 6, 0.0)] + [(0, -4.0 * math.sin(a), 4.0 - 4.0 * math.cos(a)) for a in [i * math.pi / 2 / 16 for i in range(1, 17)]] + [(0, -4.0, 14)]
+verts_a = [bm.verts.new((-20, y, z)) for (_, y, z) in prof]; verts_b = [bm.verts.new((20, y, z)) for (_, y, z) in prof]
 for i in range(len(prof) - 1):
     bm.faces.new((verts_a[i], verts_a[i + 1], verts_b[i + 1], verts_b[i]))
 me = bpy.data.meshes.new("SM_Cyclorama"); bm.to_mesh(me); bm.free()
@@ -252,10 +255,10 @@ wt = W.node_tree; bgn = wt.nodes["Background"]
 wtc = wt.nodes.new("ShaderNodeTexCoord"); wsp = wt.nodes.new("ShaderNodeSeparateXYZ")
 wmr = wt.nodes.new("ShaderNodeMapRange"); wmr.inputs["From Min"].default_value = -0.1; wmr.inputs["From Max"].default_value = 0.9
 wramp = wt.nodes.new("ShaderNodeValToRGB")
-wramp.color_ramp.elements[0].color = (0.0, 0.01, 0.0, 1); wramp.color_ramp.elements[1].color = (0.3, 0.4, 0.26, 1)
+wramp.color_ramp.elements[0].color = (0.12, 0.25, 0.05, 1); wramp.color_ramp.elements[1].color = (0.55, 0.7, 0.45, 1)
 wt.links.new(wtc.outputs["Generated"], wsp.inputs[0]); wt.links.new(wsp.outputs["Z"], wmr.inputs["Value"])
 wt.links.new(wmr.outputs["Result"], wramp.inputs["Fac"]); wt.links.new(wramp.outputs["Color"], bgn.inputs["Color"])
-bgn.inputs["Strength"].default_value = 0.45
+bgn.inputs["Strength"].default_value = 0.32
 
 # ---------------------------------------------------------------- cameras
 def camera(name, lens, f0, f1, c0, c1, t0, t1, fstop=None):
