@@ -61,3 +61,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO keep a product's identity hidden during a build-on: tight macros that ride the growth front, and the full object only in the final pull-back reveal.
 - DO merge vertices (remove doubles) on imported glTF/Objaverse meshes before shading: split vertices make chrome look faceted.
 - DO on the Mutant cover: type glitches in, flickers, then glitches out and stays out; the last shot is the head alone, central.
+- DO run every 3D render through the free local AI tools for the best look (notes/ai-enhance.md): Cycles + OIDN denoise where it's used, render 720p and AI-upscale (compact 2x; Real-ESRGAN for hero stills), RIFE in-betweens on smooth shots. Free tools only, never paid or cloud enhancers. RIFE never across cuts, glitch/strobe frames or beat hits.
