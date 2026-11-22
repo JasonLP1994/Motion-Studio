@@ -100,6 +100,8 @@ cues = [  # (file, frame the picture happens, level dB, pan) - v5: logo -> stree
     ("tick/fs721514.ogg", 241, -24, -0.15),  # footstep
     ("tick/fs528561.ogg", 250, -24, 0.15),  # footstep
     ("ding/kenney-interface-glass-001.ogg", 248, -18, 0.2),     # the glass door swings open
+    ("pop/kenney-interface-pluck-002.ogg", 300, -19, 0.4),     # the designer waves
+    ("pop/kenney-interface-pluck-001.ogg", 384, -19, 0.0),     # he waves back
     ("../../../../public/sfx/whoosh_fs-683101-quick-woosh.ogg", 298, -13, 0.0),  # the agency fills the frame
     ("../../../../public/sfx/transition_fs-702773-swipe-wav.ogg", 440, -14, 0.0),  # into the screen, back to the logo
 ]

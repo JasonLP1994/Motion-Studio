@@ -7,17 +7,20 @@ import { getLength, getPointAtLength, getTangentAtLength } from "@remotion/paths
 
 const LIGHT = { x: -0.55, y: -0.83 }; // light from the upper left: the opposite side gets the heavy line
 const cache = new Map<string, string>();
+// line boil: the ink shimmers on twos like hand-drawn animation (3 states, set once per frame by the film)
+let BOIL = 0;
+export const setBoil = (frame: number) => { BOIL = Math.floor(frame / 2) % 3; };
 
 const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) / 4294967296; };
 
 export const brushPath = (d: string, w: number, open = false) => {
-  const key = `${w}|${open ? 1 : 0}|${d}`;
+  const key = `${BOIL}|${w}|${open ? 1 : 0}|${d}`;
   const hit = cache.get(key); if (hit) return hit;
   let L = 0;
   try { L = getLength(d); } catch { return ""; }
   if (!(L > 0)) return "";
   const n = Math.max(14, Math.min(220, Math.round(L / 5)));
-  const seed = hash(d) * 6.283;
+  const seed = hash(d) * 6.283 + BOIL * 1.9;
   const left: string[] = [], right: string[] = [];
   for (let i = 0; i <= n; i++) {
     const t = i / n, at = Math.min(L - 0.01, t * L);
@@ -28,8 +31,9 @@ export const brushPath = (d: string, w: number, open = false) => {
     const pressure = 0.78 + 0.24 * Math.sin(t * 9.4 + seed) + 0.1 * Math.sin(t * 23 + seed * 2);
     const taper = open ? Math.pow(Math.sin(Math.PI * t), 0.7) : 1;
     const hw = (w / 2) * (open ? 1 : shadow) * pressure * taper;
-    left.push(`${(p.x + nx * hw).toFixed(2)},${(p.y + ny * hw).toFixed(2)}`);
-    right.push(`${(p.x - nx * hw).toFixed(2)},${(p.y - ny * hw).toFixed(2)}`);
+    const j = Math.sin(i * 12.9898 + BOIL * 78.233 + seed) * 0.35 * Math.min(1, w / 6); // tiny positional jitter
+    left.push(`${(p.x + nx * (hw + j)).toFixed(2)},${(p.y + ny * (hw + j)).toFixed(2)}`);
+    right.push(`${(p.x - nx * (hw - j)).toFixed(2)},${(p.y - ny * (hw - j)).toFixed(2)}`);
   }
   const out = `M${left.join(" L")} L${right.reverse().join(" L")} Z`;
   if (cache.size > 4000) cache.clear();

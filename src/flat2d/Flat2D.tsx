@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AbsoluteFill, Easing, continueRender, delayRender, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { flatConfig as cfg } from "./config";
-import { Ink } from "./brush";
+import { Ink, setBoil } from "./brush";
 
 const W = cfg.output.width, H = cfg.output.height, CX = W / 2, CY = H / 2;
 const c = cfg.col, T = cfg.t, ST = cfg.street, IN = cfg.inside;
@@ -20,7 +20,7 @@ const legPath = (hx: number, lift: number, kneeOut: number) => {
   const w0 = 19, w1 = 13, w2 = 9;
   return `M${hip.x - w0} ${hip.y} Q${knee.x - w1 - 4} ${knee.y} ${ank.x - w2} ${ank.y} L${ank.x + w2} ${ank.y} Q${knee.x + w1 + 4} ${knee.y} ${hip.x + w0} ${hip.y} Z`;
 };
-const Man: React.FC<{ x: number; y: number; s: number; phase: number; walking: boolean }> = ({ x, y, s, phase, walking }) => {
+const Man: React.FC<{ x: number; y: number; s: number; phase: number; walking: boolean; wave?: number; f0?: number }> = ({ x, y, s, phase, walking, wave = 0, f0 = 0 }) => {
   const sw = walking ? Math.sin(phase) : 0;
   const bob = walking ? -Math.abs(Math.cos(phase)) * 8 : 0;
   const lL = Math.max(0, sw) * 30, lR = Math.max(0, -sw) * 30; // the lifted foot rises and shows its sole
@@ -52,11 +52,16 @@ const Man: React.FC<{ x: number; y: number; s: number; phase: number; walking: b
         <><path d={`M-96 -384 C-118 -360 -120 -320 ${-116 + arm * 0.2} ${-290 + arm * 0.4} C${-114 + arm * 0.4} -256 ${-110 + arm * 0.6} -232 ${-104 + arm * 0.7} ${-212 + arm}
           L${-86 + arm * 0.7} ${-214 + arm} C${-90 + arm * 0.5} -240 -94 -268 -94 -296 C-92 -330 -86 -360 -80 -384 Z`} fill={c.tealDeep} stroke="none" /><Ink d={`M-96 -384 C-118 -360 -120 -320 ${-116 + arm * 0.2} ${-290 + arm * 0.4} C${-114 + arm * 0.4} -256 ${-110 + arm * 0.6} -232 ${-104 + arm * 0.7} ${-212 + arm}
           L${-86 + arm * 0.7} ${-214 + arm} C${-90 + arm * 0.5} -240 -94 -268 -94 -296 C-92 -330 -86 -360 -80 -384 Z`} w={10} /></>
-        <><path d={`M96 -384 C118 -360 120 -320 ${116 - arm * 0.2} ${-290 - arm * 0.4} C${114 - arm * 0.4} -256 ${110 - arm * 0.6} -232 ${104 - arm * 0.7} ${-212 - arm}
+        {wave < 0.02 ? (<><><path d={`M96 -384 C118 -360 120 -320 ${116 - arm * 0.2} ${-290 - arm * 0.4} C${114 - arm * 0.4} -256 ${110 - arm * 0.6} -232 ${104 - arm * 0.7} ${-212 - arm}
           L${86 - arm * 0.7} ${-214 - arm} C${90 - arm * 0.5} -240 94 -268 94 -296 C92 -330 86 -360 80 -384 Z`} fill={c.maroon} stroke="none" /><Ink d={`M96 -384 C118 -360 120 -320 ${116 - arm * 0.2} ${-290 - arm * 0.4} C${114 - arm * 0.4} -256 ${110 - arm * 0.6} -232 ${104 - arm * 0.7} ${-212 - arm}
           L${86 - arm * 0.7} ${-214 - arm} C${90 - arm * 0.5} -240 94 -268 94 -296 C92 -330 86 -360 80 -384 Z`} w={10} /></>
         <ellipse cx={-95 + arm * 0.7} cy={-202 + arm} rx={11} ry={14} fill={c.skinShade} />
         <ellipse cx={95 - arm * 0.7} cy={-202 - arm} rx={11} ry={14} fill={c.skin} />
+        </>) : (() => {
+          const osc = Math.sin(f0 * 0.5) * 18 * wave, hx = 95 + (150 - 95) * wave + osc, hy = -202 + (-540 + 202) * wave;
+          const d = `M84 -386 C${(84 + hx) / 2 + 16} ${(-386 + hy) / 2} ${hx - 10} ${hy + 30} ${hx - 6} ${hy + 8} L${hx + 12} ${hy + 14} C${hx + 6} ${hy + 40} ${(96 + hx) / 2 + 26} ${(-370 + hy) / 2 + 10} 104 -366 Z`;
+          return <><path d={d} fill={c.maroon} stroke="none" /><Ink d={d} w={10} /><ellipse cx={hx + 3} cy={hy + 2} rx={12} ry={15} fill={c.skin} /></>;
+        })()}
         {/* crossbody strap + rounded bag */}
         <path d="M58 -396 C20 -340 -30 -290 -74 -246" fill="none" stroke={c.cream} strokeWidth={8} />
         <><path d="M-118 -258 C-118 -268 -110 -272 -100 -272 L-50 -272 C-40 -272 -36 -266 -36 -256 L-38 -214 C-38 -204 -46 -200 -56 -200 L-100 -200 C-112 -200 -118 -206 -118 -216 Z" fill={c.redDeep} stroke="none" /><Ink d={`M-118 -258 C-118 -268 -110 -272 -100 -272 L-50 -272 C-40 -272 -36 -266 -36 -256 L-38 -214 C-38 -204 -46 -200 -56 -200 L-100 -200 C-112 -200 -118 -206 -118 -216 Z`} w={10} /></>
@@ -229,7 +234,7 @@ const manInside = (f: number) => {
   return { x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u, s: A.s + (B.s - A.s) * u, walking: f >= a && f < b - 8, phase: (f - T.walk[0]) * 0.36 };
 };
 // an anime-style designer in profile, seated at a desk, facing right (flip mirrors them)
-const Seated: React.FC<{ x: number; flip?: boolean; f: number; ph: number; hair: string; hoodie: string; pony?: boolean }> = ({ x, flip, f, ph, hair, hoodie, pony }) => {
+const Seated: React.FC<{ x: number; flip?: boolean; f: number; ph: number; hair: string; hoodie: string; pony?: boolean; wave?: number }> = ({ x, flip, f, ph, hair, hoodie, pony, wave = 0 }) => {
   const blink = ((f + ph * 37) % 96) < 4;
   const sway = Math.sin(f / 11 + ph) * 6, type = Math.sin(f / 2.6 + ph) * 2;
   return (
@@ -252,8 +257,9 @@ const Seated: React.FC<{ x: number; flip?: boolean; f: number; ph: number; hair:
       <><path d="M-14 694 C-20 640 -16 580 6 546 C24 520 52 512 72 520 C92 528 100 552 102 590 L104 694 Z" fill={hoodie} stroke="none" /><Ink d={`M-14 694 C-20 640 -16 580 6 546 C24 520 52 512 72 520 C92 528 100 552 102 590 L104 694 Z`} w={7} /></>
       <Ink d={`M2 600 C10 640 14 670 16 694`} w={5.1} open />
       {/* arm to the keyboard, typing */}
-      <><path d={`M60 560 C88 590 104 620 120 ${640 + type} L178 ${640 + type} C180 650 178 656 172 658 L112 ${662 + type} C92 640 70 610 46 584 Z`} fill={hoodie} stroke="none" /><Ink d={`M60 560 C88 590 104 620 120 ${640 + type} L178 ${640 + type} C180 650 178 656 172 658 L112 ${662 + type} C92 640 70 610 46 584 Z`} w={7} /></>
+      {wave < 0.02 ? (<><><path d={`M60 560 C88 590 104 620 120 ${640 + type} L178 ${640 + type} C180 650 178 656 172 658 L112 ${662 + type} C92 640 70 610 46 584 Z`} fill={hoodie} stroke="none" /><Ink d={`M60 560 C88 590 104 620 120 ${640 + type} L178 ${640 + type} C180 650 178 656 172 658 L112 ${662 + type} C92 640 70 610 46 584 Z`} w={7} /></>
       <ellipse cx={180} cy={650 + type} rx={12} ry={9} fill={c.skin} />
+      </>) : null}
       {/* neck + anime profile head: forehead, small nose, lips, pointed chin */}
       <><path d="M36 522 C40 506 56 500 64 506 L66 528 L40 534 Z" fill={c.skinShade} stroke="none" /><Ink d={`M36 522 C40 506 56 500 64 506 L66 528 L40 534 Z`} w={7} /></>
       <><path d="M26 452 C24 420 44 398 72 398 C96 398 110 414 112 434 C112 444 116 452 122 460 C118 464 114 466 112 468 C114 474 112 480 108 482 C110 488 106 494 100 496 C96 506 86 514 72 514 C52 514 30 496 26 470 Z" fill={c.skin} stroke="none" /><Ink d={`M26 452 C24 420 44 398 72 398 C96 398 110 414 112 434 C112 444 116 452 122 460 C118 464 114 466 112 468 C114 474 112 480 108 482 C110 488 106 494 100 496 C96 506 86 514 72 514 C52 514 30 496 26 470 Z`} w={7} /></>
@@ -279,9 +285,15 @@ const Seated: React.FC<{ x: number; flip?: boolean; f: number; ph: number; hair:
       {/* headphones */}
       <path d="M36 452 C30 400 70 372 104 396" fill="none" stroke={c.peach} strokeWidth={7} />
       <ellipse cx={48} cy={462} rx={16} ry={20} fill={c.maroon} />
+      {wave >= 0.02 && (() => {
+        const osc = Math.sin(f * 0.55) * 16 * wave, hx = 180 + (168 - 180) * wave + osc, hy = 650 + (352 - 650) * wave;
+        const d = `M60 548 C${(60 + hx) / 2 + 26} ${(560 + hy) / 2 - 4} ${hx - 16} ${hy + 22} ${hx - 8} ${hy + 6} L${hx + 10} ${hy + 14} C${hx + 4} ${hy + 34} ${(60 + hx) / 2 + 36} ${(560 + hy) / 2 + 26} 46 584 Z`;
+        return <><path d={d} fill={hoodie} stroke="none" /><Ink d={d} w={7} /><ellipse cx={hx + 1} cy={hy + 4} rx={11} ry={13} fill={c.skin} /></>;
+      })()}
     </g>
   );
 };
+let BEZEL = 1;
 const Interior: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ f, inner, id }) => {
   const S = IN.screen, man = manInside(f);
   return (
@@ -300,16 +312,16 @@ const Interior: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = (
         </g>
       ))}
       {/* the big wall screen (portal back to the logo) */}
-      <rect x={S.x - 18} y={S.y - 18} width={S.w + 36} height={S.h + 36} rx={8} fill={c.ink} />
+      <rect x={S.x - 18} y={S.y - 18} width={S.w + 36} height={S.h + 36} rx={8} fill={c.ink} opacity={id.endsWith("_0") ? BEZEL : 1} />
       <defs><clipPath id={`scr${id}`}><rect x={S.x} y={S.y} width={S.w} height={S.h} /></clipPath></defs>
       <rect x={S.x} y={S.y} width={S.w} height={S.h} fill={cfg.cardBg} stroke="none" />
       {inner && <g clipPath={`url(#scr${id})`} stroke="none">{inner}</g>}
       <Seated x={180} f={f} ph={0} hair={c.redDeep} hoodie={c.lips} pony />
-      <Seated x={1740} flip f={f} ph={2} hair={c.ink} hoodie={c.maroon} />
+      <Seated x={1740} flip f={f} ph={2} hair={c.ink} hoodie={c.maroon} wave={ease(f, T.wave.designer[0], T.wave.designer[0] + 10) * ease(f, T.wave.designer[1] - 10, T.wave.designer[1], 1, 0)} />
       {/* plant */}
       <rect x={1270} y={740} width={70} height={80} fill={c.peach} />
       <path d="M1305 740 C1260 680 1250 620 1270 580 C1300 620 1306 680 1305 740 C1310 670 1330 620 1360 600 C1366 650 1340 700 1305 740 Z" fill={c.maroon} />
-      {f >= T.walk[1] && <Man {...man} />}
+      {f >= T.walk[1] && <Man {...man} f0={f} wave={ease(f, T.wave.man[0], T.wave.man[0] + 10) * ease(f, T.wave.man[1] - 10, T.wave.man[1], 1, 0)} />}
       </g>
     </g>
   );
@@ -329,12 +341,13 @@ const LN = PORTALS.map((p) => Math.log(p.K));
 const CUM = [0, LN[0], LN[0] + LN[1], LN[0] + LN[1] + LN[2]];
 const DUR = cfg.output.durationInFrames;
 // knots (frame, log-zoom) with a periodic monotone cubic: smooth, never stops, end speed = start speed (no loop bump)
-const KT = [...T.arrive, DUR], KL = CUM;
-const sec = [0, 1, 2].map((i) => (KL[i + 1] - KL[i]) / (KT[i + 1] - KT[i]));
+const KT = [0, T.ease0[0], T.arrive[1], T.arrive[2], DUR], KL = [0, LN[0] * T.ease0[1], CUM[1], CUM[2], CUM[3]];
+const NK = KT.length - 1;
+const sec = [...Array(NK)].map((_, i) => (KL[i + 1] - KL[i]) / (KT[i + 1] - KT[i]));
 const hm = (a: number, b: number) => (2 * a * b) / (a + b);
-const SL = [hm(sec[2], sec[0]), hm(sec[0], sec[1]), hm(sec[1], sec[2]), hm(sec[2], sec[0])];
+const SL = KT.map((_, i) => (i === 0 || i === NK ? hm(sec[NK - 1], sec[0]) : hm(sec[i - 1], sec[i])));
 const logZoom = (f: number) => {
-  let i = 0; while (i < 2 && f >= KT[i + 1]) i++;
+  let i = 0; while (i < NK - 1 && f >= KT[i + 1]) i++;
   const h = KT[i + 1] - KT[i], u = (f - KT[i]) / h;
   const h00 = 2 * u ** 3 - 3 * u ** 2 + 1, h10 = u ** 3 - 2 * u ** 2 + u, h01 = -2 * u ** 3 + 3 * u ** 2, h11 = u ** 3 - u ** 2;
   return h00 * KL[i] + h10 * h * SL[i] + h01 * KL[i + 1] + h11 * h * SL[i + 1];
@@ -365,6 +378,8 @@ export const Flat2D: React.FC = () => {
   const L = logZoom(f) % CUM[3];
   let k = 0; while (k < 2 && L >= CUM[k + 1]) k++;
   const lz = L - CUM[k], z = Math.exp(lz), g = lz / LN[k], P = PORTALS[k].P;
+  setBoil(f);
+  BEZEL = k === 2 ? interpolate(z / PORTALS[2].K, [0.9, 0.985], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
   const sx = P.x + (CX - P.x) * g, sy = P.y + (CY - P.y) * g;
   const tr = `translate(${sx} ${sy}) scale(${z}) translate(${-P.x} ${-P.y})`;
   const reveal = k === 0 ? interpolate(z, T.revealDot as [number, number], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;

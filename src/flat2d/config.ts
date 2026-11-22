@@ -17,6 +17,8 @@ export const flatConfig = {
 
   t: {
     arrive: [0, 125, 300],      // frames where the logo, the street and the agency interior each fill the frame at scale 1
+    ease0: [40, 0.07],          // gentle start: by frame 40 only 7% of the logo zoom has happened, so the logo stays readable
+    wave: { designer: [292, 346], man: [378, 436] }, // the right-hand designer waves as he walks in; he waves back at the screen
     revealDot: [1.25, 3.0],     // the street fades into the dot as the logo zooms from x1.25 to x3 (the dot is pure ink at rest)
     walkSignal: 146,            // the crossing light turns to "walk"
     walk: [150, 262],           // he crosses the street and reaches the glass door
