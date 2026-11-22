@@ -91,3 +91,4 @@ Animate camera + target empties; prefer slow ease-in/out.
 | Lens And Composition | `references/lens-and-composition.md` | When needed |
 | Camera Move Library | `references/camera-move-library.md` | When needed |
 | Dof Guide | `references/dof-guide.md` | When needed |
+| Product camera language (learned in this workspace) | `references/product-camera.md` | Product videos, reveals, macro sequences |

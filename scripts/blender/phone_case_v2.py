@@ -258,8 +258,8 @@ for o in [PHONE] + list(PHONE.children):
     o.hide_render = False; o.keyframe_insert("hide_render", frame=144)
 
 # hero turn: the whole product rotates slowly in the last shot
-key(PROD, "rotation_euler", 181, (math.radians(90), 0, math.radians(-28)))
-key(PROD, "rotation_euler", 240, (math.radians(90), 0, math.radians(18)))
+key(PROD, "rotation_euler", 181, (math.radians(90), 0, math.radians(-15)))
+key(PROD, "rotation_euler", 240, (math.radians(90), 0, math.radians(10)))   # turns one way while the camera orbits the other (parallax)
 key(PROD, "rotation_euler", 1, (math.radians(90), 0, math.radians(-18)))
 key(PROD, "rotation_euler", 176, (math.radians(90), 0, math.radians(-10)))
 
@@ -342,12 +342,58 @@ def camera(name, lens, f0, f1, c0, c1, t0, t1, fstop=None):
     mk = S.timeline_markers.new(name, frame=f0); mk.camera = c; return c
 # build is seen only in close-ups; the whole case is held back for the pull-back reveal at the end
 # 0-5.8 s: mystery. Tight macros ride the growth front so the object can't be read; 5.8-7.5 s phone + ring; 7.5-10 s pull-back reveal
-camera("CAM_Chip", 70, 1, 30, (0.95, 0.75, 0.12), (0.85, 0.66, 0.18), (0.33, 0.05, 0.27), (0.3, 0.05, 0.32), fstop=2.0)
-camera("CAM_Rim", 50, 31, 66, (1.15, 0.85, 0.1), (1.05, 0.8, 0.78), (0.36, 0.0, 0.2), (0.34, 0.0, 0.78), fstop=2.8)
-camera("CAM_Sweep", 50, 67, 102, (0.12, 0.3, 2.0), (-0.02, 0.26, 1.9), (0.1, 0.05, 1.0), (0.0, 0.05, 1.2), fstop=2.8)
-camera("CAM_Bump", 60, 103, 140, (-0.42, 0.62, 1.12), (-0.24, 0.58, 1.22), (0.02, 0.06, 1.37), (0.04, 0.06, 1.4), fstop=2.8)   # oblique onto the rim corner (the cut-out is an open hole until the phone arrives)
-camera("CAM_Ring", 60, 141, 180, (0.6, 1.6, 0.75), (0.3, 1.45, 0.85), (0, 0.06, 0.93), (0, 0.06, 0.93), fstop=2.8)
-camera("CAM_Hero", 40, 181, 240, (0.25, 1.7, 0.85), (0.0, 3.1, 1.1), (0, 0, 0.95), (0, 0, 1.0), fstop=8.0)
+# v2 camera language (notes: .claude/skills/camera-cinematography/references/product-camera.md):
+# constant-speed slider/crane moves in the close-ups (momentum through every cut, no park-and-stop), arcs instead of straight
+# lines, a rack focus on the sweep, a push-in that lands on the ring click, and an orbiting pull-back reveal that comes in fast
+# and decelerates (expo ease-out) into a slow drift. Tiny noise float on the macros so they breathe like a real rig.
+def camera2(name, lens, keys, fstop=None, interp='LINEAR', focus=None, noise=0.0, parent=None):
+    c = bpy.data.objects.new(name, bpy.data.cameras.new(name)); S.collection.objects.link(c)
+    c.data.lens = lens; c.data.clip_start = 0.01; c.data.sensor_fit = 'VERTICAL'
+    t = bpy.data.objects.new("EMPTY_CamTarget_" + name[4:], None); S.collection.objects.link(t)
+    if parent: c.parent = parent
+    tr = c.constraints.new('TRACK_TO'); tr.target = t; tr.track_axis = 'TRACK_NEGATIVE_Z'; tr.up_axis = 'UP_Y'
+    for fr, pos, tgt in keys:
+        key(c, "location", fr, pos); key(t, "location", fr, tgt)
+    for o in (c, t):
+        for fc in o.animation_data.action.fcurves:
+            for kp in fc.keyframe_points: kp.interpolation = interp if isinstance(interp, str) else 'BEZIER'
+    if not isinstance(interp, str):           # per-segment easing: list of (interpolation, easing) per key
+        for o in (c, t):
+            for fc in o.animation_data.action.fcurves:
+                for kp, (ip, ea) in zip(fc.keyframe_points, interp): kp.interpolation = ip; kp.easing = ea
+    if noise:
+        for fc in c.animation_data.action.fcurves:
+            nm = fc.modifiers.new('NOISE'); nm.strength = noise; nm.scale = 45; nm.phase = len(name) * 3.7 + fc.array_index * 11
+    if fstop:
+        c.data.dof.use_dof = True; c.data.dof.aperture_fstop = fstop
+        if focus:
+            F = bpy.data.objects.new("EMPTY_Focus_" + name[4:], None); S.collection.objects.link(F)
+            for fr, pos in focus: key(F, "location", fr, pos)
+            c.data.dof.focus_object = F
+        else:
+            c.data.dof.focus_object = t
+    S.timeline_markers.new(name, frame=keys[0][0]).camera = c
+    return c
+
+# 1. corner chip: slow push with a sideways slide (parallax), constant speed
+camera2("CAM_Chip", 70, [(1, (1.0, 0.8, 0.1), (0.34, 0.05, 0.27)), (31, (0.8, 0.6, 0.21), (0.29, 0.05, 0.34))], fstop=2.0, noise=0.004)
+# 2. rim chase: crane up with the strand on a slight arc
+camera2("CAM_Rim", 50, [(31, (1.18, 0.86, 0.08), (0.36, 0.0, 0.2)), (49, (1.24, 0.7, 0.45), (0.35, 0.0, 0.5)), (67, (1.06, 0.78, 0.8), (0.34, 0.0, 0.8))], fstop=2.8, noise=0.004)
+# 3. sweep: slider across the back with a rack focus from the top edge down to the engraving
+camera2("CAM_Sweep", 50, [(67, (0.2, 0.32, 2.02), (0.1, 0.05, 1.0)), (103, (-0.1, 0.26, 1.88), (0.0, 0.05, 1.2))], fstop=2.8, noise=0.003,
+        focus=[(67, (0.05, 0.05, 1.55)), (88, (0.05, 0.05, 1.55)), (103, (0.0, 0.06, 0.62))])
+# 4. camera rim: arc around the rim corner
+camera2("CAM_Bump", 60, [(103, (-0.46, 0.6, 1.1), (0.02, 0.06, 1.37)), (122, (-0.38, 0.74, 1.2), (0.03, 0.06, 1.39)), (141, (-0.18, 0.66, 1.28), (0.05, 0.06, 1.41))], fstop=2.8, noise=0.003)
+# 5. ring: push in as the ring swings on, decelerate onto the click (f172), tiny drift after
+camera2("CAM_Ring", 60, [(141, (0.75, 1.75, 0.7), (0, 0.06, 0.93)), (172, (0.32, 1.42, 0.86), (0, 0.06, 0.93)), (181, (0.28, 1.4, 0.87), (0, 0.06, 0.93))],
+        fstop=2.8, interp=[('EXPO', 'EASE_OUT'), ('LINEAR', 'AUTO'), ('LINEAR', 'AUTO')])
+# 6. hero reveal: orbit + pull back on a pivot at the product, fast then decelerating (expo), then a slow drift to the end
+PIV = bpy.data.objects.new("EMPTY_HeroPivot", None); S.collection.objects.link(PIV); PIV.location = (0, 0, 1.0)
+key(PIV, "rotation_euler", 181, (0, 0, math.radians(24))); key(PIV, "rotation_euler", 222, (0, 0, math.radians(-3))); key(PIV, "rotation_euler", 240, (0, 0, math.radians(-6)))
+for fc in PIV.animation_data.action.fcurves:
+    k0, k1, k2 = fc.keyframe_points; k0.interpolation = 'EXPO'; k0.easing = 'EASE_OUT'; k1.interpolation = 'LINEAR'
+camera2("CAM_Hero", 40, [(181, (0.0, 1.55, -0.14), (0, 0, 0.95)), (222, (0.0, 2.9, 0.08), (0, 0, 1.0)), (240, (0.0, 3.05, 0.1), (0, 0, 1.0))],
+        fstop=8.0, interp=[('EXPO', 'EASE_OUT'), ('LINEAR', 'AUTO'), ('LINEAR', 'AUTO')], parent=PIV)
 S.camera = bpy.data.objects["CAM_Chip"]
 
 # ---------------------------------------------------------------- render
