@@ -142,7 +142,7 @@ BG_GREEN = TEAL
 m_cyc = principled("MAT_Cyclorama", BG_GREEN, 0.95)
 _cb = m_cyc.node_tree.nodes["Principled BSDF"]
 _cb.inputs["Specular IOR Level"].default_value = 0.0
-_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.35  # mostly self-lit = flat, seamless
+_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.75   # the set keeps its teal everywhere (no black floor)  # mostly self-lit = flat, seamless
 
 # ---------------------------------------------------------------- product (local axes: X width, Y height, Z depth, back = -Z)
 PROD = bpy.data.objects.new("PRODUCT", None); S.collection.objects.link(PROD)
@@ -316,8 +316,9 @@ L4 = light("LGT_Fill_Soft", (2.6, 1.6, 0.9), 22, 2.0, 2.0, (1.0, 0.96, 0.92)); l
 L4.visible_glossy = False          # fill lifts the shading only: no hard rectangle in the glossy back
 L5 = light("LGT_Kick_Teal", (-1.9, -0.7, 0.55), 160, 0.3, 2.0, (0.1, 0.75, 0.85))   # behind-left, grazing: a teal edge line, not a front reflection; link_to(L5, COL_P)
 bpy.ops.object.light_add(type='SPOT', location=(0, -1.2, 4.2)); BGP = bpy.context.object; BGP.name = "LGT_Backdrop_Pool"
-BGP.data.energy = 900; BGP.data.spot_size = math.radians(55); BGP.data.spot_blend = 1.0; BGP.data.color = (0.6, 0.95, 1.0)
+BGP.data.energy = 1600; BGP.data.spot_size = math.radians(85); BGP.data.spot_blend = 1.0; BGP.data.color = (0.6, 0.95, 1.0)
 aim(BGP, (0, -4.0, 1.6)); link_to(BGP, COL_BG)
+FL = light("LGT_Backdrop_Floor", (0, 1.5, 4.5), 700, 6.0, 6.0, (0.7, 0.95, 1.0), look=(0, 0.5, 0)); link_to(FL, COL_BG)   # soft wash on the floor, set only
 W = bpy.data.worlds.new("WLD"); S.world = W; W.use_nodes = True
 # studio gradient environment: bright overhead, dark below, so the clear coat carries a smooth oily reflection
 wt = W.node_tree; bgn = wt.nodes["Background"]

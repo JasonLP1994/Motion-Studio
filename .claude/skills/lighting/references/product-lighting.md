@@ -12,7 +12,7 @@ so every light (and every dark card) is designed by where it shows up in the sur
 | Fill | Large, weak (~1/8 of key), and `visible_glossy = False` | Lifts the shading without a hard rectangle in the glossy surface |
 | Accent kick (colour) | Thin strip behind, grazing (never in front of a glossy face) | A coloured edge line that ties product to set. In front it became a huge pale patch in the reflection |
 | Negative fill | Black emission-0 planes, `visible_camera = False`, `visible_shadow = False` | Dark bands in the reflection: contrast and richer colour on glossy surfaces |
-| Backdrop | Its own soft spot "pool" behind the product, light-linked to the backdrop only; product lights light-linked to the product only | Background falls off into a vignette that focuses the eye; neither washes out the other |
+| Backdrop | Its own soft spot "pool" behind the product PLUS a wide soft wash over the floor, both light-linked to the backdrop only; product lights light-linked to the product only; keep some self-glow on the set | Gentle vignette that focuses the eye while the set keeps its colour. Lesson: with only a small pool the floor and every close-up went black (product lights no longer reach the set once linked) |
 
 Light linking (Cycles, Blender 4.0+): `light_obj.light_linking.receiver_collection = collection`.
 
