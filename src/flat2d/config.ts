@@ -11,7 +11,7 @@ export const flatConfig = {
     // teal / navy, lavender chrome, purple accents, heavy navy ink outlines. Token names kept so each role stays put.
     red: "#FFE01A", redDeep: "#FF2D95", maroon: "#2C8FB0", maroonDeep: "#1E2B57",
     ink: "#121733", peach: "#B9BCD6", cream: "#F4F1FF", lips: "#8A3CF0",
-    yellowDeep: "#E9B400", tealDeep: "#1C6A8A", pinkDeep: "#C9157A", outline: 5,
+    yellowDeep: "#E9B400", tealDeep: "#1C6A8A", pinkDeep: "#C9157A", outline: 3,
     skin: "#FFD5BC", skinShade: "#F0A88E", glow: "#FFF6C8",
   },
 
