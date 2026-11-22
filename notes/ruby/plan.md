@@ -61,3 +61,10 @@ jewellery CAD by **CADtrends**, CC-BY 4.0 (credit needed if posted), ~0.2-1 M fa
 | E | ChapelHIlls Frisch3StnPndt: three-stone | 171083b36fa14480a2c5616b81554249 |
 | F | Harrison McNairPndt: flower halo | 932479257ff44de7803d61f338f4561e |
 Waiting on the user's pick. Downloads go to an ignored folder (never GitHub); credit goes in public/models/CREDITS.md.
+
+## v2 built (23 Nov): user picked #6, ChapelHills BluTourmPndt (tall cushion/emerald-cut centre, double pave halo, pave bail)
+- scripts/blender/ruby_model_prep.py: weld, split loose parts, sort by convexity + position -> CENTRE (1), PAVE (280),
+  METAL (16), PAVE_BAIL (66), METAL_BAIL (15), CHAIN (54, dropped: too short). Output work/models/ruby/pendant-prep.blend (ignored).
+- scripts/blender/ruby_pendant.py appends the groups (mm -> cm, flipped face-up, bail at +Y), diamond / ruby / rose gold materials,
+  own cable chain threaded through the bail at (0, 1.76, -0.92). Cameras re-framed for the taller piece; hero raised to ~58 deg.
+- Stills v2: renders/ruby-pendant-still-v2-*.png (~64 s/frame at 720p, 64 spp, while the shoe renders).

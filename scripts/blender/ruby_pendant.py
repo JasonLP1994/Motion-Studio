@@ -13,17 +13,17 @@ CFG = {
     # explode / assemble (Blender frames = plan frame + 1). 100 BPM: beat = 18 frames
     "explode": (145, 181), "hold_end": 199,
     "land": {"dia": (199, 208), "halo": (199, 208), "bail": (217, 226), "chain": (235, 244)},
-    "apart": {"dia": (0, 0.05, 1.15), "halo": (0, -0.3, -0.62), "bail": (0, 0.62, 0.62), "chain": (0, 1.15, 1.05)},
+    "apart": {"dia": (0, -0.1, 1.5), "halo": (0, -0.35, -0.65), "bail": (0, 0.7, 0.6), "chain": (0, 1.3, 1.1)},
     "glints": [109, 325],          # sparkle-light spikes (star glare) on the beats
     # cameras: name, first frame, (pos start, pos end), (target start, target end), lens, f-stop, interpolation
     "cams": [
-        ("MAC", 1, ((0.05, -0.22, 1.25), (0.10, -0.45, 2.7)), ((0, 0, 0.2), (0, 0, 0.18)), 100, 2.8, "LINEAR"),
-        ("TOP", 37, ((0.0, -0.05, 4.2), (0.0, -0.4, 10.5)), ((0, 0.25, 0), (0, 0.3, 0)), 50, 8, "EXPO"),
-        ("TQ", 109, ((-3.9, -7.6, 6.2), (-3.0, -6.6, 5.3)), ((0, 0.4, 0.2), (0, 0.45, 0.22)), 60, 11, "LINEAR"),
-        ("MA", 199, ((1.55, -2.7, 3.3), (1.35, -2.45, 3.0)), ((0, 0, 0.12), (0, 0, 0.1)), 85, 5.6, "LINEAR"),
-        ("MB", 217, ((-2.2, -0.6, 3.3), (-2.0, -0.4, 3.0)), ((0, 0.78, 0.05), (0, 0.8, 0.05)), 85, 5.6, "LINEAR"),
-        ("MC", 235, ((2.7, 1.6, 2.6), (2.45, 1.45, 2.35)), ((0, 0.88, 0), (0, 0.88, 0)), 85, 5.6, "LINEAR"),
-        ("HERO", 253, ((-1.7, -4.2, 2.5), (-0.4, -6.0, 3.3)), ((0, 0.3, 0.02), (0, 0.35, 0.02)), 45, 11, "EXPO"),
+        ("MAC", 1, ((0.05, -0.3, 1.7), (0.12, -0.6, 3.5)), ((0, 0, 0.42), (0, 0, 0.4)), 100, 2.8, "LINEAR"),
+        ("TOP", 37, ((0.0, -0.05, 5.5), (0.0, -0.5, 14.0)), ((0, 0.45, 0), (0, 0.5, 0)), 50, 8, "EXPO"),
+        ("TQ", 109, ((-7.0, -10.5, 9.6), (-5.9, -9.2, 8.4)), ((0.25, 0.5, 0.3), (0.3, 0.55, 0.35)), 60, 11, "LINEAR"),
+        ("MA", 199, ((2.7, -4.7, 5.9), (2.4, -4.3, 5.3)), ((0, 0, 0.36), (0, 0, 0.34)), 85, 5.6, "LINEAR"),
+        ("MB", 217, ((-3.5, 0.3, 4.3), (-3.2, 0.5, 3.9)), ((0, 1.3, -0.7), (0, 1.32, -0.7)), 85, 5.6, "LINEAR"),
+        ("MC", 235, ((4.0, 4.16, 2.68), (3.6, 3.9, 2.3)), ((0, 1.76, -0.92), (0, 1.76, -0.92)), 85, 5.6, "LINEAR"),
+        ("HERO", 253, ((-2.4, -4.6, 8.0), (-0.6, -5.8, 10.6)), ((0, 0.55, 0.0), (0, 0.6, 0.0)), 45, 11, "EXPO"),
     ],
 }
 OUT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "/tmp/ruby.blend"
@@ -122,47 +122,27 @@ ROOT = empty("PENDANT")
 HALO = empty("G_HALO", parent=ROOT); DIAG = empty("G_DIAMOND", parent=ROOT)
 BAIL = empty("G_BAIL", parent=ROOT); CHAIN = empty("G_CHAIN", parent=ROOT)
 
-# centre diamond (6 mm) in a 4-claw basket
-GZ = 0.10
-obj("Diamond", gem_mesh("diamond", 0.30), DIA, (0, 0, GZ), DIAG)
-torus("Basket_top", 0.285, 0.022, ROSE, (0, 0, GZ - 0.03), parent=HALO)
-torus("Basket_low", 0.17, 0.02, ROSE, (0, 0, GZ - 0.22), parent=HALO)
-for k in range(4):
-    a = math.pi / 4 + k * math.pi / 2; ca, sa = math.cos(a), math.sin(a)
-    cu = bpy.data.curves.new(f"prong{k}", "CURVE"); cu.dimensions = "3D"; cu.bevel_depth = 0.026; cu.bevel_resolution = 4
-    cu.use_fill_caps = True; sp = cu.splines.new("BEZIER"); sp.bezier_points.add(2)
-    for i, (rr, z) in enumerate(((0.14, GZ - 0.3), (0.31, GZ + 0.02), (0.265, GZ + 0.13))):
-        bp = sp.bezier_points[i]; bp.co = (rr * ca, rr * sa, z); bp.handle_left_type = bp.handle_right_type = "AUTO"
-    o = bpy.data.objects.new(f"Prong{k}", cu); cu.materials.append(ROSE); o.parent = HALO; link(o)
-    sphere(f"ProngTip{k}", 0.03, ROSE, (0.262 * ca, 0.262 * sa, GZ + 0.135), HALO)
-
-# ruby halo: frame with a rounded seat ring, beaded (milgrain) rims, 16 round rubies
-HR, NR, RR = 0.47, 16, 0.078
-torus("HaloFrame", HR, 0.11, ROSE, (0, 0, -0.04), sz=0.45, parent=HALO, seg=(128, 24))
-torus("HaloRimIn", HR - 0.105, 0.022, ROSE, (0, 0, 0.0), parent=HALO, seg=(128, 16))
-torus("HaloRimOut", HR + 0.105, 0.022, ROSE, (0, 0, 0.0), parent=HALO, seg=(128, 16))
-rme = gem_mesh("ruby", RR)
-for k in range(NR):
-    a = k * 2 * math.pi / NR
-    obj(f"Ruby{k}", rme, RUBY, (HR * math.cos(a), HR * math.sin(a), 0.03), HALO, (0, 0, a))
-    for rr in (HR - 0.105, HR + 0.105):   # beads (milgrain) on the rims between stones
-        for j in range(3 if rr > HR else 2):
-            b = a + (j + 0.5) * (2 * math.pi / NR) / (3 if rr > HR else 2)
-            sphere(f"Bead{k}_{j}_{int(rr*100)}", 0.02, ROSE, (rr * math.cos(b), rr * math.sin(b), 0.022), HALO)
-    pa = a + math.pi / NR   # tiny claws between rubies
-    sphere(f"RubyClaw{k}", 0.026, ROSE, (HR * math.cos(pa), HR * math.sin(pa), 0.075), HALO)
-
-# jump ring (on the halo) + bail with 3 tiny diamonds; the chain runs through the bail along X
-torus("JumpRing", 0.075, 0.02, ROSE, (0, 0.63, -0.02), rot=(0, math.pi / 2, 0), parent=BAIL)
-BY = 0.86
-torus("Bail", 0.15, 0.036, ROSE, (0, BY, 0.0), rot=(0, math.pi / 2, 0), parent=BAIL, seg=(64, 20)).scale = (1, 1.35, 1)
-bme = gem_mesh("bail_dia", 0.03)
-for i, t in enumerate((-0.45, 0.0, 0.45)):
-    obj(f"BailDia{i}", bme, DIA, (0, BY + 0.2 * math.sin(t), 0.15 * 1.35 * math.cos(t) * 1.0 + 0.012), BAIL, (t, 0, 0))
+# the pendant: a real jewellery CAD model, "ChapelHills BluTourmPndt" by CADtrends (Sketchfab c091efb068624f228432cbfb7b21a0ec,
+# CC-BY 4.0, via Objaverse), split into groups by scripts/blender/ruby_model_prep.py. Its own chain is replaced (too short).
+from mathutils import Matrix
+PREP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "work", "models", "ruby", "pendant-prep.blend")
+with bpy.data.libraries.load(os.path.abspath(PREP), link=False) as (src, dst):
+    dst.objects = [n for n in src.objects if n in ("CENTRE", "PAVE", "METAL", "PAVE_BAIL", "METAL_BAIL")]
+# model space (mm, bail at -Y, front at -Z) -> scene (cm, face up, bail at +Y, centre stone at the origin)
+XF = Matrix.Translation((0, 0.86, 0.88)) @ Matrix.Scale(0.1, 4) @ Matrix.Rotation(math.pi, 4, "X")
+for o in dst.objects:
+    grp, m = {"CENTRE": (DIAG, DIA), "PAVE": (HALO, RUBY), "METAL": (HALO, ROSE), "PAVE_BAIL": (BAIL, RUBY), "METAL_BAIL": (BAIL, ROSE)}[o.name]
+    o.data.transform(XF); o.matrix_world = Matrix(); o.parent = grp; link(o)
+    o.data.materials.clear(); o.data.materials.append(m)
+    metal = m is ROSE
+    for poly in o.data.polygons: poly.use_smooth = metal
+    if metal:
+        o.data.use_auto_smooth = True; o.data.auto_smooth_angle = math.radians(35)
+BY, BZ = 1.76, -0.92   # where the chain passes through the bail (scene space)
 
 # cable chain: a 2-link unit arrayed and deformed along a U path through the bail
-L, LR, PITCH = 15.0, 0.012, 0.115
-bpy.ops.mesh.primitive_torus_add(major_radius=0.045, minor_radius=LR, major_segments=24, minor_segments=8)
+L, LR, PITCH = 15.0, 0.016, 0.15
+bpy.ops.mesh.primitive_torus_add(major_radius=0.058, minor_radius=LR, major_segments=24, minor_segments=8)
 l1 = bpy.context.object; l1.scale = (1.55, 1, 1); bpy.ops.object.transform_apply(scale=True)
 bpy.ops.object.duplicate(); l2 = bpy.context.object; l2.rotation_euler = (math.pi / 2, 0, 0); l2.location.x = PITCH
 bpy.ops.object.transform_apply(location=True, rotation=True)
@@ -171,7 +151,7 @@ link_o = bpy.context.object; link_o.name = "Chain"; link_o.data.materials.append
 arr = link_o.modifiers.new("Arr", "ARRAY"); arr.use_relative_offset = False; arr.use_constant_offset = True
 arr.constant_offset_displace = (2 * PITCH, 0, 0); arr.count = int(L / (2 * PITCH)) + 12
 path = bpy.data.curves.new("chain_path", "CURVE"); path.dimensions = "3D"; sp = path.splines.new("BEZIER")
-P = [(-2.6, 10.0, 3.2), (-1.0, 3.4, 0.7), (-0.42, 1.2, 0.04), (0, BY, 0.0), (0.42, 1.2, 0.04), (1.0, 3.4, 0.7), (2.6, 10.0, 3.2)]  # a V running back into the set
+P = [(-2.6, 11.0, -1.55), (-1.05, 3.8, -1.2), (-0.36, BY + 0.2, BZ - 0.03), (0, BY, BZ), (0.36, BY + 0.2, BZ - 0.03), (1.05, 3.8, -1.2), (2.6, 11.0, -1.55)]  # a V running back into the set
 sp.bezier_points.add(len(P) - 1)
 for bp, p in zip(sp.bezier_points, P): bp.co = p; bp.handle_left_type = bp.handle_right_type = "AUTO"
 path_o = bpy.data.objects.new("ChainPath", path); path_o.parent = CHAIN; link(path_o)
@@ -269,7 +249,7 @@ for name, f0, (p0, p1), (t0, t1), lens, fstop, interp in CFG["cams"]:
     keyv(tgt, "location", [(f0, Vector(t0)), (f1, Vector(t1))], interp, "EASE_OUT")
     m = S.timeline_markers.new(f"cut_{name}", frame=f0); m.camera = cam
     if name == "MAC":   # rack focus: from soft to sharp on the table
-        keyv(tgt, "location", [(f0, Vector((0, 0, 0.75))), (f0 + 22, Vector(t0)), (f1, Vector(t1))], "BEZIER")
+        keyv(tgt, "location", [(f0, Vector((0, 0, 1.05))), (f0 + 22, Vector(t0)), (f1, Vector(t1))], "BEZIER")
 S.camera = bpy.data.objects["MAC"]
 
 # ---------------- render ----------------
