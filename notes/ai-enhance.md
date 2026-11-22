@@ -20,3 +20,13 @@ Rules of use
 - Credits for posts that use them aren't required for outputs, but keep the model credits in `public/models/CREDITS.md`.
 Weights: tools/ai-models/ (RealESRGAN_x2.pth and RealESRGAN_x4plus.pth via Hugging Face mirrors of the official release,
 rife49.pth, 2xNomosUni_compact.safetensors). Python packages: tools/ai-py (spandrel 0.4.2, einops).
+
+## Default recipe: best quality in the fastest time (user rule)
+1. Cycles at ~48 samples (adaptive, threshold 0.03) + OIDN denoise. Clamp indirect 3 (no fireflies), diffuse 2 / glossy 4 /
+   transmission 2 bounces, caustics off, light tree on, persistent data on for sequences.
+2. Render 720p (or 50-67%) and AI-upscale to the delivery size with `--model fast` (Real-ESRGAN only for hero stills).
+3. Smooth shots: render every other frame, RIFE fills the rest. Always render for real: the first and last frame of every shot,
+   frames either side of a cut, glitch/strobe frames, hits (clicks, impacts) and fast moves.
+4. One render at a time on this machine (two at once each run at half speed). Long renders as tracked background tasks.
+5. Fastest fallback: same pipeline with Eevee instead of Cycles (flatter reflections).
+Measured: lime case v2 at 720p, 96 spp took ~3.3-5 min/frame while sharing the CPU with another render.
