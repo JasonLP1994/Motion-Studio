@@ -14,15 +14,20 @@ export const flatConfig = {
     ink: "#170405", peach: "#F2A27E", cream: "#F6E6D0", lips: "#E52A2F",
   },
 
+  // Infinite loop: frame 449 flows into frame 0, and the logo is both the start and the end.
   t: {
     push: 1.06,                       // slow push towards the screen while holding
-    zoomIn: [beat(4), beat(6)],       // 75 -> 113: into the monitor, lands on beat 6
+    logoOut: beat(2),                 // 38: the logo steps away
+    unflood: [beat(2) + 8, beat(3) + 6],   // 46 -> 62: the deep red shrinks back into the monitor, revealing the designer
+    boot: beat(4),                    // 75: the 3D app wakes on her screen (sun + grid)
+    click: beat(5),                   // 94: she clicks and the cube pops in
+    zoomIn: [beat(6), beat(8)],       // 113 -> 150: into the monitor, lands on the bar
+    pops: [beat(8), beat(9), beat(10)],    // octahedron, ring, sphere pop in on the beats
+    cursor: { in: beat(9), grab: beat(10), drop: beat(12), out: beat(13) }, // her cursor drags the cube into place
+    ball: [beat(8), beat(15)],        // the ball rides the keyframe curve
     zoomOut: [beat(14), beat(16)],    // 263 -> 300: back out to the designer, lands on the bar
-    click: beat(3),                   // she clicks the mouse (the cue that starts the zoom)
-    cursor: { in: beat(7), grab: beat(8), drop: beat(10), out: beat(12) }, // her cursor drags the cube into place
-    pops: [beat(6), beat(7), beat(8)],     // octahedron, ring, sphere pop in on the beats
-    flood: [beat(18), beat(18) + 14],      // 338: the screen's red floods the frame
-    logo: { circle: beat(18) + 12, p: beat(18) + 20, word: beat(19) + 10, tag: beat(20) + 6 },
+    flood: [beat(19), beat(19) + 14], // 356: the screen's deep red floods the frame
+    logo: { circle: beat(19) + 12, p: beat(19) + 20, word: beat(20) + 10, tag: beat(21) + 4 }, // then holds through the loop point
   },
 
   screen: { x: 410, y: 240, w: 576, h: 324 }, // the monitor screen (exactly 16:9): the portal into the 3D world

@@ -50,3 +50,8 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (snow globe): give the globe a soft back shadow on the floor like the reference tile shots.
 - DO: make stars and flat ornaments chunky 3D shapes so they still read edge-on when the camera orbits.
 - DON'T (clay diorama): light glossy toy materials with one huge soft key plus strong fill/sky: it flattens them and the plastic reflections disappear (user: "too bright ... you can't see the reflections"). DO: one smaller, brighter softbox (hidden from camera, light-linked out of the glass) above-right, low fill/sky, glossy coat ~1.0 / roughness ~0.07, and keep snow just below white (icy blue) so it doesn't clip.
+
+## Flat 2D / brand films
+- DO (Phillips Digital flat 2D): make brand films an infinite loop that starts AND ends on the logo (user: "I want it an infinite loop so the logo is the beginning and end"). Check frame 0 against the last frame (mean diff ~0) and wrap sound tails round the loop.
+- DO: use the user's real logo file, cut into masks and recoloured to the film's palette; never redraw it.
+- DO: check true peak on the encoded MP4, not just the WAV (AAC adds ~1 dB): put a fast limiter before the AAC encode so the file stays at or below -1 dBTP.

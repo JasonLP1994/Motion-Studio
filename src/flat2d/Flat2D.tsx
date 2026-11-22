@@ -88,8 +88,8 @@ const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
   const cubeLift = f > cu.grab && f < cu.drop ? Math.sin(((f - cu.grab) / (cu.drop - cu.grab)) * Math.PI) * 0.7 : 0;
   const cubePos: V = [cubeX, 1.1 + cubeLift, 0.6];
   const items: { z: number; el: React.ReactNode }[] = [];
-  const s1 = popS(f, T.pops[0]), s2 = popS(f, T.pops[1]), s3 = popS(f, T.pops[2]);
-  items.push({ z: proj(cubePos)[2], el: <Solid key="cube" proj={proj} verts={CUBE_V} faces={CUBE_F} pos={cubePos} s={1.05} ry={f * 0.012 + 0.5} rx={0.25} /> });
+  const s1 = popS(f, T.pops[0]), s2 = popS(f, T.pops[1]), s3 = popS(f, T.pops[2]), s0 = popS(f, T.click), sb = popS(f, T.boot);
+  if (s0 > 0.01) items.push({ z: proj(cubePos)[2], el: <Solid key="cube" proj={proj} verts={CUBE_V} faces={CUBE_F} pos={cubePos} s={1.05 * s0} ry={f * 0.012 + 0.5} rx={0.25} /> });
   if (s1 > 0.01) items.push({ z: proj([2.4, 1.6, -0.4])[2], el: <Solid key="oct" proj={proj} verts={OCT_V} faces={OCT_F} pos={[2.4, 1.6, -0.4]} s={1.4 * s1} ry={f * 0.03} rx={0.3} /> });
   // sphere with a flat crescent shadow
   if (s3 > 0.01) {
@@ -119,7 +119,7 @@ const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
   };
   const CP: V[] = [[-5, 0.4, 3.2], [-2.5, 4.2, 3.6], [2.5, -0.6, 3.0], [5, 2.8, 2.4]];
   const curve = Array.from({ length: 40 }, (_, i) => proj(bez(i / 39, CP)));
-  const bt = ease(f, 120, 290, 0, 1, Easing.inOut(Easing.quad));
+  const bt = ease(f, T.ball[0], T.ball[1], 0, 1, Easing.inOut(Easing.quad));
   const ball = proj(bez(bt, CP)); const br = 0.32 * cfg.cam.focal / ball[2];
   const hp = CP.map(proj);
   // cursor (screen space)
@@ -133,18 +133,22 @@ const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
   return (
     <g>
       <rect {...BLEED} fill={c.redDeep} />
-      <circle cx={1480} cy={230} r={150} fill={c.red} />
-      {grid}
-      <Shadow proj={proj} x={cubeX} z={0.6} r={1.25 - cubeLift * 0.3} />
+      {sb > 0.01 && <circle cx={1480} cy={230} r={150 * sb} fill={c.red} />}
+      <g opacity={ease(f, T.boot, T.boot + 12, 0, 1, Easing.out(Easing.quad))}>{grid}</g>
+      {s0 > 0.01 && <Shadow proj={proj} x={cubeX} z={0.6} r={(1.25 - cubeLift * 0.3) * s0} />}
       {s1 > 0.01 && <Shadow proj={proj} x={2.4} z={-0.4} r={1.1 * s1} />}
       {s3 > 0.01 && <Shadow proj={proj} x={0.2} z={-3.4} r={1.2 * s3} />}
-      <polyline points={ptsStr(curve)} fill="none" stroke={c.cream} strokeWidth={4} strokeDasharray="14 10" />
-      <line x1={hp[0][0]} y1={hp[0][1]} x2={hp[1][0]} y2={hp[1][1]} stroke={c.peach} strokeWidth={3} />
-      <line x1={hp[3][0]} y1={hp[3][1]} x2={hp[2][0]} y2={hp[2][1]} stroke={c.peach} strokeWidth={3} />
-      {hp.map((p, i) => <rect key={i} x={p[0] - 9} y={p[1] - 9} width={18} height={18} fill={i % 3 === 0 ? c.cream : c.peach} stroke={c.ink} strokeWidth={3} />)}
+      {s0 > 0.01 && (
+        <g>
+          <polyline points={ptsStr(curve)} fill="none" stroke={c.cream} strokeWidth={4} strokeDasharray="14 10" />
+          <line x1={hp[0][0]} y1={hp[0][1]} x2={hp[1][0]} y2={hp[1][1]} stroke={c.peach} strokeWidth={3} />
+          <line x1={hp[3][0]} y1={hp[3][1]} x2={hp[2][0]} y2={hp[2][1]} stroke={c.peach} strokeWidth={3} />
+          {hp.map((p, i) => <rect key={i} x={p[0] - 9} y={p[1] - 9} width={18} height={18} fill={i % 3 === 0 ? c.cream : c.peach} stroke={c.ink} strokeWidth={3} />)}
+        </g>
+      )}
       {items.map((it) => it.el)}
-      <circle cx={ball[0]} cy={ball[1]} r={br} fill={c.ink} />
-      <circle cx={ball[0] - br * 0.3} cy={ball[1] - br * 0.3} r={br * 0.35} fill={c.cream} />
+      {s0 > 0.01 && <circle cx={ball[0]} cy={ball[1]} r={br * s0} fill={c.ink} />}
+      {s0 > 0.01 && <circle cx={ball[0] - br * 0.3} cy={ball[1] - br * 0.3} r={br * 0.35 * s0} fill={c.cream} />}
       {ui && (
         <g>
           <rect x={BLEED.x} y={984} width={BLEED.width} height={1600} fill={c.ink} />
@@ -217,10 +221,19 @@ const Piece: React.FC<{ p: { src: string; x: number; y: number; w: number; h: nu
 );
 const Logo: React.FC<{ f: number }> = ({ f }) => {
   const L = cfg.logo, t = T.logo;
-  const sc = spring({ frame: f - t.circle, fps: FPS, config: { damping: 12, stiffness: 150, mass: 0.8 } });
-  const sp = spring({ frame: f - t.p, fps: FPS, config: { damping: 11, stiffness: 170, mass: 0.6 } });
-  const wy = ease(f, t.word, t.word + 14, 1, 0, Easing.out(Easing.exp));
-  const tg = ease(f, t.tag, t.tag + 10, 0, 1, Easing.out(Easing.quad));
+  let sc: number, sp: number, wy: number, tg: number;
+  if (f < T.flood[0]) { // start of the loop: the finished logo holds, then steps away (exits ~45% shorter than entrances)
+    const o = T.logoOut;
+    tg = ease(f, o, o + 6, 1, 0, Easing.in(Easing.cubic));
+    wy = ease(f, o + 1, o + 8, 0, 1, Easing.in(Easing.cubic));
+    sp = ease(f, o + 3, o + 10, 1, 0, Easing.in(Easing.cubic));
+    sc = ease(f, o + 4, o + 12, 1, 0, Easing.in(Easing.cubic));
+  } else {
+    sc = spring({ frame: f - t.circle, fps: FPS, config: { damping: 12, stiffness: 150, mass: 0.8 } });
+    sp = spring({ frame: f - t.p, fps: FPS, config: { damping: 11, stiffness: 170, mass: 0.6 } });
+    wy = ease(f, t.word, t.word + 14, 1, 0, Easing.out(Easing.exp));
+    tg = ease(f, t.tag, t.tag + 10, 0, 1, Easing.out(Easing.quad));
+  }
   return (
     <AbsoluteFill>
       <Piece p={L.circle} style={{ transform: `scale(${sc})` }} />
@@ -239,7 +252,7 @@ export const Flat2D: React.FC = () => {
   const [zi0, zi1] = T.zoomIn, [zo0, zo1] = T.zoomOut;
   let tr: string | null = null; // null = full-screen 3D world
   if (f < zi0) {
-    const z = ease(f, 0, zi0, 1, T.push, Easing.inOut(Easing.quad));
+    const z = ease(f, T.unflood[1], zi0, 1, T.push, Easing.inOut(Easing.quad));
     tr = camTr(z, 0);
   } else if (f < zi1) {
     const s = zoomState(ease(f, zi0, zi1, 0, 1, Easing.inOut(Easing.cubic))); tr = camTr(s.z, s.g);
@@ -251,7 +264,10 @@ export const Flat2D: React.FC = () => {
   } else {
     tr = camTr(1, 0);
   }
-  const fl = ease(f, T.flood[0], T.flood[1], 0, 1, Easing.in(Easing.cubic));
+  // deep red covers the frame around the logo: it shrinks back into the monitor at the start, and floods out at the end
+  const fl = f < T.flood[0]
+    ? ease(f, T.unflood[0], T.unflood[1], 1, 0, Easing.inOut(Easing.cubic))
+    : ease(f, T.flood[0], T.flood[1], 0, 1, Easing.in(Easing.cubic));
   const floodR = fl * Math.hypot(W, H);
   return (
     <AbsoluteFill style={{ backgroundColor: c.red }}>
@@ -259,7 +275,7 @@ export const Flat2D: React.FC = () => {
         {tr === null ? <World f={f} /> : <g transform={tr}><Designer f={f} /></g>}
         {fl > 0 && <circle cx={P_S.x} cy={P_S.y} r={floodR} fill={c.redDeep} />}
       </svg>
-      {f >= T.logo.circle - 2 && <Logo f={f} />}
+      {(f >= T.logo.circle - 2 || f < T.logoOut + 14) && <Logo f={f} />}
     </AbsoluteFill>
   );
 };
