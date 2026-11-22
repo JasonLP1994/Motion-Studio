@@ -44,6 +44,8 @@ Suggest these alongside the kit's 10 templates. Each has a guide, prompt.txt, wo
 - `.claude/skills/blender-farm-render/SKILL.md`: render-engine quality 3D in **Blender Cycles**. Build the scene from the project's three.js code, check it with quick local renders, estimate the farm cost and hand the user **one packed farm-ready `.blend`** (`renders/farm/`, never GitHub). The user uploads and pays on the farm; the beginner guide is `notes/render-farm.md`. Frames come back to `inputs/farm/` for sound and checks.
 - **Denoiser (local previews):** this Blender has no built-in denoiser, so render previews with `scripts/denoise/oidn_render.py` (Intel Open Image Denoise, Apache-2.0, installed in the git-ignored `tools/oidn-py` by `bash scripts/denoise/setup_oidn.sh`). Never use ffmpeg median/nlmeans smoothing to hide render noise: it smears detail and darkens the image.
 
+- **AI render enhancement (local, free):** `notes/ai-enhance.md`. Compact AI 2x upscaler (`scripts/ai/upscale.py --model fast`, render 720p -> 1080p), Real-ESRGAN for hero stills, RIFE in-betweens (`scripts/ai/interpolate.py`, render every other frame of slow shots only, never across cuts/glitches), OIDN for Cycles. Everything lives in ignored `tools/`. Long cloud renders must run as a tracked background task (see `notes/blender-setup.md`).
+
 ## Extra skills (from the user's motion-graphics pack, MIT, in .claude/skills/)
 - `motion-broll`: one-shape motion B-roll cut into a talking-head video, timed to words.
 - `object-separation`: cut a person, product or hand out of a video with SAM 2. This is the matte the kit's text-behind-a-person templates need on non-Mac machines.

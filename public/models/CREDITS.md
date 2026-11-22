@@ -8,3 +8,6 @@
   (Sketchfab model e97fb74847454a269c4fbfba077aae2a), licensed CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/),
   obtained through the Objaverse dataset (allenai/objaverse on Hugging Face). Re-scaled and re-posed; chrome material added.
   Credit line for posts: "Head model: Female Head Realistic by recofiv3 (CC-BY 4.0)".
+- AI enhancement models (local, in ignored `tools/ai-models/`): Real-ESRGAN x2 / x4plus by Xintao Wang et al. (BSD-3-Clause);
+  2xNomosUni_compact_multijpg_ldl by Philip Hofmann (CC-BY 4.0); RIFE 4.9 by Zhewei Huang / hzwer (Practical-RIFE, MIT), network code
+  from Fannovel16/ComfyUI-Frame-Interpolation (MIT). Intel Open Image Denoise (Apache-2.0).
