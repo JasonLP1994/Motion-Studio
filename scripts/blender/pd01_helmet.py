@@ -49,11 +49,16 @@ def recolour(mat):
         return n.outputs[0]
     tc = N.new("ShaderNodeTexCoord"); sep = N.new("ShaderNodeSeparateXYZ"); L.new(tc.outputs["Object"], sep.inputs[0])
     helmet_z = m('GREATER_THAN', sep.outputs["Z"], 0.4)                     # above the collar
-    orange = m('MULTIPLY', m('MULTIPLY', m('GREATER_THAN', hsv.outputs["S"], 0.38), m('GREATER_THAN', hsv.outputs["V"], 0.18)), m('LESS_THAN', hsv.outputs["H"], 0.14))
+    orange = m('MULTIPLY', m('MULTIPLY', m('GREATER_THAN', hsv.outputs["S"], 0.2), m('GREATER_THAN', hsv.outputs["V"], 0.05)), m('LESS_THAN', hsv.outputs["H"], 0.16))
     lightgrey = m('MULTIPLY', m('LESS_THAN', hsv.outputs["S"], 0.22), m('GREATER_THAN', hsv.outputs["V"], 0.42))
     pink_mask = m('MULTIPLY', lightgrey, helmet_z)                          # small light-grey plates on the helmet -> hot pink
     black = N.new("ShaderNodeRGB"); black.outputs[0].default_value = (0.012, 0.012, 0.016, 1)
-    g = m('MULTIPLY', hsv.outputs["V"], 0.22)                               # everything else: dark gunmetal / charcoal
+    g = m('MULTIPLY', hsv.outputs["V"], m('ADD', 0.22, m('MULTIPLY', helmet_z, -0.16)))   # gunmetal: darker on the helmet, charcoal on the collar
+    # even, glossy roughness on the helmet (the source map has worn-paint blotches); collar keeps its fabric roughness
+    rl_ = next((l.from_socket for l in b.inputs["Roughness"].links), None)
+    if rl_ is not None:
+        rmix = N.new("ShaderNodeMix"); rmix.data_type = 'FLOAT'; L.new(helmet_z, rmix.inputs["Factor"]); L.new(rl_, rmix.inputs[2]); rmix.inputs[3].default_value = 0.2
+        L.new(rmix.outputs[0], b.inputs["Roughness"])
     gm = N.new("ShaderNodeCombineRGB")
     for ch, mul in (("R", 1.0), ("G", 1.0), ("B", 1.15)): L.new(m('MULTIPLY', g, mul), gm.inputs[ch])
     mix1 = N.new("ShaderNodeMix"); mix1.data_type = 'RGBA'; L.new(m('MULTIPLY', orange, helmet_z), mix1.inputs["Factor"])

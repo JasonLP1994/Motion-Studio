@@ -33,3 +33,4 @@ kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-e
   rim only, top rim, glossy-invisible fill, black cards). Lesson: a strong pink light washed magenta over the whole black shell;
   pink belongs at grazing angles (rim) and on emissive accents.
 - Look frames: notes/frames/pd01-look4.jpg. Next: cleaner black shell, HUD layout comp, style frames, camera plan.
+- Shell clean-up: worn-paint blotches in the source albedo/roughness -> helmet gunmetal multiplier 0.06 and an even roughness 0.2 above the collar. Look: notes/frames/pd01-look5.jpg.
