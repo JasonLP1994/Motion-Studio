@@ -2,12 +2,13 @@
 # frames: each part's colour ROLE goes in the red channel, a 3-step toon shade in green, and an inverted-hull outline is pure
 # black. scripts/pixel_palette.py then repaints every pixel into a chosen palette (exact palette colours, no anti-aliasing),
 # and Remotion scales the sprites up with hard square pixels.
-# Run: PYTHONPATH=tools/py312 blender -b --factory-startup -P work/pixel/sneaker_sprite.py -- OUT_DIR ANGLES W H [TILT]
+# Run: PYTHONPATH=tools/py312 blender -b --factory-startup -P work/pixel/sneaker_sprite.py -- OUT_DIR ANGLES W H [TILT] [ROLL]
 import bpy, sys, math, os
 from mathutils import Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
 OUT, N, W, H = args[0], int(args[1]), int(args[2]), int(args[3]); TILT = float(args[4]) if len(args) > 4 else 12.0
+ROLL = float(args[5]) if len(args) > 5 else 0.0   # camera roll in degrees: tilts the shoe in frame (toe down) without leaving the pixel grid
 GLB = "/home/user/Motion-Studio/work/shoes/31032bcf56a44166afbb4e73ee3d7051.glb"
 ROLES = {  # material name -> colour role (0 is reserved for the outline)
     "Sock": 1, "SockAdditions": 2, "Curve": 3, "Sockbottom": 4, "Traces": 5,
@@ -69,6 +70,9 @@ W_ = bpy.data.worlds.new("W"); S.world = W_; W_.use_nodes = True; W_.node_tree.n
 cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam")); S.collection.objects.link(cam); S.camera = cam
 cam.data.type = 'ORTHO'; cam.data.ortho_scale = 1.32
 cam.location = Vector((1.6, -1.6, 0.75)) ; cam.rotation_euler = (Vector((0, 0, 0.0)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
+from mathutils import Matrix as _M
+bpy.context.view_layer.update()   # matrix_world is stale until the depsgraph updates
+cam.matrix_world = cam.matrix_world @ _M.Rotation(math.radians(ROLL), 4, 'Z')
 
 S.render.engine = 'BLENDER_EEVEE'; S.eevee.taa_render_samples = 1; S.render.filter_size = 0.0
 S.render.film_transparent = True; S.render.dither_intensity = 0.0
