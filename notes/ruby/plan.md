@@ -47,3 +47,17 @@ Never their brand, logo, or their exact stud design.
   adaptive 0.03, ~64 spp + OIDN. 1280x720 then compact AI 2x upscale to 1920x1080.
 - RIFE only inside smooth moves (pull-back, explode drift, hero arc); real frames for cuts, clicks and glints.
 - The shoe render finishes ~08:30 UTC 23 Nov; the ruby full render starts after it (one render at a time). Stills render now at low priority.
+
+## v2 direction (user): use a real model instead of building the pendant
+Searched Objaverse (allenai/objaverse on Hugging Face, LVIS categories necklace / jewelry / jewel / gemstone). Shortlist, all
+jewellery CAD by **CADtrends**, CC-BY 4.0 (credit needed if posted), ~0.2-1 M faces, one material, stones are separate loose parts
+(classify by shape to give them diamond / ruby materials). Picture: notes/ruby/model-options-v1.jpg.
+| Option | Model | Sketchfab uid |
+|---|---|---|
+| A (recommended) | Denali Emily RndPndt: round centre + pave halo, bail, chain | 325769d4c1dd4b10ba63679c2064d144 |
+| B | ChapelHills RosePndt: round, beaded bezel | a0030a829f174d6fa68236512d6144fd |
+| C | ChapelHills AmthHrtPndt: heart halo | 1f81943ceb394e08992765d4b74039a2 |
+| D | Denali KarinPndt: teardrop halo | 52a367debfca4d6cabb5cdc7de516fee |
+| E | ChapelHIlls Frisch3StnPndt: three-stone | 171083b36fa14480a2c5616b81554249 |
+| F | Harrison McNairPndt: flower halo | 932479257ff44de7803d61f338f4561e |
+Waiting on the user's pick. Downloads go to an ignored folder (never GitHub); credit goes in public/models/CREDITS.md.
