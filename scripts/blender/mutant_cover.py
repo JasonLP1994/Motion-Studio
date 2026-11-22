@@ -10,7 +10,7 @@ from mathutils.bvhtree import BVHTree
 
 ROOT = "/home/user/Motion-Studio/work/mutant/"
 OUT = os.environ.get("MUT_OUT", ROOT + "frames/")
-FPS, NF, RES = 24, 240, (1920, 1080)
+FPS, NF, RES = 24, 258, (1920, 1080)   # 3D runs to f258; the logo end card after it is pure Remotion
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 
 VIOLET = (0.34, 0.06, 1.0)
@@ -290,6 +290,12 @@ key(hero, "location", 205, (0.03, -1.2, 0.16)); key(ht, "location", 205, (0.0, 0
 key(hero, "location", 222, (0.025, -1.23, 0.155)); key(ht, "location", 222, (0.0, 0.285, 0.68))
 key(hero, "location", NF, (-0.04, -1.0, 0.14)); key(ht, "location", NF, (-0.06, 0.27, 0.69))   # text glitches out: push in, head central
 S.timeline_markers.new("CAM_Hero", frame=149).camera = hero
+# end shot (cut hidden in the type glitch-out): straight on to the face, head centred, slow push. Lives in the head rig so it
+# stays square to the face whatever the pose.
+endc, endt = make_cam("CAM_End", 50, 8.0, RIG)
+key(endc, "location", 226, rig_local((0, -2.45, 0.5))); key(endt, "location", 226, rig_local((0, 0, 0.5)))
+key(endc, "location", NF, rig_local((0, -2.15, 0.5))); key(endt, "location", NF, rig_local((0, 0, 0.5)))
+S.timeline_markers.new("CAM_End", frame=226).camera = endc
 S.camera = bpy.data.objects["CAM_Eye"]
 
 # ---------------------------------------------------------------- render

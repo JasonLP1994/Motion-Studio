@@ -1,10 +1,10 @@
-# Mutant moving cover sound, made from scratch in numpy (no samples). 240 frames at 24 fps (10 s), stereo.
+# Mutant moving cover sound, made from scratch in numpy (no samples). 288 frames at 24 fps (12 s), stereo.
 # 0-6.2 s close-ups: dark sub pulse, a liquid-metal stretch on every spike start, whooshes on the shot cuts
 # (f37/73/109), wet pops as holes tear (f100-180). f149 reveal: riser into the masthead hit (f158), 120 BPM
 # fashion-tech kick + hats, digital glitch bursts exactly on the type glitches, big slam on BEYOND FLESH (f198),
 # glitch-out f222-230 then the beat drops away to a shimmering chrome tail under the head-alone end shot.
 import numpy as np, wave, sys
-SR, FPS, N = 48000, 24, 240
+SR, FPS, N = 48000, 24, 288
 t = np.arange(int(SR * N / FPS)) / SR
 L = np.zeros_like(t); R = np.zeros_like(t); rng = np.random.default_rng(23)
 F = lambda f: f / FPS
@@ -62,12 +62,18 @@ glitch(222, 8, 0.6)
 # BEYOND FLESH slam f198
 x = tt(1.8); add(np.sin(2 * np.pi * (48 * np.exp(-x * 4) + 32) * x) * np.exp(-x * 1.8), F(198), 1.0)
 add(band(len(tt(0.4)), 1500, 9000) * np.exp(-tt(0.4) * 10), F(198), 0.5)
-# head-alone end: shimmering chrome tail (F# major add9) + sub swell, fades out by the last frame
-x = tt(10 - F(230))
+# head alone (straight on): shimmering chrome bed (F# major add9), cut dead by the black-and-white glitch
+x = tt(F(249) - F(230))
 for f0, g, p in [(185, 0.12, -0.3), (233.1, 0.1, 0.3), (277.2, 0.1, -0.1), (370, 0.07, 0.2), (415.3, 0.05, -0.4)]:
     add(np.sin(2 * np.pi * f0 * x + 0.3 * np.sin(2 * np.pi * 5.5 * x)) * (1 - np.exp(-x * 6)), F(230), g, p)
 add(band(len(x), 6000, 15000) * (1 - np.exp(-x * 4)), F(230), 0.06)
-fade = np.clip((10 - t) / 0.35, 0, 1); L *= fade; R *= fade
+# black-and-white glitch f249-258: heavy crunch, then the logo hit f258 (sub + bright ping) and a clean tail to 12 s
+glitch(249, 9, 0.75)
+x = tt(12 - F(258))
+add(np.sin(2 * np.pi * (52 * np.exp(-x * 5) + 33) * x) * np.exp(-x * 1.6), F(258), 1.0)
+for f0, g in [(1480, 0.12), (2220, 0.07), (2960, 0.04)]: add(np.sin(2 * np.pi * f0 * x) * np.exp(-x * 2.2), F(258), g)
+add(np.sin(2 * np.pi * 92.5 * x) * (1 - np.exp(-x * 3)) * np.exp(-x * 0.9), F(258), 0.18)
+fade = np.clip((12 - t) / 0.35, 0, 1); L *= fade; R *= fade
 st = np.tanh(np.stack([L, R], 1) * 1.15) / np.tanh(1.15); st = st / np.abs(st).max() * 0.9
 with wave.open(sys.argv[1], "wb") as wf:
     wf.setnchannels(2); wf.setsampwidth(2); wf.setframerate(SR); wf.writeframes((st * 32767).astype(np.int16).tobytes())

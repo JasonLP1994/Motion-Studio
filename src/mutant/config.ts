@@ -7,8 +7,8 @@
 export const P = { lime: "#C8FA14", limeDeep: "#A6E200", ink: "#0A0A0A", violet: "#7A35FF", glitchA: "#FF2BD6", glitchB: "#00E5FF" };
 
 export const mutantConfig = {
-  output: { width: 1920, height: 1080, fps: 24, durationInFrames: 240 },
-  frames: { dir: "mutant/frames/f_", pad: 4, first: 1 },
+  output: { width: 1920, height: 1080, fps: 24, durationInFrames: 288 }, // 12 s: cover + straight-on head + logo end card
+  frames: { dir: "mutant/frames/f_", pad: 4, first: 1, last: 258 },
   grade3d: "saturate(1.35) contrast(1.08)", // pop like the reference
   // text glitches in (bursts as elements arrive), flickers in the hold, then glitches out at f222 and stays out
   glitch: { bursts: [[150, 6], [158, 10], [176, 5], [184, 4], [198, 7], [209, 3], [216, 3]] as [number, number][], out: 222, outDur: 8 },
@@ -31,4 +31,8 @@ export const mutantConfig = {
   orbit: { at: 204, dur: 16 },
   sparkle: { at: 212 },
   footer: { lines: ["OBJECT", "IN MOTION"], at: 214, x: 1848, y: 1010 },
+
+  // the head glitches into flat black-and-white, then a cut to the logo end card
+  bw: { from: 249, to: 258 },
+  logo: { at: 258, word: "PHILLIPS DIGITAL", sub: "ART / MOTION / IDENTITY", size: 92, bg: "#000000", ink: "#FFFFFF" },
 };

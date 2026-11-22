@@ -85,10 +85,47 @@ export const MutantCover: React.FC = () => {
   const blade = prog(f, C.blade.at, C.blade.dur, expo);
   const g = prog(f, C.globe.at, C.globe.dur, Easing.inOut(Easing.cubic));
   const hud = prog(f, C.hud.at, 8, Easing.out(Easing.back(1.6)));
-  const frameNo = Math.min(C.output.durationInFrames, f + C.frames.first);
+  const frameNo = Math.min(C.frames.last, f + C.frames.first);
+
+  // ---- logo end card (pure black and white)
+  if (f >= C.logo.at) {
+    const lg = C.logo; const lf = f - lg.at;
+    const gk = lf < 8 ? 1 - lf / 8 : 0;
+    const blink = gk > 0 && rnd(f * 5.3) < 0.3 * gk;
+    const dx = gk * 14 * (rnd(f) > 0.5 ? 1 : -1);
+    const starP = prog(lf, 3, 8, Easing.out(Easing.back(2)));
+    const orb = prog(lf, 4, 12, Easing.inOut(Easing.cubic));
+    const sub = prog(lf, 10, 8, expo);
+    return (
+      <AbsoluteFill style={{ background: lg.bg, alignItems: "center", justifyContent: "center" }}>
+        {!blink && (
+          <div style={{ display: "flex", alignItems: "center", gap: 34, filter: gk ? `drop-shadow(${dx}px 0 0 rgba(255,255,255,0.55)) drop-shadow(${-dx}px 0 0 rgba(255,255,255,0.3))` : undefined, transform: `translateX(${gk * (rnd(f * 2) - 0.5) * 60}px)` }}>
+            <svg width={150} height={110} viewBox="-75 -55 150 110">
+              <ellipse rx={68} ry={30} fill="none" stroke={lg.ink} strokeWidth={3.5} transform="rotate(-14)" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - orb} />
+              <path transform={`rotate(${(1 - starP) * 90}) scale(${starP})`} d="M0 -44 C5 -5 5 -5 44 0 C5 5 5 5 0 44 C-5 5 -5 5 -44 0 C-5 -5 -5 -5 0 -44Z" fill={lg.ink} />
+            </svg>
+            <div>
+              <div style={{ fontFamily: "BarlowCondBlack", fontStyle: "italic", fontWeight: 900, fontSize: lg.size, color: lg.ink, lineHeight: 0.9, letterSpacing: "0.005em" }}>{lg.word}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 10, opacity: sub }}>
+                <div style={{ width: 80 * sub, height: 3, background: lg.ink }} />
+                <div style={{ ...ital, color: lg.ink, fontSize: 20, letterSpacing: "0.08em" }}>{lg.sub}</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </AbsoluteFill>
+    );
+  }
+  // ---- head glitches into flat black-and-white solids before the cut
+  const inBW = f >= C.bw.from && f < C.bw.to;
+  const bwMode = inBW ? [0, 2, 1, 0, 1, 2, 0, 1, 1][f - C.bw.from] ?? 1 : -1; // 0 = white field / black solid head, 1 = inverted, 2 = graded frame
+  const headFilter = bwMode === 0 ? "grayscale(1) contrast(18) brightness(1.25)" : bwMode === 1 ? "grayscale(1) contrast(18) brightness(1.25) invert(1)" : C.grade3d;
+  const fieldBg = bwMode === 0 ? "#FFFFFF" : bwMode === 1 ? "#000000" : `radial-gradient(ellipse at 55% 45%, ${P.lime} 55%, ${P.limeDeep} 100%)`;
+  const headSrc = staticFile(`${C.frames.dir}${String(frameNo).padStart(C.frames.pad, "0")}.png`);
 
   return (
-    <AbsoluteFill style={{ background: `radial-gradient(ellipse at 55% 45%, ${P.lime} 55%, ${P.limeDeep} 100%)` }}>
+    <AbsoluteFill style={{ background: fieldBg }}>
+      <AbsoluteFill style={{ display: inBW ? "none" : "flex", background: `radial-gradient(ellipse at 55% 45%, ${P.lime} 55%, ${P.limeDeep} 100%)` }} />
       {/* masthead + blade sit behind the head */}
       <Glitch f={f} seed={1}>
       <div style={{ position: "absolute", top: m.y, left: 0, width: W, display: "flex", justifyContent: "center" }}>
@@ -110,7 +147,13 @@ export const MutantCover: React.FC = () => {
       </Glitch>
 
       {/* the chrome head with its growths (Blender, transparent) */}
-      <Img src={staticFile(`${C.frames.dir}${String(frameNo).padStart(C.frames.pad, "0")}.png`)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: C.grade3d }} />
+      {inBW
+        ? Array.from({ length: 6 }).map((_, i) => {
+            const top = (i / 6) * 100, bottom = 100 - ((i + 1) / 6) * 100;
+            const shift = rnd(f * 0.9 + i * 11) < 0.5 ? (rnd(f + i * 7) - 0.5) * 220 : 0;
+            return <Img key={i} src={headSrc} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: headFilter, clipPath: `inset(${top}% 0 ${bottom}% 0)`, transform: `translateX(${shift}px)` }} />;
+          })
+        : <Img src={headSrc} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: headFilter }} />}
       <Glitch f={f} seed={2}>
 
       {/* top bar */}

@@ -50,3 +50,14 @@ masthead baseline. Stills: notes/frames/mutant-stills-v2.jpg (f54 / f174 / f229)
   flickers in the hold (f209, 216); glitch-out f222-230, then the type is gone for good.
 - End: CAM_Hero pushes in from f222 to f240 and re-aims so the face lands in the centre; final frame is the chrome head alone.
 - Stills: notes/frames/mutant-stills-v3.jpg (f212 hold / f224 glitch-out / f239 final, half-size 3D).
+
+## v4 (user: end shot straight on, head central, "not looking through the nose"; then glitch to black-and-white solids and a small PHILLIPS DIGITAL logo)
+Now 12 s (288 frames). 3D renders to f258.
+| Time | Frames | Shot |
+|---|---|---|
+| 9.25–9.4 s | 222–226 | type glitches out (cut hidden inside it) |
+| 9.4–10.4 s | 226–249 | CAM_End: lives in the head rig, straight on to the face, head centred, slow push |
+| 10.4–10.75 s | 249–258 | head glitches into flat black-and-white solids (threshold / inverted / colour frames in a fixed rhythm, sliced bands) |
+| 10.75–12 s | 258–288 | black end card: small logo glitches in (orbit ellipse + 4-point star mark, PHILLIPS DIGITAL in Barlow Condensed Black Italic, rule + ART / MOTION / IDENTITY), holds |
+Sound extended: heavy glitch on the B/W flicker, logo hit (sub + bright ping) with a clean tail.
+Stills: notes/frames/mutant-end-v3.jpg.
