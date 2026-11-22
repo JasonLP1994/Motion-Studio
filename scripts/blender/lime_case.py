@@ -226,7 +226,7 @@ for o in [PHONE] + list(PHONE.children):
     o.hide_render = False; o.keyframe_insert("hide_render", frame=88)
 
 # hero turn: the whole product rotates slowly in the last shot
-key(PROD, "rotation_euler", 169, (math.radians(90), 0, math.radians(-28)))
+key(PROD, "rotation_euler", 187, (math.radians(90), 0, math.radians(-28)))
 key(PROD, "rotation_euler", 240, (math.radians(90), 0, math.radians(18)))
 key(PROD, "rotation_euler", 1, (math.radians(90), 0, math.radians(-18)))
 key(PROD, "rotation_euler", 168, (math.radians(90), 0, math.radians(-10)))
@@ -269,12 +269,16 @@ def camera(name, lens, f0, f1, c0, c1, t0, t1, fstop=None):
     key(c, "location", f0, c0); key(c, "location", f1, c1); key(t, "location", f0, t0); key(t, "location", f1, t1)
     if fstop: c.data.dof.use_dof = True; c.data.dof.focus_object = t; c.data.dof.aperture_fstop = fstop
     mk = S.timeline_markers.new(name, frame=f0); mk.camera = c; return c
-camera("CAM_Grow", 35, 1, 84, (1.5, 3.5, 1.7), (0.7, 3.2, 1.3), (0, 0, 1.02), (0, 0, 1.0), fstop=5.6)
+# build is seen only in close-ups; the whole case is held back for the pull-back reveal at the end
+camera("CAM_Chip", 70, 1, 22, (0.95, 0.75, 0.12), (0.85, 0.66, 0.18), (0.33, 0.05, 0.27), (0.28, 0.05, 0.34), fstop=2.0)
+camera("CAM_Rim", 50, 23, 48, (1.15, 0.85, 0.42), (1.05, 0.8, 1.2), (0.36, 0.0, 0.52), (0.34, 0.0, 1.2), fstop=2.8)
+camera("CAM_Sweep", 40, 49, 84, (-0.15, 0.6, 2.1), (0.1, 0.55, 2.0), (-0.05, 0.05, 1.25), (-0.1, 0.05, 1.35), fstop=4.0)
 camera("CAM_Ring", 60, 85, 120, (0.6, 1.6, 0.75), (0.3, 1.45, 0.85), (0, 0.06, 0.93), (0, 0.06, 0.93), fstop=2.8)
 camera("CAM_Bump", 70, 121, 144, (0.1, 0.95, 1.85), (-0.15, 0.88, 1.75), (-0.19, 0.06, 1.55), (-0.19, 0.06, 1.55), fstop=2.4)
-camera("CAM_Edge", 70, 145, 168, (1.15, 0.75, 1.05), (1.05, 0.95, 1.35), (0.38, 0.0, 1.2), (0.38, 0.0, 1.3), fstop=2.8)
-camera("CAM_Hero", 40, 169, 240, (0.0, 3.7, 1.15), (0.0, 3.35, 1.1), (0, 0, 1.0), (0, 0, 1.0), fstop=8.0)
-S.camera = bpy.data.objects["CAM_Grow"]
+camera("CAM_Engrave", 50, 145, 166, (0.3, 1.6, 0.42), (-0.25, 1.6, 0.48), (0.05, 0.06, 0.55), (-0.05, 0.06, 0.55), fstop=2.8)
+camera("CAM_Edge", 50, 167, 186, (1.4, 0.55, 0.7), (1.3, 0.85, 1.3), (0.3, 0.0, 0.9), (0.3, 0.0, 1.1), fstop=2.8)
+camera("CAM_Hero", 40, 187, 240, (0.25, 1.7, 0.85), (0.0, 3.1, 1.1), (0, 0, 0.95), (0, 0, 1.0), fstop=8.0)
+S.camera = bpy.data.objects["CAM_Chip"]
 
 # ---------------------------------------------------------------- render
 S.render.engine = 'BLENDER_EEVEE'; e = S.eevee
