@@ -55,7 +55,8 @@ glare_src = next((n for n in tree.nodes if n.bl_idname == "CompositorNodeGlare")
 GLARE = None
 if glare_src:
     GLARE = {k: getattr(glare_src, k) for k in
-             ("glare_type", "threshold", "mix", "quality", "size")}
+             ("glare_type", "threshold", "mix", "quality", "size", "streaks", "angle_offset", "fade")
+             if hasattr(glare_src, k)}  # streaks/angle/fade: star glints on gems
 for n in list(tree.nodes):
     tree.nodes.remove(n)
 rl = tree.nodes.new("CompositorNodeRLayers")
