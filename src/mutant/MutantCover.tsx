@@ -30,6 +30,32 @@ const bars = (() => {
   return out.filter((b) => b.x + b.w <= C.barcode.w);
 })();
 
+const rnd = (n: number) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
+const glitchK = (f: number) => {
+  const g = C.glitch; let k = 0;
+  for (const [a, d] of g.bursts) if (f >= a && f < a + d) k = Math.max(k, 1 - ((f - a) / d) * 0.6);
+  if (f >= g.out && f < g.out + g.outDur) k = 1;
+  return k;
+};
+// RGB-split + sliced, flickering copy of a type layer; after the outro it is gone for good
+const Glitch: React.FC<{ f: number; seed: number; children: React.ReactNode }> = ({ f, seed, children }) => {
+  const g = C.glitch; if (f >= g.out + g.outDur) return null;
+  const k = glitchK(f); if (k === 0) return <AbsoluteFill>{children}</AbsoluteFill>;
+  const outP = f >= g.out ? (f - g.out) / g.outDur : 0;
+  if (rnd(f * 3.1 + seed) < 0.22 * k + 0.6 * outP) return null; // blink off
+  const dx = (6 + 18 * k) * (rnd(f + seed * 7) > 0.5 ? 1 : -1);
+  const bands = 7;
+  return (
+    <AbsoluteFill style={{ filter: `drop-shadow(${dx}px 0 0 ${P.glitchA}) drop-shadow(${-dx * 0.8}px 0 0 ${P.glitchB})` }}>
+      {Array.from({ length: bands }).map((_, i) => {
+        const top = (i / bands) * 100, bottom = 100 - ((i + 1) / bands) * 100;
+        const shift = rnd(f * 0.7 + i * 13 + seed) < 0.45 * k ? (rnd(f + i * 5 + seed) - 0.5) * 160 * k : 0;
+        return <AbsoluteFill key={i} style={{ clipPath: `inset(${top}% 0 ${bottom}% 0)`, transform: `translateX(${shift}px)` }}>{children}</AbsoluteFill>;
+      })}
+    </AbsoluteFill>
+  );
+};
+
 export const MutantCover: React.FC = () => {
   const f = useCurrentFrame();
   const W = C.output.width;
@@ -64,6 +90,7 @@ export const MutantCover: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: `radial-gradient(ellipse at 55% 45%, ${P.lime} 55%, ${P.limeDeep} 100%)` }}>
       {/* masthead + blade sit behind the head */}
+      <Glitch f={f} seed={1}>
       <div style={{ position: "absolute", top: m.y, left: 0, width: W, display: "flex", justifyContent: "center" }}>
         {m.text.split("").map((ch, i) => {
           const p = prog(f, m.at + i * m.stagger, 9, expo);
@@ -80,9 +107,11 @@ export const MutantCover: React.FC = () => {
         <clipPath id="bladeClip"><rect x={0} y={0} width={W} height={bladeTop + blade * (1080 - bladeTop)} /></clipPath>
         <polygon clipPath="url(#bladeClip)" points={`1640,${bladeTop - 10} 1722,${bladeTop - 10} 1262,1080 1228,1080`} fill={P.ink} />
       </svg>
+      </Glitch>
 
       {/* the chrome head with its growths (Blender, transparent) */}
-      <Img src={staticFile(`${C.frames.dir}${String(frameNo).padStart(C.frames.pad, "0")}.png`)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+      <Img src={staticFile(`${C.frames.dir}${String(frameNo).padStart(C.frames.pad, "0")}.png`)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: C.grade3d }} />
+      <Glitch f={f} seed={2}>
 
       {/* top bar */}
       <div style={{ position: "absolute", top: 18, left: 72, right: 72, height: 30, display: "flex", alignItems: "center", gap: 22, opacity: tb }}>
@@ -164,6 +193,7 @@ export const MutantCover: React.FC = () => {
         <div style={{ width: 110 * prog(f, C.footer.at, 12, expo), height: 4, background: P.ink }} />
         <div style={{ ...ital, fontSize: 28, textAlign: "right", lineHeight: 1 }}>{C.footer.lines.map((l) => <div key={l}>{l}</div>)}</div>
       </div>
+      </Glitch>
     </AbsoluteFill>
   );
 };

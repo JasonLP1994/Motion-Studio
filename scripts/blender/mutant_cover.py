@@ -77,10 +77,10 @@ def violet_chrome(name, holes):
     b.inputs["Metallic"].default_value = 1.0; b.inputs["Roughness"].default_value = 0.07
     lw = N.new("ShaderNodeLayerWeight"); lw.inputs["Blend"].default_value = 0.42
     ramp = N.new("ShaderNodeValToRGB"); cr = ramp.color_ramp
-    cr.elements[0].position = 0.05; cr.elements[0].color = (0.5, 0.2, 1.0, 1)
-    cr.elements[1].position = 0.55; cr.elements[1].color = (*SILVER, 1)
+    cr.elements[0].position = 0.1; cr.elements[0].color = (0.4, 0.04, 1.0, 1)
+    cr.elements[1].position = 0.7; cr.elements[1].color = (*SILVER, 1)
     L.new(lw.outputs["Facing"], ramp.inputs["Fac"]); L.new(ramp.outputs["Color"], b.inputs["Base Color"])
-    b.inputs["Emission Color"].default_value = (*VIOLET, 1); b.inputs["Emission Strength"].default_value = 0.07
+    b.inputs["Emission Color"].default_value = (*VIOLET, 1); b.inputs["Emission Strength"].default_value = 0.14
     if holes:
         # round holes tear open inside the webs (never on the rims): Voronoi F1 < radius * interior mask
         tc = N.new("ShaderNodeTexCoord"); vo = N.new("ShaderNodeTexVoronoi"); vo.inputs["Scale"].default_value = 9.0
@@ -244,8 +244,8 @@ acc = wsum(None, (0.025, 0.025, 0.03), one.outputs[0])                       # d
 acc = wsum(acc, (1, 1, 1), lobe((-0.55, -0.6, 0.6), 0.82, 0.95, 9.0))         # key softbox, front-left-up
 acc = wsum(acc, (1, 1, 1), lobe((1, -0.15, 0.15), 0.9, 0.97, 5.0))            # tall strip, right
 acc = wsum(acc, (0.9, 0.95, 1), lobe((0, 0.2, 1), 0.6, 1.0, 1.2))            # soft top
-acc = wsum(acc, LIME, lobe((0, -0.3, -1), 0.25, 0.75, 1.6))                   # lime bounce from below (the field)
-acc = wsum(acc, VIOLET, lobe((-1, 0.35, -0.1), 0.75, 0.95, 2.5))              # violet card, left
+acc = wsum(acc, LIME, lobe((0, -0.3, -1), 0.2, 0.7, 2.6))                   # lime bounce from below (the field)
+acc = wsum(acc, VIOLET, lobe((-1, 0.35, -0.1), 0.7, 0.92, 3.5))              # violet card, left
 WL.new(acc, bg.inputs["Color"]); bg.inputs["Strength"].default_value = 1.0
 
 def area(name, loc, energy, size, col):
@@ -287,7 +287,8 @@ follow("CAM_Neck", 109, 148, 11, 45, 0.45, 0.22)     # webs on the neck, holes t
 hero, ht = make_cam("CAM_Hero", 40, 9.0)
 key(hero, "location", 149, (0.5, -0.75, 0.42)); key(ht, "location", 149, (0.05, 0.2, 0.6))
 key(hero, "location", 205, (0.03, -1.2, 0.16)); key(ht, "location", 205, (0.0, 0.28, 0.68))
-key(hero, "location", NF, (0.02, -1.25, 0.15)); key(ht, "location", NF, (0.0, 0.29, 0.68))
+key(hero, "location", 222, (0.025, -1.23, 0.155)); key(ht, "location", 222, (0.0, 0.285, 0.68))
+key(hero, "location", NF, (-0.04, -1.0, 0.14)); key(ht, "location", NF, (-0.06, 0.27, 0.69))   # text glitches out: push in, head central
 S.timeline_markers.new("CAM_Hero", frame=149).camera = hero
 S.camera = bpy.data.objects["CAM_Eye"]
 

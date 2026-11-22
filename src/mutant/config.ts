@@ -4,11 +4,14 @@
 // 0-6.2 s: close-ups of the growing spikes only (no type). The cover type builds only on the reveal (f150+).
 // 3D layer: work/mutant/mutant.py (Blender, transparent PNGs) -> public/mutant/frames/f_0001.png ...
 
-export const P = { lime: "#C9F23C", limeDeep: "#B4DE22", ink: "#0A0A0A", violet: "#7A35FF" };
+export const P = { lime: "#C8FA14", limeDeep: "#A6E200", ink: "#0A0A0A", violet: "#7A35FF", glitchA: "#FF2BD6", glitchB: "#00E5FF" };
 
 export const mutantConfig = {
   output: { width: 1920, height: 1080, fps: 24, durationInFrames: 240 },
   frames: { dir: "mutant/frames/f_", pad: 4, first: 1 },
+  grade3d: "saturate(1.35) contrast(1.08)", // pop like the reference
+  // text glitches in (bursts as elements arrive), flickers in the hold, then glitches out at f222 and stays out
+  glitch: { bursts: [[150, 6], [158, 10], [176, 5], [184, 4], [198, 7], [209, 3], [216, 3]] as [number, number][], out: 222, outDur: 8 },
 
   topBar: { left: "PHILLIPS DIGITAL®", centre: "ART / MOTION / IDENTITY", right: "EST. 2026", at: 150 },
   masthead: { text: "PHILLIPS DIGITAL", at: 158, stagger: 2, y: 64, width: 1790, maxSize: 470 },

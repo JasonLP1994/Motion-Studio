@@ -41,3 +41,12 @@ Close-up cameras live in the head rig and are keyed from the real spike curves (
 Fixes: imported head had every vertex split (1,184,766 -> 201,377 after merge) which made the chrome look faceted; neck stretched so its cut
 end stays below frame; area-light shadow bias; masthead size cap raised once the condensed font loaded (fills 1790 px); blade starts at the
 masthead baseline. Stills: notes/frames/mutant-stills-v2.jpg (f54 / f174 / f229).
+
+## v3 (user: "more saturation, pop like the reference"; "text glitches in and out, glitches out at the end and stays out, head central for the end shot")
+- Saturation: webs pushed to a deeper violet (ramp 0.4/0.04/1.0, more violet coverage, emission 0.14), stronger lime bounce and violet card
+  in the reflections, field #C8FA14, 3D layer graded saturate(1.35) contrast(1.08) in Remotion (`grade3d` in config).
+- Glitch: both type layers (masthead/blade behind the head, everything in front) run through <Glitch>: RGB-split drop shadows
+  (#FF2BD6 / #00E5FF), 7 sliced bands that jump sideways, random blink-off. Bursts as elements arrive (f150, 158, 176, 184, 198) and two
+  flickers in the hold (f209, 216); glitch-out f222-230, then the type is gone for good.
+- End: CAM_Hero pushes in from f222 to f240 and re-aims so the face lands in the centre; final frame is the chrome head alone.
+- Stills: notes/frames/mutant-stills-v3.jpg (f212 hold / f224 glitch-out / f239 final, half-size 3D).
