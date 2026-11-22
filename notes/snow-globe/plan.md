@@ -58,3 +58,6 @@ The shoe HQ render is using this machine's CPU until about 22 Nov. Test stills f
 - 21 Nov 03:27 UTC: stills v5 done (~38 min/frame at 128 spp; sent). Speed test: 100% / 16 spp + OIDN = ~5 min/frame and
   visually matches 128 spp (mean diff <1/255; reflections a touch softer). --persistent saved almost nothing.
   FULL render running at 100% / 16 spp into renders/frames/snow-globe-full-v1 (ETA ~39 h, about 22 Nov 18:00 UTC), shoe after.
+- 22 Nov 10:55 UTC: user: "finish the render now, we have enough footage". Stopped at 367/450 frames (12.2 s; the orbit is
+  ~82% of a turn, so it is no longer a seamless loop). Final: renders/snow-globe-full-v1.mp4 (1920x1080, 30 fps, crf 16,
+  waltz trimmed with a 1 s fade-out, -14.1 LUFS, true peak -2.6 dBFS). Sent. Shoe render resumed.
