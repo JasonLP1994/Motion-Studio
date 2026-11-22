@@ -12,64 +12,88 @@ const into = (P: { x: number; y: number }, K: number) => `translate(${P.x} ${P.y
 const colOf = (k: string) => (c as unknown as Record<string, string>)[k];
 const OUT = { stroke: c.ink, strokeWidth: c.outline, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
 
-// ---------------- the man (back view, walking away from us) ----------------
-// origin = between his feet; at s = 1 he is ~460 px tall
+// ---------------- the man (back view, walking away from us), anime proportions ----------------
+// origin = between his feet; at s = 1 he is ~490 px tall. Everything is curves: tapered limbs, a flared coat that swings.
+const legPath = (hx: number, lift: number, kneeOut: number) => {
+  const hip = { x: hx, y: -212 }, knee = { x: hx * 1.08 + kneeOut, y: -112 - lift * 0.45 }, ank = { x: hx * 1.1, y: -16 - lift };
+  const w0 = 19, w1 = 13, w2 = 9;
+  return `M${hip.x - w0} ${hip.y} Q${knee.x - w1 - 4} ${knee.y} ${ank.x - w2} ${ank.y} L${ank.x + w2} ${ank.y} Q${knee.x + w1 + 4} ${knee.y} ${hip.x + w0} ${hip.y} Z`;
+};
 const Man: React.FC<{ x: number; y: number; s: number; phase: number; walking: boolean }> = ({ x, y, s, phase, walking }) => {
   const sw = walking ? Math.sin(phase) : 0;
-  const bob = walking ? -Math.abs(Math.cos(phase)) * 7 : 0;
-  const lL = Math.max(0, sw) * 26, lR = Math.max(0, -sw) * 26; // the lifted foot rises (back view)
-  const arm = sw * 14;
+  const bob = walking ? -Math.abs(Math.cos(phase)) * 8 : 0;
+  const lL = Math.max(0, sw) * 30, lR = Math.max(0, -sw) * 30; // the lifted foot rises and shows its sole
+  const arm = sw * 16, hem = sw * 9, flare = walking ? Math.cos(phase * 2) * 4 : 0;
+  const shoe = (hx: number, lift: number) => lift > 4
+    ? <ellipse cx={hx * 1.1} cy={-12 - lift} rx={17} ry={11} fill={c.cream} />
+    : <path d={`M${hx * 1.1 - 20} -4 C${hx * 1.1 - 20} -22 ${hx * 1.1 + 20} -22 ${hx * 1.1 + 20} -4 Z`} fill={c.maroonDeep} />;
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`}>
-      <ellipse cx={0} cy={4} rx={78} ry={12} fill={c.maroonDeep} opacity={0.55} stroke="none" />
+      <ellipse cx={0} cy={4} rx={80} ry={12} fill={c.maroonDeep} opacity={0.45} stroke="none" />
       <g transform={`translate(0 ${bob})`}>
-        {/* legs + shoes */}
-        <rect x={-52} y={-190 - lL} width={40} height={180} fill={c.ink} />
-        <rect x={12} y={-190 - lR} width={40} height={180} fill={c.ink} />
-        <rect x={-56} y={-14 - lL} width={48} height={16} rx={6} fill={c.maroonDeep} />
-        <rect x={8} y={-14 - lR} width={48} height={16} rx={6} fill={c.maroonDeep} />
-        {/* long coat with a cream light edge on the right (light from the right, as negative space) */}
-        <path d="M-74 -392 L74 -392 L96 -168 L-96 -168 Z" fill={c.maroon} />
-        <path d="M-74 -392 L-40 -392 L-50 -168 L-96 -168 Z" fill={c.tealDeep} />
-        <path d="M58 -392 L74 -392 L96 -168 L76 -168 Z" fill={c.cream} />
-        <rect x={-4} y={-300} width={8} height={132} fill={c.maroonDeep} />
-        {/* arms swing */}
-        <path d={`M-74 -386 L-96 -386 L-110 ${-210 + arm} L-84 ${-210 + arm} Z`} fill={c.tealDeep} />
-        <path d={`M74 -386 L96 -386 L110 ${-210 - arm} L84 ${-210 - arm} Z`} fill={c.maroon} />
-        <circle cx={-97} cy={-200 + arm} r={13} fill={c.maroon} />
-        <circle cx={97} cy={-200 - arm} r={13} fill={c.maroon} />
-        {/* bag strap + messenger bag */}
-        <path d="M60 -390 L-70 -230" stroke={c.cream} strokeWidth={9} />
-        <rect x={-104} y={-252} width={66} height={56} rx={6} fill={c.redDeep} />
-        <rect x={-96} y={-240} width={50} height={10} fill={c.red} />
-        {/* collar, neck, head from behind */}
-        <rect x={-44} y={-412} width={88} height={26} rx={10} fill={c.peach} />
-        <rect x={-18} y={-436} width={36} height={30} fill={c.maroon} />
-        <circle cx={0} cy={-470} r={46} fill={c.ink} />
-        <ellipse cx={-46} cy={-462} rx={8} ry={14} fill={c.maroon} />
-        <ellipse cx={46} cy={-462} rx={8} ry={14} fill={c.cream} />
+        {/* legs: the back leg first */}
+        <path d={legPath(-22, lL, -3)} fill={c.ink} />
+        <path d={legPath(22, lR, 3)} fill={c.ink} />
+        {shoe(-22, lL)}{shoe(22, lR)}
+        {/* flared trench coat; the hem and tails swing with the stride */}
+        <path d={`M-60 -404 C-84 -400 -96 -384 -100 -352 L-106 -250 C-110 -214 ${-122 + hem} -184 ${-134 + hem} ${-152 + flare}
+          C-90 ${-138 - flare} -40 -146 0 -142 C40 -146 90 ${-138 + flare} ${134 + hem} ${-152 - flare}
+          C${122 + hem} -184 110 -214 106 -250 L100 -352 C96 -384 84 -400 60 -404 Z`} fill={c.maroon} />
+        <path d={`M-60 -404 C-84 -400 -96 -384 -100 -352 L-106 -250 C-110 -214 ${-122 + hem} -184 ${-134 + hem} ${-152 + flare}
+          C-100 -144 -60 -146 -34 -144 C-40 -220 -44 -330 -30 -404 Z`} fill={c.tealDeep} stroke="none" />
+        <path d={`M0 -300 C2 -240 ${hem * 0.4} -190 ${hem * 0.6} -142`} fill="none" stroke={c.ink} strokeWidth={3} />
+        <path d={`M-52 -270 C-62 -220 ${-80 + hem * 0.6} -180 ${-92 + hem} -150`} fill="none" stroke={c.ink} strokeWidth={2.5} />
+        <path d={`M56 -270 C66 -220 ${82 + hem * 0.6} -180 ${96 + hem} -152`} fill="none" stroke={c.ink} strokeWidth={2.5} />
+        <path d="M-104 -282 C-40 -272 40 -272 104 -282 L102 -262 C40 -252 -40 -252 -102 -262 Z" fill={c.ink} />
+        {/* arms swing and bend at the elbow, tapering to the hands */}
+        <path d={`M-96 -384 C-118 -360 -120 -320 ${-116 + arm * 0.2} ${-290 + arm * 0.4} C${-114 + arm * 0.4} -256 ${-110 + arm * 0.6} -232 ${-104 + arm * 0.7} ${-212 + arm}
+          L${-86 + arm * 0.7} ${-214 + arm} C${-90 + arm * 0.5} -240 -94 -268 -94 -296 C-92 -330 -86 -360 -80 -384 Z`} fill={c.tealDeep} />
+        <path d={`M96 -384 C118 -360 120 -320 ${116 - arm * 0.2} ${-290 - arm * 0.4} C${114 - arm * 0.4} -256 ${110 - arm * 0.6} -232 ${104 - arm * 0.7} ${-212 - arm}
+          L${86 - arm * 0.7} ${-214 - arm} C${90 - arm * 0.5} -240 94 -268 94 -296 C92 -330 86 -360 80 -384 Z`} fill={c.maroon} />
+        <ellipse cx={-95 + arm * 0.7} cy={-202 + arm} rx={11} ry={14} fill={c.skinShade} />
+        <ellipse cx={95 - arm * 0.7} cy={-202 - arm} rx={11} ry={14} fill={c.skin} />
+        {/* crossbody strap + rounded bag */}
+        <path d="M58 -396 C20 -340 -30 -290 -74 -246" fill="none" stroke={c.cream} strokeWidth={8} />
+        <path d="M-118 -258 C-118 -268 -110 -272 -100 -272 L-50 -272 C-40 -272 -36 -266 -36 -256 L-38 -214 C-38 -204 -46 -200 -56 -200 L-100 -200 C-112 -200 -118 -206 -118 -216 Z" fill={c.redDeep} />
+        <path d="M-108 -262 L-48 -262" stroke={c.cream} strokeWidth={4} />
+        {/* popped chrome collar, nape, ears */}
+        <path d="M-50 -400 C-56 -428 -40 -440 -22 -436 L22 -436 C40 -440 56 -428 50 -400 C20 -392 -20 -392 -50 -400 Z" fill={c.peach} />
+        <path d="M-16 -436 C-16 -450 16 -450 16 -436 L14 -424 L-14 -424 Z" fill={c.skinShade} />
+        <ellipse cx={-40} cy={-470} rx={8} ry={13} fill={c.skinShade} />
+        <ellipse cx={40} cy={-470} rx={8} ry={13} fill={c.skin} />
+        {/* spiky anime hair from behind, with a blue sheen and a light rim */}
+        <path d="M-44 -452 C-56 -470 -52 -500 -40 -514 L-58 -522 C-40 -540 -20 -548 -6 -546 L-14 -566 C6 -556 22 -552 34 -540 L46 -552 C50 -534 54 -516 50 -500 L64 -500 C56 -484 50 -466 42 -450
+          C34 -444 26 -452 20 -442 C12 -452 4 -440 -4 -446 C-12 -438 -22 -450 -28 -442 C-36 -450 -40 -444 -44 -452 Z" fill={c.ink} />
+        <path d="M-30 -520 C-20 -530 0 -536 16 -530 C4 -526 -10 -522 -24 -510 Z" fill={c.maroon} stroke="none" />
+        <path d="M44 -540 C54 -520 54 -496 46 -470" fill="none" stroke={c.cream} strokeWidth={4} />
       </g>
     </g>
   );
 };
 
-// ---------------- a car (side view) ----------------
+// ---------------- a car (side view): sleek curves, wheel arches, glowing lights, speed lines ----------------
 const Car: React.FC<{ x: number; y: number; len: number; col: string; dir: 1 | -1; s: number }> = ({ x, y, len, col, dir, s }) => {
-  const k = len / 280;
-  const body = colOf(col), glass = col === "ink" ? c.maroon : c.redDeep;
+  const k = len / 300;
+  const body = colOf(col), shade = col === "ink" ? c.maroonDeep : col === "cream" ? c.peach : c.tealDeep;
   return (
     <g transform={`translate(${x} ${y}) scale(${dir * s * k} ${s})`}>
-      <ellipse cx={140} cy={2} rx={150} ry={10} fill={c.maroonDeep} opacity={0.5} stroke="none" />
-      <path d="M0 -26 C0 -60 18 -72 50 -76 L84 -116 C92 -124 104 -128 118 -128 L196 -128 C212 -128 222 -122 230 -112 L256 -80 C272 -78 280 -66 280 -48 L280 -26 Z" fill={body} />
-      <path d="M96 -112 L118 -118 L150 -118 L150 -80 L80 -80 Z" fill={glass} />
-      <path d="M160 -118 L196 -118 C204 -118 210 -114 216 -106 L234 -80 L160 -80 Z" fill={glass} />
-      <path d="M0 -40 L280 -40 L280 -26 L0 -26 Z" fill={col === "ink" ? c.maroonDeep : c.peach} />
-      <path d="M60 -70 L250 -70" stroke={c.cream} strokeWidth={5} />
-      <rect x={262} y={-70} width={16} height={10} rx={3} fill={c.cream} />
-      {[64, 218].map((wx) => (
+      <ellipse cx={150} cy={2} rx={160} ry={10} fill={c.maroonDeep} opacity={0.45} stroke="none" />
+      {[0, 1, 2].map((i) => <path key={i} d={`M${-30 - i * 22} ${-90 + i * 26} L${-130 - i * 40} ${-90 + i * 26}`} stroke={c.cream} strokeWidth={4} opacity={0.8} />)}
+      <path d="M8 -30 C2 -52 18 -64 54 -70 C84 -104 118 -124 168 -124 C214 -124 242 -104 266 -76 C292 -72 304 -58 304 -40 L302 -30 Z" fill={body} />
+      <path d="M8 -30 C6 -42 10 -50 22 -54 L300 -54 C304 -46 304 -38 302 -30 Z" fill={shade} />
+      <path d="M78 -76 C102 -102 128 -114 160 -114 L160 -76 Z" fill={c.ink} />
+      <path d="M170 -114 C204 -114 226 -100 246 -76 L170 -76 Z" fill={c.ink} />
+      <path d="M96 -88 C112 -102 130 -108 148 -108" fill="none" stroke={c.cream} strokeWidth={5} />
+      <path d="M70 -66 C140 -72 220 -72 280 -64" fill="none" stroke={c.cream} strokeWidth={4} />
+      <path d="M284 -58 C296 -56 302 -52 302 -46 L286 -46 Z" fill={c.glow} />
+      <path d="M302 -52 L340 -62 L340 -40 Z" fill={c.glow} opacity={0.55} stroke="none" />
+      <path d="M10 -56 L22 -56 L20 -44 L8 -44 Z" fill={c.redDeep} />
+      {[70, 236].map((wx) => (
         <g key={wx}>
-          <circle cx={wx} cy={-24} r={26} fill={c.ink} />
-          <circle cx={wx} cy={-24} r={10} fill={c.peach} />
+          <path d={`M${wx - 36} -30 A 36 36 0 0 1 ${wx + 36} -30 Z`} fill={c.ink} />
+          <circle cx={wx} cy={-24} r={27} fill={c.ink} />
+          <circle cx={wx} cy={-24} r={12} fill={c.peach} />
+          <circle cx={wx} cy={-24} r={4} fill={c.ink} />
         </g>
       ))}
     </g>
@@ -164,6 +188,9 @@ const Street: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ 
       <rect x={D.x + D.w - 16} y={D.y + D.h / 2 - 20} width={6} height={40} fill={c.cream} />
       <path d={`M${D.x} ${D.y} L${D.x + D.w * (1 - open * 0.75)} ${D.y + open * 18} L${D.x + D.w * (1 - open * 0.75)} ${D.y + D.h - open * 10} L${D.x} ${D.y + D.h} Z`} fill={c.cream} opacity={0.18} stroke={c.ink} strokeWidth={6} />
       <rect x={WN.x - 14} y={WN.y + WN.h} width={WN.w + 28} height={10} fill={c.ink} />
+      {/* curved scalloped awning over the shopfront */}
+      <path d={`M${WN.x - 40} 252 C${WN.x + 200} 236 ${WN.x + 300} 236 ${WN.x + WN.w + 40} 252 L${WN.x + WN.w + 50} 286 ${[...Array(8)].map((_, i) => { const x1 = WN.x + WN.w + 50 - (i + 1) * ((WN.w + 100) / 8); return `A ${(WN.w + 100) / 16} 14 0 0 1 ${x1} 286`; }).join(" ")} Z`} fill={c.redDeep} />
+      <path d={`M${WN.x - 30} 262 C${WN.x + 200} 248 ${WN.x + 300} 248 ${WN.x + WN.w + 30} 262`} fill="none" stroke={c.cream} strokeWidth={4} />
       {/* far pavement, road, zebra, lane marks, near pavement */}
       <rect x={-1400} y={ST.farWalk} width={4720} height={r0 - ST.farWalk + 2} fill={c.maroon} />
       <rect x={-1400} y={r0} width={4720} height={r1 - r0} fill={c.maroonDeep} />
@@ -171,6 +198,10 @@ const Street: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ 
       {zeb}
       <rect x={-1400} y={r1} width={4720} height={1600} fill={c.maroon} />
       <rect x={-1400} y={r1} width={4720} height={12} fill={c.peach} />
+      {/* curved street lamp */}
+      <path d="M300 1050 L300 700 C300 640 330 610 390 606" fill="none" stroke={c.ink} strokeWidth={14} />
+      <path d="M370 600 C380 586 420 586 430 600 L424 616 L376 616 Z" fill={c.ink} />
+      <path d="M380 616 L420 616 C418 628 382 628 380 616 Z" fill={c.glow} />
       {/* crossing signal on the near pavement */}
       <rect x={1452} y={700} width={14} height={340} fill={c.ink} />
       <rect x={1420} y={640} width={78} height={110} rx={8} fill={c.ink} />
@@ -191,26 +222,59 @@ const manInside = (f: number) => {
   const u = ease(f, a, b, 0, 1, Easing.out(Easing.quad));
   return { x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u, s: A.s + (B.s - A.s) * u, walking: f >= a && f < b - 8, phase: (f - T.walk[0]) * 0.36 };
 };
-const Seated: React.FC<{ x: number; flip?: boolean; f: number; ph: number }> = ({ x, flip, f, ph }) => (
-  <g transform={`translate(${x} 0) scale(${flip ? -1 : 1} 1)`}>
-    {/* desk + monitor (facing right) */}
-    <rect x={-40} y={700} width={330} height={16} fill={c.ink} />
-    <rect x={0} y={716} width={12} height={160} fill={c.ink} />
-    <rect x={260} y={716} width={12} height={160} fill={c.ink} />
-    <rect x={150} y={560} width={150} height={100} rx={6} fill={c.ink} />
-    <rect x={160} y={570} width={130} height={80} fill={c.redDeep} />
-    <rect x={180 + (Math.sin(f / 9 + ph) + 1) * 30} y={590} width={44} height={40} fill={c.peach} />
-    <rect x={218} y={660} width={14} height={40} fill={c.ink} />
-    {/* designer in profile, facing the monitor */}
-    <rect x={40} y={700} width={20} height={170} fill={c.ink} />
-    <path d="M-10 700 L80 700 L70 560 C66 530 40 520 20 524 C0 530 -10 560 -10 600 Z" fill={c.maroonDeep} />
-    <path d="M58 530 C90 536 104 560 108 590 L94 596 C88 572 76 556 56 552 Z" fill={c.cream} />
-    <circle cx={44} cy={486} r={38} fill={c.maroon} />
-    <path d="M60 470 C84 476 88 500 80 520 C72 510 64 500 60 490 Z" fill={c.cream} />
-    <path d="M10 470 C10 440 36 430 56 436 C70 440 78 452 78 462 L30 470 L30 520 C16 514 8 496 10 470 Z" fill={c.ink} />
-    <path d="M74 640 L150 620 L150 632 L80 654 Z" fill={c.maroon} />
-  </g>
-);
+// an anime-style designer in profile, seated at a desk, facing right (flip mirrors them)
+const Seated: React.FC<{ x: number; flip?: boolean; f: number; ph: number; hair: string; hoodie: string; pony?: boolean }> = ({ x, flip, f, ph, hair, hoodie, pony }) => {
+  const blink = ((f + ph * 37) % 96) < 4;
+  const sway = Math.sin(f / 11 + ph) * 6, type = Math.sin(f / 2.6 + ph) * 2;
+  return (
+    <g transform={`translate(${x} 0) scale(${flip ? -1 : 1} 1)`}>
+      {/* curved gaming chair */}
+      <path d="M-46 690 C-60 620 -58 520 -30 470 C-10 450 20 452 24 476 C30 540 30 620 26 690 Z" fill={c.ink} />
+      <path d="M-34 670 C-44 610 -42 540 -22 494" fill="none" stroke={c.redDeep} strokeWidth={6} />
+      <path d="M-40 690 L60 690 L52 712 L-34 712 Z" fill={c.ink} />
+      <path d="M8 712 L8 820 M-30 850 L46 850 M8 820 L-30 850 M8 820 L46 850" stroke={c.ink} strokeWidth={8} fill="none" />
+      {/* desk with a rounded edge + monitor */}
+      <path d="M-20 700 L300 700 C308 700 312 706 312 712 L-20 712 Z" fill={c.ink} />
+      <path d="M260 712 C262 760 262 820 258 870 L270 870 C274 820 274 760 272 712 Z" fill={c.ink} />
+      <rect x={150} y={556} width={156} height={104} rx={14} fill={c.ink} />
+      <rect x={160} y={566} width={136} height={84} rx={8} fill={c.maroonDeep} />
+      <path d={`M172 ${630 - (Math.sin(f / 9 + ph) + 1) * 14} C200 590 236 640 284 ${600 + Math.sin(f / 7 + ph) * 10}`} fill="none" stroke={c.redDeep} strokeWidth={5} />
+      <circle cx={196 + (Math.sin(f / 9 + ph) + 1) * 34} cy={600} r={9} fill={c.glow} />
+      <path d="M220 660 C222 676 222 690 218 700 L236 700 C232 690 232 676 234 660 Z" fill={c.ink} />
+      {/* legs + hoodie body */}
+      <path d="M24 690 C70 686 112 690 126 704 C130 740 128 800 122 860 L104 860 C104 800 104 744 96 716 C70 712 40 714 24 712 Z" fill={c.ink} />
+      <path d="M-14 694 C-20 640 -16 580 6 546 C24 520 52 512 72 520 C92 528 100 552 102 590 L104 694 Z" fill={hoodie} />
+      <path d="M2 600 C10 640 14 670 16 694" fill="none" stroke={c.ink} strokeWidth={3} />
+      {/* arm to the keyboard, typing */}
+      <path d={`M60 560 C88 590 104 620 120 ${640 + type} L178 ${640 + type} C180 650 178 656 172 658 L112 ${662 + type} C92 640 70 610 46 584 Z`} fill={hoodie} />
+      <ellipse cx={180} cy={650 + type} rx={12} ry={9} fill={c.skin} />
+      {/* neck + anime profile head: forehead, small nose, lips, pointed chin */}
+      <path d="M36 522 C40 506 56 500 64 506 L66 528 L40 534 Z" fill={c.skinShade} />
+      <path d="M26 452 C24 420 44 398 72 398 C96 398 110 414 112 434 C112 444 116 452 122 460 C118 464 114 466 112 468 C114 474 112 480 108 482 C110 488 106 494 100 496 C96 506 86 514 72 514 C52 514 30 496 26 470 Z" fill={c.skin} />
+      <path d="M100 496 C96 506 86 514 72 514 C80 506 84 498 86 490 Z" fill={c.skinShade} stroke="none" />
+      {/* big anime eye (closes on a blink) */}
+      {blink ? <path d="M84 446 C90 450 98 450 104 446" fill="none" stroke={c.ink} strokeWidth={4} /> : (
+        <g>
+          <path d="M82 436 C88 428 100 428 106 434 L104 458 C96 462 88 460 84 452 Z" fill={c.cream} />
+          <ellipse cx={96} cy={446} rx={7} ry={11} fill={c.maroon} />
+          <circle cx={98} cy={441} r={3} fill={c.cream} stroke="none" />
+          <path d="M80 434 C90 424 102 424 110 432" fill="none" stroke={c.ink} strokeWidth={5} />
+        </g>
+      )}
+      <path d="M86 422 C94 418 104 418 110 422" fill="none" stroke={c.ink} strokeWidth={3} />
+      <path d="M106 480 L114 480" stroke={c.redDeep} strokeWidth={3} />
+      {/* hair: bangs + crown, with a ponytail that sways or a messy short cut */}
+      {pony && <path d={`M30 430 C0 440 ${-30 + sway} 480 ${-40 + sway * 1.6} 540 C${-20 + sway} 520 -4 490 20 462 Z`} fill={hair} />}
+      <path d={`M22 460 C10 410 40 382 78 384 C104 386 118 404 116 426 C108 418 100 414 92 418 C96 408 90 400 84 402 C82 414 72 420 60 420
+        C${pony ? 50 : 56} 440 ${pony ? 44 : 40} 460 34 ${pony ? 486 : 496} C30 480 26 470 22 460 Z`} fill={hair} />
+      {!pony && <path d="M40 392 L30 372 L54 386 L58 362 L72 384 L90 368 L88 390 Z" fill={hair} />}
+      <path d="M48 396 C60 390 76 388 92 392" fill="none" stroke={c.cream} strokeWidth={3} />
+      {/* headphones */}
+      <path d="M36 452 C30 400 70 372 104 396" fill="none" stroke={c.peach} strokeWidth={7} />
+      <ellipse cx={48} cy={462} rx={16} ry={20} fill={c.maroon} />
+    </g>
+  );
+};
 const Interior: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ f, inner, id }) => {
   const S = IN.screen, man = manInside(f);
   return (
@@ -233,8 +297,8 @@ const Interior: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = (
       <defs><clipPath id={`scr${id}`}><rect x={S.x} y={S.y} width={S.w} height={S.h} /></clipPath></defs>
       <rect x={S.x} y={S.y} width={S.w} height={S.h} fill={cfg.cardBg} stroke="none" />
       {inner && <g clipPath={`url(#scr${id})`} stroke="none">{inner}</g>}
-      <Seated x={180} f={f} ph={0} />
-      <Seated x={1740} flip f={f} ph={2} />
+      <Seated x={180} f={f} ph={0} hair={c.redDeep} hoodie={c.lips} pony />
+      <Seated x={1740} flip f={f} ph={2} hair={c.ink} hoodie={c.maroon} />
       {/* plant */}
       <rect x={1270} y={740} width={70} height={80} fill={c.peach} />
       <path d="M1305 740 C1260 680 1250 620 1270 580 C1300 620 1306 680 1305 740 C1310 670 1330 620 1360 600 C1366 650 1340 700 1305 740 Z" fill={c.maroon} />
