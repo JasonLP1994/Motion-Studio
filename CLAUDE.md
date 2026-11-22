@@ -70,7 +70,7 @@ When the user teaches a new technique, save it the same way: templates/<id>/ wit
 
 ## Rules
 - Read `mia-motion-graphics/SKILL.md` before any motion graphics work.
-- Before building, ask what it's for, the format and length, the exact words, the feeling, and whether there's sound.
+- **New piece (motion, 3D, still art, logo, poster): run `.claude/skills/project-brief/SKILL.md` first (user rule).** It asks the professional checklist in short multiple-choice rounds (purpose, platform, length, quality vs time, words, feeling, references, colours, assets, camera/motion, lighting/finish, sound, deliverables, end card, captions, credits), saves `notes/briefs/<project>.md`, and sets the approval checkpoints.
 - Suggest one to three templates from `templates/` that fit, with a one-line reason each. Reuse their build notes and specs instead of starting from scratch.
 - From a style reference, take its grammar (type, colours, pacing, how text enters and exits), never its content, logos or characters. Rebuild everything in code.
 - Plan the video second by second, then show three still frames before rendering the full video.
