@@ -289,6 +289,7 @@ try:
     S.view_settings.view_transform = "Standard"; S.view_settings.look = "Medium High Contrast"; S.view_settings.exposure = -0.35
 except TypeError:
     pass
+if os.environ.get("NO_OVERWRITE"): S.render.use_overwrite = False; S.render.use_placeholder = False
 S.render.image_settings.file_format = 'PNG'; os.makedirs(OUT, exist_ok=True)
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if args and args[0] == "still":

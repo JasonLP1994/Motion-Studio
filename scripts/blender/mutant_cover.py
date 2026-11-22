@@ -264,6 +264,7 @@ S.render.resolution_x, S.render.resolution_y = RES; S.render.resolution_percenta
 for vt, lk in (("AgX", "AgX - Punchy"), ("AgX", "Punchy"), ("Filmic", "High Contrast")):
     try: S.view_settings.view_transform = vt; S.view_settings.look = lk; break
     except TypeError: continue
+if os.environ.get("NO_OVERWRITE"): S.render.use_overwrite = False; S.render.use_placeholder = False
 S.render.image_settings.file_format = 'PNG'; S.render.image_settings.color_mode = 'RGBA'
 os.makedirs(OUT, exist_ok=True)
 if args and args[0] == "still":
