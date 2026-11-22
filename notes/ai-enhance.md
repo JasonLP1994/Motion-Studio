@@ -28,7 +28,7 @@ rife49.pth, 2xNomosUni_compact.safetensors). Python packages: tools/ai-py (spand
 3. Smooth shots: render every other frame, RIFE fills the rest. Always render for real: the first and last frame of every shot,
    frames either side of a cut, glitch/strobe frames, hits (clicks, impacts) and fast moves.
 4. One render at a time on this machine (two at once each run at half speed). Long renders as tracked background tasks.
-5. Fastest fallback: same pipeline with Eevee instead of Cycles (flatter reflections).
+5. Engine: always Cycles (user rule: best result). Eevee only if the user asks for it.
 Measured: lime case v2 at 720p, 96 spp took ~3.3-5 min/frame while sharing the CPU with another render.
 
 ## Setup in a fresh container (done 22 Nov in the Motion Studio /home/user container; all inside ignored tools/)

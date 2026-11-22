@@ -59,3 +59,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: draw anything the camera zooms deep into as vectors, or upscale+smooth raster masks; a small logo JPEG goes jagged at x10+.
 - DO (code-drawn characters): ink character and car contours with the brush helper (src/flat2d/brush.tsx `<Ink>`): heavier on the shadow side, pressure wobble, tapered open strokes; keep buildings on a thinner even line so figures pop (user asked for brush strokes, anime feel, "less blocky, more fluid").
 - DO: hold renders until SVG <image> masks have loaded (delayRender + Image.decode); otherwise frame 0 can render the logo without its letters.
+- DO render 3D in Blender **Cycles** (+ OIDN denoise, AI upscale, RIFE in-betweens on smooth shots): the user says it gives the best result. Never switch to Eevee to save time unless the user asks; speed comes from the recipe in notes/ai-enhance.md, not a different engine.
