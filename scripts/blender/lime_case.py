@@ -45,6 +45,41 @@ def boolean(target, cutter, op='DIFFERENCE'):
 def smooth(o):
     for p in o.data.polygons: p.use_smooth = True
 
+# ---------------------------------------------------------------- growth field (shared by shader + geometry nodes)
+# Arrival time A(p) for each point of the case, in "growth units": the back spreads out from the bottom
+# centre, then the side walls rise, then the front lip, and the camera bump forms last as its own piece.
+GROW_EXPR = "2.55*min(1,max(0,(frame-4)/80))"   # growth clock T: frames 4-84
+START = (0.0, -0.74, -0.053)
+def arrival(nt, pos):
+    def m(op, a, b=None, c=None, clamp=False):
+        n = nt.nodes.new("ShaderNodeMath"); n.operation = op; n.use_clamp = clamp
+        for i, v in enumerate((a, b, c)):
+            if v is None: continue
+            if isinstance(v, (int, float)): n.inputs[i].default_value = v
+            else: nt.links.new(v, n.inputs[i])
+        return n.outputs[0]
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(pos, sep.inputs[0])
+    x, y, z = sep.outputs["X"], sep.outputs["Y"], sep.outputs["Z"]
+    dv = nt.nodes.new("ShaderNodeVectorMath"); dv.operation = 'DISTANCE'; dv.inputs[1].default_value = START
+    nt.links.new(pos, dv.inputs[0]); d = dv.outputs["Value"]
+    is_bump = m('LESS_THAN', z, -0.056)
+    is_lip = m('GREATER_THAN', z, 0.03)
+    is_backz = m('LESS_THAN', z, -0.04)
+    is_back = m('MULTIPLY', is_backz, m('SUBTRACT', 1.0, is_bump))
+    is_side = m('SUBTRACT', m('SUBTRACT', 1.0, is_backz), is_lip, clamp=True)
+    a_back = m('MULTIPLY_ADD', d, 1.0, 0.25)
+    a_side = m('ADD', m('MULTIPLY', d, 0.72), m('MULTIPLY', m('ADD', z, 0.04), 2.0))
+    a_lip = m('MULTIPLY_ADD', d, 0.85, 0.3)
+    bx = m('SUBTRACT', x, -0.19); by = m('SUBTRACT', y, 0.55)
+    db = m('SQRT', m('ADD', m('MULTIPLY', bx, bx), m('MULTIPLY', by, by)))
+    a_bump = m('MULTIPLY_ADD', db, 2.0, 2.05)
+    base = m('ADD', m('ADD', m('MULTIPLY', is_back, a_back), m('MULTIPLY', is_side, a_side)),
+             m('ADD', m('MULTIPLY', is_lip, a_lip), m('MULTIPLY', is_bump, a_bump)))
+    # torn edge: the same noise in both trees (same input, same settings) roughens the growth front
+    nz = nt.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 7.0; nz.inputs["Detail"].default_value = 2.0
+    nz.inputs["Roughness"].default_value = 0.5; nt.links.new(pos, nz.inputs["Vector"])
+    return m('ADD', base, m('MULTIPLY_ADD', nz.outputs["Fac"], 0.1, -0.05))
+
 # ---------------------------------------------------------------- materials
 def lime_oil(name, metal=0.85, rough=0.18, grow=False):
     m = bpy.data.materials.new(name); m.use_nodes = True
@@ -64,22 +99,21 @@ def lime_oil(name, metal=0.85, rough=0.18, grow=False):
     bump = nt.nodes.new("ShaderNodeBump"); bump.inputs["Strength"].default_value = 0.08; bump.inputs["Distance"].default_value = 0.002
     nt.links.new(nz.outputs["Fac"], bump.inputs["Height"]); nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
     if grow:
-        # grow-on in the shader: a smooth diagonal cut (alpha clip) with a thin glowing lime forming edge
-        tc = nt.nodes.new("ShaderNodeTexCoord"); sp = nt.nodes.new("ShaderNodeSeparateXYZ")
-        mx = nt.nodes.new("ShaderNodeMath"); mx.operation = 'MULTIPLY_ADD'; mx.inputs[1].default_value = 0.55
-        thr = nt.nodes.new("ShaderNodeValue"); drv(thr.outputs[0], "-0.95+2.0*min(1,max(0,(frame-6)/74))")
-        dd = nt.nodes.new("ShaderNodeMath"); dd.operation = 'SUBTRACT'
-        al = nt.nodes.new("ShaderNodeMath"); al.operation = 'LESS_THAN'; al.inputs[1].default_value = 0.0
-        band = nt.nodes.new("ShaderNodeMapRange"); band.inputs["From Min"].default_value = -0.035; band.inputs["From Max"].default_value = 0.0
-        band.inputs["To Min"].default_value = 0.0; band.inputs["To Max"].default_value = 30.0
-        live = nt.nodes.new("ShaderNodeMath"); live.operation = 'LESS_THAN'; live.inputs[1].default_value = 1.0
+        # grow-on: alpha cut where the growth clock has not reached this point yet, thin glowing lime edge
+        at = nt.nodes.new("ShaderNodeAttribute"); at.attribute_type = 'GEOMETRY'; at.attribute_name = "rest"
+        A = arrival(nt, at.outputs["Vector"])
+        T = nt.nodes.new("ShaderNodeValue"); drv(T.outputs[0], GROW_EXPR)
+        age = nt.nodes.new("ShaderNodeMath"); age.operation = 'SUBTRACT'
+        nt.links.new(T.outputs[0], age.inputs[0]); nt.links.new(A, age.inputs[1])
+        vis = nt.nodes.new("ShaderNodeMath"); vis.operation = 'GREATER_THAN'; vis.inputs[1].default_value = 0.0
+        nt.links.new(age.outputs[0], vis.inputs[0]); nt.links.new(vis.outputs[0], b.inputs["Alpha"])
+        band = nt.nodes.new("ShaderNodeMapRange"); band.clamp = True
+        band.inputs["From Min"].default_value = 0.02; band.inputs["From Max"].default_value = 0.0
+        band.inputs["To Min"].default_value = 0.0; band.inputs["To Max"].default_value = 0.0  # no glow: clean like the reference
+        live = nt.nodes.new("ShaderNodeMath"); live.operation = 'LESS_THAN'; live.inputs[1].default_value = 2.48
         glow = nt.nodes.new("ShaderNodeMath"); glow.operation = 'MULTIPLY'
-        nt.links.new(tc.outputs["Object"], sp.inputs[0]); nt.links.new(sp.outputs["X"], mx.inputs[0]); nt.links.new(sp.outputs["Y"], mx.inputs[2])
-        nt.links.new(mx.outputs[0], dd.inputs[0]); nt.links.new(thr.outputs[0], dd.inputs[1])
-        nt.links.new(dd.outputs[0], al.inputs[0]); nt.links.new(al.outputs[0], b.inputs["Alpha"])
-        nt.links.new(dd.outputs[0], band.inputs["Value"])
-        # glow only while the sweep is travelling (hide it once threshold passes the far corner)
-        nt.links.new(thr.outputs[0], live.inputs[0]); nt.links.new(band.outputs[0], glow.inputs[0]); nt.links.new(live.outputs[0], glow.inputs[1])
+        nt.links.new(age.outputs[0], band.inputs["Value"]); nt.links.new(T.outputs[0], live.inputs[0])
+        nt.links.new(band.outputs[0], glow.inputs[0]); nt.links.new(live.outputs[0], glow.inputs[1])
         nt.links.new(glow.outputs[0], b.inputs["Emission Strength"])
         b.inputs["Emission Color"].default_value = (0.55, 1.0, 0.05, 1)
         m.blend_method = 'CLIP'; m.shadow_method = 'CLIP'; m.alpha_threshold = 0.5
@@ -102,12 +136,13 @@ m_cyc = principled("MAT_Cyclorama", (0.006, 0.007, 0.007), 0.6)
 PROD = bpy.data.objects.new("PRODUCT", None); S.collection.objects.link(PROD)
 PROD.location = (0, 0, 1.0); PROD.rotation_euler = (math.radians(90), 0, 0)   # back faces world +Y (towards camera)
 
+PHONE = bpy.data.objects.new("PHONE_RIG", None); S.collection.objects.link(PHONE); PHONE.parent = PROD
 phone = rounded_slab("SM_Phone", 0.358, 0.738, -0.04, 0.04, 0.105, edge=0.012)
-phone.data.materials.append(m_glass); phone.data.materials.append(m_frame); smooth(phone); phone.parent = PROD
+phone.data.materials.append(m_glass); phone.data.materials.append(m_frame); smooth(phone); phone.parent = PHONE
 LENSES = [(-0.25, 0.6), (-0.13, 0.6), (-0.19, 0.49)]
 for i, (lx, ly) in enumerate(LENSES):
-    lr = cyl(f"SM_LensRing_{i}", lx, ly, -0.065, -0.04, 0.05); lr.data.materials.append(m_lensring); smooth(lr); lr.parent = PROD
-    le = cyl(f"SM_Lens_{i}", lx, ly, -0.067, -0.05, 0.038); le.data.materials.append(m_lens); smooth(le); le.parent = PROD
+    lr = cyl(f"SM_LensRing_{i}", lx, ly, -0.065, -0.04, 0.05); lr.data.materials.append(m_lensring); smooth(lr); lr.parent = PHONE
+    le = cyl(f"SM_Lens_{i}", lx, ly, -0.067, -0.05, 0.038); le.data.materials.append(m_lens); smooth(le); le.parent = PHONE
 
 # case shell: outer slab minus cavity minus front opening, plus camera bump with lens holes
 case = rounded_slab("SM_Case", 0.38, 0.76, -0.053, 0.05, 0.12, edge=0.018)
@@ -141,23 +176,29 @@ bpy.context.view_layer.objects.active = case; bpy.ops.object.modifier_apply(modi
 bpy.data.objects.remove(eng, do_unlink=True)
 case.parent = PROD
 
-# grow-on: geometry nodes delete everything beyond a sweep front that travels diagonally over frames 6-80
-gn = bpy.data.node_groups.new("GN_GrowSweep", 'GeometryNodeTree')
+# grow-on curl: store each point's rest position (the shader cuts with it), then lift the freshly grown
+# band near the front outwards along its normal so the edge peels up and settles flat as it grows
+gn = bpy.data.node_groups.new("GN_GrowCurl", 'GeometryNodeTree')
 gn.interface.new_socket("Geometry", in_out='INPUT', socket_type='NodeSocketGeometry')
 gn.interface.new_socket("Geometry", in_out='OUTPUT', socket_type='NodeSocketGeometry')
 N = gn.nodes; L = gn.links
 gi = N.new("NodeGroupInput"); go = N.new("NodeGroupOutput")
-pos = N.new("GeometryNodeInputPosition"); sep = N.new("ShaderNodeSeparateXYZ")
-mx = N.new("ShaderNodeMath"); mx.operation = 'MULTIPLY'; mx.inputs[1].default_value = 0.55
-add = N.new("ShaderNodeMath"); add.operation = 'ADD'
-thr = N.new("ShaderNodeValue"); drv(thr.outputs[0], "-0.95+2.0*min(1,max(0,(frame-6)/74))")
-cmp = N.new("FunctionNodeCompare"); cmp.data_type = 'FLOAT'; cmp.operation = 'GREATER_THAN'
-dele = N.new("GeometryNodeDeleteGeometry"); dele.domain = 'FACE'
-L.new(pos.outputs[0], sep.inputs[0]); L.new(sep.outputs["X"], mx.inputs[0])
-L.new(mx.outputs[0], add.inputs[0]); L.new(sep.outputs["Y"], add.inputs[1])
-L.new(add.outputs[0], cmp.inputs["A"]); L.new(thr.outputs[0], cmp.inputs["B"])
-L.new(gi.outputs[0], dele.inputs["Geometry"]); L.new(cmp.outputs[0], dele.inputs["Selection"]); L.new(dele.outputs[0], go.inputs[0])
-pass  # GN_GrowSweep kept in the file for reference; the smooth sweep is done in MAT_LimeOil
+pos = N.new("GeometryNodeInputPosition"); nrm = N.new("GeometryNodeInputNormal")
+store = N.new("GeometryNodeStoreNamedAttribute"); store.data_type = 'FLOAT_VECTOR'; store.domain = 'POINT'
+store.inputs["Name"].default_value = "rest"
+vin = [sk for sk in store.inputs if sk.name == "Value" and sk.type == 'VECTOR'][0]
+L.new(gi.outputs[0], store.inputs["Geometry"]); L.new(pos.outputs[0], vin)
+A = arrival(gn, pos.outputs[0])
+T = N.new("ShaderNodeValue"); drv(T.outputs[0], GROW_EXPR)
+age = N.new("ShaderNodeMath"); age.operation = 'SUBTRACT'; L.new(T.outputs[0], age.inputs[0]); L.new(A, age.inputs[1])
+f = N.new("ShaderNodeMath"); f.operation = 'MULTIPLY_ADD'; f.use_clamp = True; f.inputs[1].default_value = -1 / 0.12; f.inputs[2].default_value = 1.0
+L.new(age.outputs[0], f.inputs[0])                       # 1 at the front, 0 once the band is 0.16 behind it
+f2 = N.new("ShaderNodeMath"); f2.operation = 'POWER'; f2.inputs[1].default_value = 2.0; L.new(f.outputs[0], f2.inputs[0])
+amt = N.new("ShaderNodeMath"); amt.operation = 'MULTIPLY'; amt.inputs[1].default_value = 0.035; L.new(f2.outputs[0], amt.inputs[0])
+off = N.new("ShaderNodeVectorMath"); off.operation = 'SCALE'; L.new(nrm.outputs[0], off.inputs[0]); L.new(amt.outputs[0], off.inputs["Scale"])
+setp = N.new("GeometryNodeSetPosition"); L.new(store.outputs[0], setp.inputs["Geometry"]); L.new(off.outputs[0], setp.inputs["Offset"])
+L.new(setp.outputs[0], go.inputs[0])
+case.modifiers.new("GrowCurl", 'NODES').node_group = gn
 
 # MagSafe ring (torus + hinge) swings in and clicks at frame 108
 bpy.ops.mesh.primitive_torus_add(major_radius=0.17, minor_radius=0.014, major_segments=96, minor_segments=16)
@@ -170,6 +211,13 @@ key(RING, "location", 1, (0.9, -0.6, -0.9)); key(RING, "location", 86, (0.9, -0.
 key(RING, "location", 104, (0, -0.08, -0.07)); key(RING, "location", 108, (0, -0.08, -0.062)); key(RING, "location", 112, (0, -0.08, -0.068))
 key(RING, "rotation_euler", 86, (math.radians(80), math.radians(-40), math.radians(90)))
 key(RING, "rotation_euler", 104, (math.radians(-6), 0, 0)); key(RING, "rotation_euler", 112, (0, 0, 0))
+
+# phone: absent while the case builds, then slides in from the open front and seats at frame 104
+key(PHONE, "location", 1, (0, 0, 1.4)); key(PHONE, "location", 88, (0, 0, 1.4))
+key(PHONE, "location", 102, (0, 0, -0.004)); key(PHONE, "location", 106, (0, 0, 0.0))
+for o in [PHONE] + list(PHONE.children):
+    o.hide_render = True; o.keyframe_insert("hide_render", frame=87)
+    o.hide_render = False; o.keyframe_insert("hide_render", frame=88)
 
 # hero turn: the whole product rotates slowly in the last shot
 key(PROD, "rotation_euler", 169, (math.radians(90), 0, math.radians(-28)))

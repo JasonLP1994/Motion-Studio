@@ -5,8 +5,8 @@ Scene: `scripts/blender/lime_case.py` (copy of `work/blender/case/case.py`). 720
 
 | Time | Frames | Shot |
 |---|---|---|
-| 0–3.5 s | 1–84 | Case grows in a smooth diagonal sweep with a glowing lime forming edge, around a black phone |
-| 3.5–5 s | 85–120 | MagSafe ring swings in and clicks (overshoot), macro |
+| 0–3.5 s | 1–84 | Case builds itself like the reference: side rims shoot up as torn-tipped strands, the back fills in behind with a ragged edge, the top rim closes, the camera bump forms last (shared growth field in shader + geometry nodes, noise-torn front, edge curls up and settles) |
+| 3.5–5 s | 85–120 | Phone slides into the finished case (f88–106; no phone during the build); MagSafe ring swings in and clicks (overshoot), macro |
 | 5–6 s | 121–144 | Camera bump / lenses macro, shallow focus |
 | 6–7 s | 145–168 | Side buttons + edge macro |
 | 7–10 s | 169–240 | Hero: the case turns slowly in the strip lights |
@@ -14,3 +14,5 @@ Scene: `scripts/blender/lime_case.py` (copy of `work/blender/case/case.py`). 720
 Engraving: "PHILLIPS / DIGITAL" cut into the back below the ring in Special Elite (typewriter, Apache 2.0, `public/fonts/SpecialElite-Regular.ttf`).
 Look: lime base with flakes under a glass clear coat, fake oil-slick hue shift at grazing angles (lime → acid yellow → teal), dark graphite cyclorama, softbox + two strip lights + top rim, gradient studio environment for the oily reflection, Standard / Medium High Contrast, exposure -0.35.
 Iterations: v1 pale mint + jagged GN delete edge + cameras too close → v2 shader sweep, reframed → v3 darker oily but forest green → v4 yellow-lime + gradient environment.
+
+v5 (user: "case should build itself like the reference, no phone already in the scene" + reference stills of the torn growth): growth field = rims lead, back fills, lip, bump last, noise-torn edge, GN curl 0.035 along the normal; no glow edge; phone hidden until f88 then slides in.
