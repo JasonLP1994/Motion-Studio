@@ -57,3 +57,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: when a word sits behind a rotoscoped subject, keep the identifying letters visible (move it, or put a solid copy in front with an outline copy behind). DON'T let type touch the frame edge (KINGZ v1 clipped C and F).
 - DO: when footage is inverted (negative), switch yellow/white graphics to black ink so they stay readable on the light negative.
 - DO (Blender product build-ons like the lime case reference): build the object from its own edges with a torn, noisy growth front (rims lead as strands, panels fill behind, details last); DON'T use a straight planar wipe, and don't show the contents (the phone) until the shell is built.
+- DON'T give inner and outer surfaces of a hollow grow-on object different arrival clocks: the inner front shows through as a second glowing line. DO drive the growth from one position-based field so there is exactly one glowing front.

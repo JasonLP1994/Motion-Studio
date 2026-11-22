@@ -48,7 +48,7 @@ def smooth(o):
 # ---------------------------------------------------------------- growth field (shared by shader + geometry nodes)
 # Arrival time A(p) for each point of the case, in "growth units": the back spreads out from the bottom
 # centre, then the side walls rise, then the front lip, and the camera bump forms last as its own piece.
-GROW_EXPR = "2.8*(min(1,max(0,(frame-4)/80))*min(1,max(0,(frame-4)/80))*(3-2*min(1,max(0,(frame-4)/80))))"   # growth clock T: frames 4-84
+GROW_EXPR = "2.15*(min(1,max(0,(frame-4)/80))*min(1,max(0,(frame-4)/80))*(3-2*min(1,max(0,(frame-4)/80))))"   # growth clock T: frames 4-84
 START = (0.36, -0.75, -0.055)   # one bottom corner (the reference starts from a corner chip)
 def arrival(nt, pos):
     def m(op, a, b=None, c=None, clamp=False):
@@ -62,19 +62,19 @@ def arrival(nt, pos):
     x, y, z = sep.outputs["X"], sep.outputs["Y"], sep.outputs["Z"]
     dv = nt.nodes.new("ShaderNodeVectorMath"); dv.operation = 'DISTANCE'; dv.inputs[1].default_value = START
     nt.links.new(pos, dv.inputs[0]); d = dv.outputs["Value"]
+    # ONE growth front: arrival depends on x,y only, so the outer skin, the inner wall and the rim
+    # at the same spot arrive together (no second line showing through the hollow case).
+    # Points near the outline lead a little, bending the single front into the reference's U shape.
     is_bump = m('LESS_THAN', z, -0.063)
-    is_lip = m('GREATER_THAN', z, 0.04)
-    is_backz = m('LESS_THAN', z, -0.04)
-    is_back = m('MULTIPLY', is_backz, m('SUBTRACT', 1.0, is_bump))
-    is_side = m('SUBTRACT', m('SUBTRACT', 1.0, is_backz), is_lip, clamp=True)
-    a_back = m('MULTIPLY_ADD', d, 1.0, 0.12)
-    a_side = m('ADD', m('MULTIPLY', d, 0.76), m('MULTIPLY', m('ADD', z, 0.04), 0.8))
-    a_lip = m('MULTIPLY_ADD', d, 0.82, 0.04)
+    sx = m('SUBTRACT', x, START[0]); sy = m('SUBTRACT', y, START[1])
+    dxy = m('SQRT', m('ADD', m('MULTIPLY', sx, sx), m('MULTIPLY', sy, sy)))
+    ex = m('SUBTRACT', 0.385, m('ABSOLUTE', x)); ey = m('SUBTRACT', 0.765, m('ABSOLUTE', y))
+    rim = m('SUBTRACT', 1.0, m('DIVIDE', m('MINIMUM', ex, ey), 0.14), clamp=True)
+    a_shell = m('SUBTRACT', m('MULTIPLY_ADD', dxy, 1.0, 0.12), m('MULTIPLY', m('MULTIPLY', rim, rim), 0.22))
     bx = m('SUBTRACT', x, -0.19); by = m('SUBTRACT', y, 0.55)
     db = m('SQRT', m('ADD', m('MULTIPLY', bx, bx), m('MULTIPLY', by, by)))
-    a_bump = m('MULTIPLY_ADD', db, 2.0, 2.05)
-    base = m('ADD', m('ADD', m('MULTIPLY', is_back, a_back), m('MULTIPLY', is_side, a_side)),
-             m('ADD', m('MULTIPLY', is_lip, a_lip), m('MULTIPLY', is_bump, a_bump)))
+    a_bump = m('MULTIPLY_ADD', db, 2.0, 1.84)
+    base = m('ADD', m('MULTIPLY', m('SUBTRACT', 1.0, is_bump), a_shell), m('MULTIPLY', is_bump, a_bump))
     # torn edge: the same noise in both trees (same input, same settings) roughens the growth front
     nz = nt.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 11.0; nz.inputs["Detail"].default_value = 3.0
     nz.inputs["Roughness"].default_value = 0.5; nt.links.new(pos, nz.inputs["Vector"])
@@ -110,7 +110,7 @@ def lime_oil(name, metal=0.85, rough=0.18, grow=False):
         band = nt.nodes.new("ShaderNodeMapRange"); band.clamp = True
         band.inputs["From Min"].default_value = 0.022; band.inputs["From Max"].default_value = 0.0
         band.inputs["To Min"].default_value = 0.0; band.inputs["To Max"].default_value = 26.0
-        live = nt.nodes.new("ShaderNodeMath"); live.operation = 'LESS_THAN'; live.inputs[1].default_value = 2.75
+        live = nt.nodes.new("ShaderNodeMath"); live.operation = 'LESS_THAN'; live.inputs[1].default_value = 2.12
         glow = nt.nodes.new("ShaderNodeMath"); glow.operation = 'MULTIPLY'
         nt.links.new(age.outputs[0], band.inputs["Value"]); nt.links.new(T.outputs[0], live.inputs[0])
         nt.links.new(band.outputs[0], glow.inputs[0]); nt.links.new(live.outputs[0], glow.inputs[1])
