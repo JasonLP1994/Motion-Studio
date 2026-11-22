@@ -1,213 +1,78 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, spring, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { flatConfig as cfg } from "./config";
 
-const W = cfg.output.width, H = cfg.output.height, CX = W / 2, CY = H / 2, FPS = cfg.output.fps;
-const c = cfg.col, T = cfg.t, SC = cfg.screen;
+const W = cfg.output.width, H = cfg.output.height, CX = W / 2, CY = H / 2;
+const c = cfg.col, T = cfg.t, ST = cfg.street, IN = cfg.inside;
 const BLEED = { x: -1400, y: -1400, width: W + 2800, height: H + 2800 };
-const P_S = { x: SC.x + SC.w / 2, y: SC.y + SC.h / 2 };
-const K_S = W / SC.w;
-
 const ease = (f: number, a: number, b: number, from = 0, to = 1, e = Easing.inOut(Easing.cubic)) =>
   interpolate(f, [a, b], [from, to], { easing: e, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 // draw a full scene shrunk into a portal centred on P at scale 1/K
 const into = (P: { x: number; y: number }, K: number) => `translate(${P.x} ${P.y}) scale(${1 / K}) translate(${-CX} ${-CY})`;
-// ---------------- 3D world (flat-shaded) ----------------
-type V = [number, number, number];
-const norm = (v: V): V => { const l = Math.hypot(...v); return [v[0] / l, v[1] / l, v[2] / l]; };
-const LIGHT = norm(cfg.cam.light as V);
-const rotY = (v: V, a: number): V => [v[0] * Math.cos(a) + v[2] * Math.sin(a), v[1], -v[0] * Math.sin(a) + v[2] * Math.cos(a)];
-const rotX = (v: V, a: number): V => [v[0], v[1] * Math.cos(a) - v[2] * Math.sin(a), v[1] * Math.sin(a) + v[2] * Math.cos(a)];
-const sub = (a: V, b: V): V => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const cross = (a: V, b: V): V => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const shade = (n: V) => { const v = dot(n, LIGHT); return v > 0.55 ? c.cream : v > 0.15 ? c.peach : v > -0.35 ? c.maroon : c.ink; };
+const colOf = (k: string) => (c as Record<string, string>)[k];
 
-const makeCam = (f: number) => {
-  const yaw = interpolate(f, [0, cfg.output.durationInFrames], cfg.cam.yaw as [number, number]);
-  const P = cfg.cam;
-  const proj = (w: V): [number, number, number] => {
-    let v = rotY(sub(w, [0, 1, 0]), yaw);
-    v = rotX(v, -P.pitch);
-    const z = v[2] + P.dist;
-    return [P.cx + (P.focal * v[0]) / z, P.cy - (P.focal * v[1]) / z, z];
-  };
-  return proj;
-};
-const ptsStr = (ps: [number, number, number][]) => ps.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-
-const CUBE_V: V[] = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
-const CUBE_F = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 4, 7, 3]];
-const OCT_V: V[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
-const OCT_F = [[0, 2, 4], [4, 2, 1], [1, 2, 5], [5, 2, 0], [4, 3, 0], [1, 3, 4], [5, 3, 1], [0, 3, 5]];
-
-const Solid: React.FC<{ proj: ReturnType<typeof makeCam>; verts: V[]; faces: number[][]; pos: V; s: number; ry: number; rx: number }> = ({ proj, verts, faces, pos, s, ry, rx }) => {
-  const wv = verts.map((v) => { const r = rotX(rotY(v, ry), rx); return [pos[0] + r[0] * s, pos[1] + r[1] * s, pos[2] + r[2] * s] as V; });
-  const pv = wv.map(proj);
-  const out = faces.map((fc, i) => {
-    const n = norm(cross(sub(wv[fc[1]], wv[fc[0]]), sub(wv[fc[2]], wv[fc[0]])));
-    const a = pv[fc[0]], b = pv[fc[1]], cc = pv[fc[2]];
-    const area = (b[0] - a[0]) * (cc[1] - a[1]) - (b[1] - a[1]) * (cc[0] - a[0]);
-    if (area <= 0) return null; // back face
-    return <polygon key={i} points={ptsStr(fc.map((k) => pv[k]))} fill={shade(n)} stroke={c.ink} strokeWidth={1.5} strokeLinejoin="round" />;
-  });
-  return <g>{out}</g>;
-};
-const Shadow: React.FC<{ proj: ReturnType<typeof makeCam>; x: number; z: number; r: number }> = ({ proj, x, z, r }) => {
-  const ps = Array.from({ length: 28 }, (_, i) => proj([x + Math.cos((i / 28) * 6.283) * r, 0, z + Math.sin((i / 28) * 6.283) * r * 0.85]));
-  return <polygon points={ptsStr(ps)} fill={c.maroonDeep} />;
-};
-const popS = (f: number, at: number) => spring({ frame: f - at, fps: FPS, config: { damping: 11, stiffness: 160, mass: 0.7 } });
-
-const World: React.FC<{ f: number; ui?: boolean; inner?: React.ReactNode; id?: string }> = ({ f, ui = true, inner, id = "w" }) => {
-  const proj = makeCam(f);
-  // floor + grid
-  // infinite floor: the floor and the sky are the same deep red, so only the grid shows (no horizon line)
-  const RF = 10;
-  const grid: React.ReactNode[] = [];
-  for (let i = -9; i <= 9; i++) {
-    const h = Math.sqrt(RF * RF - i * i);
-    const a = proj([i, 0, -h]), b = proj([i, 0, h]), d = proj([-h, 0, i]), e = proj([h, 0, i]);
-    grid.push(<line key={`x${i}`} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={c.maroon} strokeWidth={2} />);
-    grid.push(<line key={`z${i}`} x1={d[0]} y1={d[1]} x2={e[0]} y2={e[1]} stroke={c.maroon} strokeWidth={2} />);
-  }
-  // the cube the cursor drags into place
-  const cu = T.cursor;
-  const cubeX = ease(f, cu.grab, cu.drop, -4.4, -2.4, Easing.inOut(Easing.cubic));
-  const cubeLift = f > cu.grab && f < cu.drop ? Math.sin(((f - cu.grab) / (cu.drop - cu.grab)) * Math.PI) * 0.7 : 0;
-  const cubePos: V = [cubeX, 1.1 + cubeLift, 0.6];
-  const items: { z: number; el: React.ReactNode }[] = [];
-  const s1 = popS(f, T.pops[0]), s2 = popS(f, T.pops[1]), s3 = popS(f, T.pops[2]), s0 = popS(f, T.click);
-  if (s0 > 0.01) items.push({ z: proj(cubePos)[2], el: <Solid key="cube" proj={proj} verts={CUBE_V} faces={CUBE_F} pos={cubePos} s={1.05 * s0} ry={f * 0.012 + 0.5} rx={0.25} /> });
-  if (s1 > 0.01) items.push({ z: proj([2.4, 1.6, -0.4])[2], el: <Solid key="oct" proj={proj} verts={OCT_V} faces={OCT_F} pos={[2.4, 1.6, -0.4]} s={1.4 * s1} ry={f * 0.03} rx={0.3} /> });
-  // sphere with a flat crescent shadow
-  if (s3 > 0.01) {
-    const sp = proj([0.2, 1.4, -3.4]); const r = (1.25 * cfg.cam.focal / sp[2]) * s3;
-    items.push({ z: sp[2], el: (
-      <g key="sph">
-        <defs><clipPath id="sphc"><circle cx={sp[0]} cy={sp[1]} r={r} /></clipPath></defs>
-        <circle cx={sp[0]} cy={sp[1]} r={r} fill={c.cream} />
-        <circle cx={sp[0] + r * 0.45} cy={sp[1] + r * 0.35} r={r * 1.05} fill={c.peach} clipPath="url(#sphc)" />
-        <circle cx={sp[0] + r * 0.85} cy={sp[1] + r * 0.7} r={r * 1.05} fill={c.maroon} clipPath="url(#sphc)" />
-      </g>) });
-  }
-  // ring (a tilted 3D circle)
-  if (s2 > 0.01) {
-    const ps = Array.from({ length: 48 }, (_, i) => {
-      const a = (i / 48) * 6.283; let v: V = [Math.cos(a) * 1.5 * s2, Math.sin(a) * 1.5 * s2, 0];
-      v = rotY(rotX(v, 1.1), f * 0.02);
-      return proj([v[0] - 0.6, v[1] + 3.1, v[2] + 1.6]);
-    });
-    items.push({ z: proj([-0.6, 3.1, 1.6])[2] - 2, el: <polygon key="ring" points={ptsStr(ps)} fill="none" stroke={c.peach} strokeWidth={16} strokeLinejoin="round" /> });
-  }
-  items.sort((a, b) => b.z - a.z);
-  // keyframe curve with handles and a ball travelling along it
-  const bez = (t: number, p: V[]): V => {
-    const u = 1 - t;
-    return [0, 1, 2].map((k) => u * u * u * p[0][k] + 3 * u * u * t * p[1][k] + 3 * u * t * t * p[2][k] + t * t * t * p[3][k]) as V;
-  };
-  const CP: V[] = [[-5, 0.4, 3.2], [-2.5, 4.2, 3.6], [2.5, -0.6, 3.0], [5, 2.8, 2.4]];
-  const curve = Array.from({ length: 40 }, (_, i) => proj(bez(i / 39, CP)));
-  const bt = ease(f, T.ball[0], T.ball[1], 0, 1, Easing.inOut(Easing.quad));
-  const ball = proj(bez(bt, CP)); const br = 0.32 * cfg.cam.focal / ball[2];
-  const hp = CP.map(proj);
-  // cursor (screen space)
-  const cp0 = proj([-4.4, 2.3, 0.6]), cp1 = proj([cubeX, 2.3 + cubeLift, 0.6]);
-  const curX = f < cu.grab ? ease(f, cu.in, cu.grab, 1500, cp0[0], Easing.out(Easing.cubic)) : f < cu.drop ? cp1[0] : ease(f, cu.drop + 6, cu.out, cp1[0], 1700, Easing.in(Easing.cubic));
-  const curY = f < cu.grab ? ease(f, cu.in, cu.grab, 900, cp0[1], Easing.out(Easing.cubic)) : f < cu.drop ? cp1[1] : ease(f, cu.drop + 6, cu.out, cp1[1], 1000, Easing.in(Easing.cubic));
-  const curOn = f >= cu.in && f <= cu.out;
-  const grabbing = f >= cu.grab && f <= cu.drop;
-  // timeline strip with a playhead
-  const ph = interpolate(f, [0, 450], [260, 1700]);
+// ---------------- the man (back view, walking away from us) ----------------
+// origin = between his feet; at s = 1 he is ~460 px tall
+const Man: React.FC<{ x: number; y: number; s: number; phase: number; walking: boolean }> = ({ x, y, s, phase, walking }) => {
+  const sw = walking ? Math.sin(phase) : 0;
+  const bob = walking ? -Math.abs(Math.cos(phase)) * 7 : 0;
+  const lL = Math.max(0, sw) * 26, lR = Math.max(0, -sw) * 26; // the lifted foot rises (back view)
+  const arm = sw * 14;
   return (
-    <g>
-      <rect {...BLEED} fill={c.redDeep} />
-      <defs><clipPath id={`sun${id}`}><circle cx={SUN.cx} cy={SUN.cy} r={SUN.r} /></clipPath></defs>
-      <circle cx={SUN.cx} cy={SUN.cy} r={SUN.r} fill={c.red} />
-      {inner && <g clipPath={`url(#sun${id})`}>{inner}</g>}
-      {grid}
-      {s0 > 0.01 && <Shadow proj={proj} x={cubeX} z={0.6} r={(1.25 - cubeLift * 0.3) * s0} />}
-      {s1 > 0.01 && <Shadow proj={proj} x={2.4} z={-0.4} r={1.1 * s1} />}
-      {s3 > 0.01 && <Shadow proj={proj} x={0.2} z={-3.4} r={1.2 * s3} />}
-      {s0 > 0.01 && (
-        <g>
-          <polyline points={ptsStr(curve)} fill="none" stroke={c.cream} strokeWidth={4} strokeDasharray="14 10" />
-          <line x1={hp[0][0]} y1={hp[0][1]} x2={hp[1][0]} y2={hp[1][1]} stroke={c.peach} strokeWidth={3} />
-          <line x1={hp[3][0]} y1={hp[3][1]} x2={hp[2][0]} y2={hp[2][1]} stroke={c.peach} strokeWidth={3} />
-          {hp.map((p, i) => <rect key={i} x={p[0] - 9} y={p[1] - 9} width={18} height={18} fill={i % 3 === 0 ? c.cream : c.peach} stroke={c.ink} strokeWidth={3} />)}
-        </g>
-      )}
-      {items.map((it) => it.el)}
-      {s0 > 0.01 && <circle cx={ball[0]} cy={ball[1]} r={br * s0} fill={c.ink} />}
-      {s0 > 0.01 && <circle cx={ball[0] - br * 0.3} cy={ball[1] - br * 0.3} r={br * 0.35 * s0} fill={c.cream} />}
-      {ui && (
-        <g>
-          <rect x={BLEED.x} y={984} width={BLEED.width} height={1600} fill={c.ink} />
-          <rect x={260} y={1028} width={1440} height={4} fill={c.maroon} />
-          {[300, 520, 800, 1080, 1360, 1620].map((x) => <rect key={x} x={x - 9} y={1021} width={18} height={18} fill={x < ph ? c.cream : c.peach} transform={`rotate(45 ${x} 1030)`} />)}
-          <rect x={ph - 2} y={996} width={4} height={70} fill={c.cream} />
-          <path d={`M${ph - 12} 992 L${ph + 12} 992 L${ph} 1006 Z`} fill={c.cream} />
-        </g>
-      )}
-      {ui && curOn && (
-        <g transform={`translate(${curX} ${curY}) scale(${grabbing ? 0.9 : 1})`}>
-          <path d="M0 0 L0 46 L12 35 L21 56 L30 52 L21 32 L37 32 Z" fill={c.cream} stroke={c.ink} strokeWidth={4} strokeLinejoin="round" />
-        </g>
-      )}
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <ellipse cx={0} cy={4} rx={78} ry={12} fill={c.maroonDeep} opacity={0.55} />
+      <g transform={`translate(0 ${bob})`}>
+        {/* legs + shoes */}
+        <rect x={-52} y={-190 - lL} width={40} height={180} fill={c.ink} />
+        <rect x={12} y={-190 - lR} width={40} height={180} fill={c.ink} />
+        <rect x={-56} y={-14 - lL} width={48} height={16} rx={6} fill={c.maroonDeep} />
+        <rect x={8} y={-14 - lR} width={48} height={16} rx={6} fill={c.maroonDeep} />
+        {/* long coat with a cream light edge on the right (light from the right, as negative space) */}
+        <path d="M-74 -392 L74 -392 L96 -168 L-96 -168 Z" fill={c.ink} />
+        <path d="M58 -392 L74 -392 L96 -168 L76 -168 Z" fill={c.cream} />
+        <rect x={-4} y={-300} width={8} height={132} fill={c.maroonDeep} />
+        {/* arms swing */}
+        <path d={`M-74 -386 L-96 -386 L-110 ${-210 + arm} L-84 ${-210 + arm} Z`} fill={c.ink} />
+        <path d={`M74 -386 L96 -386 L110 ${-210 - arm} L84 ${-210 - arm} Z`} fill={c.ink} />
+        <circle cx={-97} cy={-200 + arm} r={13} fill={c.maroon} />
+        <circle cx={97} cy={-200 - arm} r={13} fill={c.maroon} />
+        {/* bag strap + messenger bag */}
+        <path d="M60 -390 L-70 -230" stroke={c.peach} strokeWidth={9} />
+        <rect x={-104} y={-252} width={66} height={56} rx={6} fill={c.peach} />
+        {/* collar, neck, head from behind */}
+        <rect x={-44} y={-412} width={88} height={26} rx={10} fill={c.peach} />
+        <rect x={-18} y={-436} width={36} height={30} fill={c.maroon} />
+        <circle cx={0} cy={-470} r={46} fill={c.ink} />
+        <ellipse cx={-46} cy={-462} rx={8} ry={14} fill={c.maroon} />
+        <ellipse cx={46} cy={-462} rx={8} ry={14} fill={c.cream} />
+      </g>
     </g>
   );
 };
 
-// ---------------- Scene A: the designer at the desk ----------------
-const Designer: React.FC<{ f: number; inner?: React.ReactNode; id?: string }> = ({ f, inner, id = "d" }) => {
-  const click = f >= T.click && f < T.click + 5 ? 3 : 0; // the finger presses on the click
+// ---------------- a car (side view) ----------------
+const Car: React.FC<{ x: number; y: number; len: number; col: string; dir: 1 | -1; s: number }> = ({ x, y, len, col, dir, s }) => {
+  const k = len / 280;
+  const body = colOf(col), glass = col === "ink" ? c.maroon : c.redDeep;
   return (
-    <g>
-      <defs>
-        <pattern id="stripeA" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(28)">
-          <rect width="26" height="26" fill={c.ink} /><rect width="7" height="26" fill={c.peach} />
-        </pattern>
-        <clipPath id={`screen${id}`}><rect x={SC.x} y={SC.y} width={SC.w} height={SC.h} /></clipPath>
-      </defs>
-      <rect {...BLEED} fill={c.red} />
-      {/* her big shadow on the wall, thrown by the monitor */}
-      <path d="M1360 120 C1360 10 1450 -40 1560 -40 C1700 -40 1790 50 1790 170 L1800 520 C1760 545 1700 545 1660 520 L1640 600 L1720 640 C1800 700 1840 820 1860 1100 L1400 1100 C1400 900 1440 760 1500 700 L1440 520 Z" fill={c.redDeep} />
-      {/* monitor */}
-      <rect x={SC.x - 16} y={SC.y - 16} width={SC.w + 32} height={SC.h + 32} rx={10} fill={c.ink} />
-      <rect x={SC.x} y={SC.y} width={SC.w} height={SC.h} fill={c.redDeep} />
-      {inner && <g clipPath={`url(#screen${id})`}>{inner}</g>}
-      <rect x={SC.x + SC.w / 2 - 24} y={SC.y + SC.h + 16} width={48} height={150} fill={c.ink} />
-      <path d={`M${SC.x + SC.w / 2 - 120} 800 L${SC.x + SC.w / 2 + 120} 800 L${SC.x + SC.w / 2 + 90} 780 L${SC.x + SC.w / 2 - 90} 780 Z`} fill={c.ink} />
-      {/* light from the screen pooling on the desk */}
-      <path d={`M${SC.x - 40} 812 L${SC.x + SC.w + 120} 812 L${SC.x + SC.w + 260} 1100 L${SC.x - 180} 1100 Z`} fill={c.redDeep} />
-      {/* her: sweater with stripes, neck, profile face lit by the screen, bob, glasses, earring */}
-      <path d="M1170 1100 C1180 790 1240 660 1335 648 C1445 640 1545 700 1590 820 L1650 1100 Z" fill="url(#stripeA)" />
-      <path d="M1312 540 L1300 660 L1392 660 L1386 520 Z" fill={c.maroonDeep} />
-      <path d="M1212 300 L1206 362 C1197 382 1186 402 1170 424 C1180 434 1195 436 1201 444 C1196 458 1191 468 1197 476 C1190 484 1189 494 1199 502 C1197 518 1201 534 1216 548 C1242 564 1282 568 1312 558 L1332 600 L1386 600 L1394 440 L1384 300 Z" fill={c.maroon} />
-      <path d="M1212 300 L1206 362 C1197 382 1186 402 1170 424 C1180 434 1195 436 1201 444 C1196 458 1191 468 1197 476 C1190 484 1189 494 1199 502 C1197 518 1201 534 1216 548 C1242 564 1272 567 1292 562 C1262 522 1256 472 1264 432 C1270 382 1252 332 1242 300 Z" fill={c.cream} />
-      <path d="M1194 476 C1188 482 1188 494 1200 501 C1206 494 1206 484 1194 476 Z" fill={c.lips} />
-      <path d="M1180 300 C1180 196 1262 146 1344 146 C1446 146 1508 218 1508 322 L1514 566 C1476 582 1434 582 1404 566 L1394 470 L1384 330 L1196 336 C1196 322 1186 312 1180 300 Z" fill={c.ink} />
-      <path d="M1192 338 C1196 250 1262 186 1346 182 L1350 340 Z" fill={c.ink} />
-      <ellipse cx={1234} cy={376} rx={20} ry={26} fill={c.red} stroke={c.ink} strokeWidth={8} />
-      <path d="M1250 368 L1392 352" stroke={c.ink} strokeWidth={8} />
-      <circle cx={1404} cy={606} r={26} fill="none" stroke={c.peach} strokeWidth={9} />
-      {/* desk, keyboard, mug */}
-      <rect x={BLEED.x} y={800} width={BLEED.width} height={18} fill={c.peach} />
-      <rect x={BLEED.x} y={818} width={BLEED.width} height={1600} fill={c.ink} />
-      <path d={`M${SC.x + 60} 798 L${SC.x + 420} 798 L${SC.x + 400} 784 L${SC.x + 80} 784 Z`} fill={c.maroon} />
-      <rect x={210} y={712} width={74} height={88} rx={8} fill={c.cream} />
-      <path d="M284 730 C318 730 318 784 284 784" fill="none" stroke={c.cream} strokeWidth={12} />
-      <rect x={210} y={712} width={36} height={88} fill={c.peach} />
-      {/* arm resting on the desk, hand on the mouse */}
-      <path d="M1330 690 C1250 720 1160 760 1090 782 L1098 800 L1350 800 C1380 760 1370 710 1330 690 Z" fill="url(#stripeA)" />
-      <ellipse cx={1066} cy={792 + click * 0.3} rx={30} ry={10} fill={c.peach} />
-      <path d={`M1046 ${784 + click} C1050 ${764 + click} 1086 ${762 + click} 1100 ${780 + click} L1100 800 L1046 800 Z`} fill={c.maroon} />
+    <g transform={`translate(${x} ${y}) scale(${dir * s * k} ${s})`}>
+      <ellipse cx={140} cy={2} rx={150} ry={10} fill={c.maroonDeep} opacity={0.5} />
+      <path d="M0 -26 C0 -60 18 -72 50 -76 L84 -116 C92 -124 104 -128 118 -128 L196 -128 C212 -128 222 -122 230 -112 L256 -80 C272 -78 280 -66 280 -48 L280 -26 Z" fill={body} />
+      <path d="M96 -112 L118 -118 L150 -118 L150 -80 L80 -80 Z" fill={glass} />
+      <path d="M160 -118 L196 -118 C204 -118 210 -114 216 -106 L234 -80 L160 -80 Z" fill={glass} />
+      <rect x={262} y={-70} width={16} height={10} rx={3} fill={c.cream} />
+      {[64, 218].map((wx) => (
+        <g key={wx}>
+          <circle cx={wx} cy={-24} r={26} fill={c.ink} />
+          <circle cx={wx} cy={-24} r={10} fill={c.peach} />
+        </g>
+      ))}
     </g>
   );
 };
 
-// ---------------- the logo card (pieces masked from the real logo, recoloured to the palette) ----------------
-const LogoCard: React.FC<{ inner?: React.ReactNode; reveal?: number; id?: string }> = ({ inner, reveal = 0, id = "l" }) => {
+// ---------------- the logo pieces (the real logo, cut into masks and recoloured) ----------------
+const LogoPieces: React.FC<{ id: string; tag?: boolean }> = ({ id, tag = true }) => {
   const L = cfg.logo;
   const piece = (k: keyof typeof L) => {
     const p = L[k];
@@ -222,30 +87,162 @@ const LogoCard: React.FC<{ inner?: React.ReactNode; reveal?: number; id?: string
   };
   return (
     <g>
-      <rect {...BLEED} fill={cfg.cardBg} />
-      {/* the circle and the dot are drawn as vectors so they stay crisp at any zoom */}
+      {/* the circle and the dot are vectors so they stay crisp at any zoom */}
       <circle cx={L.circle.x + L.circle.w / 2} cy={L.circle.y + L.circle.h / 2} r={L.circle.w / 2 - 1.5} fill={L.circle.col} />
-      {piece("p")}{piece("word")}{piece("tag")}
+      {piece("p")}{piece("word")}{tag && piece("tag")}
       <circle cx={DOT.cx} cy={DOT.cy} r={DOT.r + 1.4} fill={L.p.col} />
-      <defs><clipPath id={`dot${id}`}><circle cx={DOT.cx} cy={DOT.cy} r={DOT.r + 1.4} /></clipPath></defs>
-      {inner && reveal > 0 && <g clipPath={`url(#dot${id})`} opacity={reveal}>{inner}</g>}
+    </g>
+  );
+};
+
+const LogoCard: React.FC<{ inner?: React.ReactNode; reveal?: number; id?: string }> = ({ inner, reveal = 0, id = "l" }) => (
+  <g>
+    <rect {...BLEED} fill={cfg.cardBg} />
+    <LogoPieces id={id} />
+    <defs><clipPath id={`dot${id}`}><circle cx={DOT.cx} cy={DOT.cy} r={DOT.r + 1.4} /></clipPath></defs>
+    {inner && reveal > 0 && <g clipPath={`url(#dot${id})`} opacity={reveal}>{inner}</g>}
+  </g>
+);
+
+// ---------------- the street ----------------
+const manOnStreet = (f: number) => {
+  const [a, b] = T.walk, A = ST.manFrom, B = ST.manTo;
+  const u = ease(f, a, b, 0, 1, Easing.inOut(Easing.sin));
+  return { x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u, s: A.s + (B.s - A.s) * u, walking: f > a && f < b, phase: (f - a) * 0.36 };
+};
+const Street: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ f, inner, id }) => {
+  const WN = ST.window, D = ST.door, [r0, r1] = ST.road;
+  const man = manOnStreet(f);
+  const walk = f >= T.walkSignal && f < T.walk[1] + 20;
+  const open = ease(f, T.doorOpen[0], T.doorOpen[1]);
+  // zebra crossing: stripes parallel to the kerb, narrowing towards the far side
+  const zeb: React.ReactNode[] = [];
+  for (let i = 0; i < 8; i++) {
+    const y0 = r0 + ((r1 - r0) * i) / 8 + 6, y1 = r0 + ((r1 - r0) * (i + 0.55)) / 8 + 6;
+    const hw = (y: number) => 120 + ((y - r0) / (r1 - r0)) * 60;
+    const cx0 = 1180 + ((y0 - r0) / (r1 - r0)) * 30, cx1 = 1180 + ((y1 - r0) / (r1 - r0)) * 30;
+    zeb.push(<path key={i} d={`M${cx0 - hw(y0)} ${y0} L${cx0 + hw(y0)} ${y0} L${cx1 + hw(y1)} ${y1} L${cx1 - hw(y1)} ${y1} Z`} fill={c.cream} />);
+  }
+  // draw order by baseline: far cars, near cars and the man sorted by how far down the frame they stand
+  const items: { y: number; el: React.ReactNode }[] = [];
+  ST.far.forEach(([x0, col, len], i) => items.push({ y: ST.lanes.far, el: <Car key={`f${i}`} x={x0 - ST.vFar * f + len} y={ST.lanes.far} len={len} col={col} dir={-1} s={0.82} /> }));
+  ST.near.forEach(([x0, col, len], i) => items.push({ y: ST.lanes.near, el: <Car key={`n${i}`} x={x0 + ST.vNear * f} y={ST.lanes.near} len={len} col={col} dir={1} s={1} /> }));
+  if (f < T.walk[1]) items.push({ y: man.y, el: <Man key="man" {...man} /> });
+  items.sort((p, q) => p.y - q.y);
+  return (
+    <g>
+      <rect {...BLEED} fill={c.red} />
+      <circle cx={1720} cy={130} r={140} fill={c.cream} />
+      {/* neighbours */}
+      <rect x={-1400} y={60} width={2040} height={560} fill={c.maroon} />
+      {[0, 1, 2, 3].map((r) => [0, 1, 2, 3].map((k) => <rect key={`l${r}${k}`} x={80 + k * 140} y={110 + r * 110} width={70} height={64} fill={c.redDeep} />))}
+      <rect x={1500} y={20} width={1900} height={600} fill={c.redDeep} />
+      {[0, 1, 2, 3, 4].map((r) => [0, 1, 2].map((k) => <rect key={`r${r}${k}`} x={1560 + k * 130} y={70 + r * 104} width={64} height={60} fill={c.maroon} />))}
+      {/* the agency: peach facade, ink sign band with the real logo, a glass shopfront (the portal) */}
+      <rect x={640} y={40} width={860} height={580} fill={c.peach} />
+      <path d="M1500 40 L1540 60 L1540 620 L1500 620 Z" fill={c.maroonDeep} />
+      <rect x={680} y={92} width={780} height={150} fill={c.ink} />
+      <g transform="translate(1070 168) scale(0.19) translate(-960 -549)"><LogoPieces id={`sign${id}`} tag={false} /></g>
+      <rect x={WN.x - 14} y={WN.y - 14} width={WN.w + 28} height={WN.h + 18} fill={c.ink} />
+      <defs><clipPath id={`win${id}`}><rect x={WN.x} y={WN.y} width={WN.w} height={WN.h} /></clipPath></defs>
+      <rect x={WN.x} y={WN.y} width={WN.w} height={WN.h} fill={c.red} />
+      {inner && <g clipPath={`url(#win${id})`}>{inner}</g>}
+      {/* glass door: frame, then the leaf swinging open */}
+      <rect x={D.x} y={D.y} width={D.w} height={D.h} fill="none" stroke={c.ink} strokeWidth={8} />
+      <rect x={D.x + D.w - 16} y={D.y + D.h / 2 - 20} width={6} height={40} fill={c.cream} />
+      <path d={`M${D.x} ${D.y} L${D.x + D.w * (1 - open * 0.75)} ${D.y + open * 18} L${D.x + D.w * (1 - open * 0.75)} ${D.y + D.h - open * 10} L${D.x} ${D.y + D.h} Z`} fill={c.cream} opacity={0.18} stroke={c.ink} strokeWidth={6} />
+      <rect x={WN.x - 14} y={WN.y + WN.h} width={WN.w + 28} height={10} fill={c.ink} />
+      {/* far pavement, road, zebra, lane marks, near pavement */}
+      <rect x={-1400} y={ST.farWalk} width={4720} height={r0 - ST.farWalk + 2} fill={c.maroon} />
+      <rect x={-1400} y={r0} width={4720} height={r1 - r0} fill={c.maroonDeep} />
+      {[...Array(14)].map((_, i) => <rect key={i} x={-200 + i * 170} y={826} width={90} height={8} fill={c.peach} />)}
+      {zeb}
+      <rect x={-1400} y={r1} width={4720} height={1600} fill={c.maroon} />
+      <rect x={-1400} y={r1} width={4720} height={12} fill={c.peach} />
+      {/* crossing signal on the near pavement */}
+      <rect x={1452} y={700} width={14} height={340} fill={c.ink} />
+      <rect x={1420} y={640} width={78} height={110} rx={8} fill={c.ink} />
+      <circle cx={1459} cy={670} r={20} fill={walk ? c.maroonDeep : c.lips} />
+      <circle cx={1459} cy={720} r={20} fill={walk ? c.cream : c.maroonDeep} />
+      {items.map((it) => it.el)}
+    </g>
+  );
+};
+
+// ---------------- inside the agency ----------------
+const manInside = (f: number) => {
+  const [a, b] = T.inside;
+  // where he steps through the door, mapped from street coordinates into the interior (portal scale K_W)
+  const s0 = manOnStreet(T.walk[1]);
+  const A = { x: CX + (s0.x - P_W.x) * K_W, y: CY + (s0.y - P_W.y) * K_W, s: s0.s * K_W }, B = IN.manTo;
+  const u = ease(f, a, b, 0, 1, Easing.out(Easing.quad));
+  return { x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u, s: A.s + (B.s - A.s) * u, walking: f >= a && f < b - 8, phase: (f - T.walk[0]) * 0.36 };
+};
+const Seated: React.FC<{ x: number; flip?: boolean; f: number; ph: number }> = ({ x, flip, f, ph }) => (
+  <g transform={`translate(${x} 0) scale(${flip ? -1 : 1} 1)`}>
+    {/* desk + monitor (facing right) */}
+    <rect x={-40} y={700} width={330} height={16} fill={c.ink} />
+    <rect x={0} y={716} width={12} height={160} fill={c.ink} />
+    <rect x={260} y={716} width={12} height={160} fill={c.ink} />
+    <rect x={150} y={560} width={150} height={100} rx={6} fill={c.ink} />
+    <rect x={160} y={570} width={130} height={80} fill={c.redDeep} />
+    <rect x={180 + (Math.sin(f / 9 + ph) + 1) * 30} y={590} width={44} height={40} fill={c.peach} />
+    <rect x={218} y={660} width={14} height={40} fill={c.ink} />
+    {/* designer in profile, facing the monitor */}
+    <rect x={40} y={700} width={20} height={170} fill={c.ink} />
+    <path d="M-10 700 L80 700 L70 560 C66 530 40 520 20 524 C0 530 -10 560 -10 600 Z" fill={c.maroonDeep} />
+    <path d="M58 530 C90 536 104 560 108 590 L94 596 C88 572 76 556 56 552 Z" fill={c.cream} />
+    <circle cx={44} cy={486} r={38} fill={c.maroon} />
+    <path d="M60 470 C84 476 88 500 80 520 C72 510 64 500 60 490 Z" fill={c.cream} />
+    <path d="M10 470 C10 440 36 430 56 436 C70 440 78 452 78 462 L30 470 L30 520 C16 514 8 496 10 470 Z" fill={c.ink} />
+    <path d="M74 640 L150 620 L150 632 L80 654 Z" fill={c.maroon} />
+  </g>
+);
+const Interior: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ f, inner, id }) => {
+  const S = IN.screen, man = manInside(f);
+  return (
+    <g>
+      <rect {...BLEED} fill={c.red} />
+      <path d="M-1400 820 L3320 820 L3320 2480 L-1400 2480 Z" fill={c.maroonDeep} />
+      {[...Array(9)].map((_, i) => <line key={i} x1={960} y1={820} x2={-1400 + i * 590} y2={2480} stroke={c.maroon} strokeWidth={4} />)}
+      {/* a tall cream light shape from the shopfront behind us */}
+      <path d="M1180 -100 L1660 -100 L1500 820 L1240 820 Z" fill={c.redDeep} />
+      {/* pendant lamps */}
+      {[380, 1540].map((x) => (
+        <g key={x}>
+          <rect x={x - 2} y={-100} width={4} height={200} fill={c.ink} />
+          <path d={`M${x - 50} 150 L${x + 50} 150 L${x + 30} 100 L${x - 30} 100 Z`} fill={c.cream} />
+        </g>
+      ))}
+      {/* the big wall screen (portal back to the logo) */}
+      <rect x={S.x - 18} y={S.y - 18} width={S.w + 36} height={S.h + 36} rx={8} fill={c.ink} />
+      <defs><clipPath id={`scr${id}`}><rect x={S.x} y={S.y} width={S.w} height={S.h} /></clipPath></defs>
+      <rect x={S.x} y={S.y} width={S.w} height={S.h} fill={cfg.cardBg} />
+      {inner && <g clipPath={`url(#scr${id})`}>{inner}</g>}
+      <Seated x={180} f={f} ph={0} />
+      <Seated x={1740} flip f={f} ph={2} />
+      {/* plant */}
+      <rect x={1270} y={740} width={70} height={80} fill={c.peach} />
+      <path d="M1305 740 C1260 680 1250 620 1270 580 C1300 620 1306 680 1305 740 C1310 670 1330 620 1360 600 C1366 650 1340 700 1305 740 Z" fill={c.maroon} />
+      {f >= T.walk[1] && <Man {...man} />}
     </g>
   );
 };
 
 // ---------------- one continuous zoom through the three portals ----------------
-const DOT = cfg.dot, SUN = cfg.sun;
+const DOT = cfg.dot;
 const HALF_DIAG = Math.hypot(CX, CY);
+const P_W = { x: ST.window.x + ST.window.w / 2, y: ST.window.y + ST.window.h / 2 }, K_W = W / ST.window.w;
+const P_S = { x: IN.screen.x + IN.screen.w / 2, y: IN.screen.y + IN.screen.h / 2 }, K_S = W / IN.screen.w;
 const PORTALS = [
-  { P: { x: DOT.cx, y: DOT.cy }, K: (HALF_DIAG / (DOT.r + 1.4)) * 1.02 },  // logo -> designer
-  { P: P_S, K: K_S },                                               // designer -> 3D world
-  { P: { x: SUN.cx, y: SUN.cy }, K: (HALF_DIAG / SUN.r) * 1.02 },  // 3D world -> logo
+  { P: { x: DOT.cx, y: DOT.cy }, K: (HALF_DIAG / (DOT.r + 1.4)) * 1.02 }, // logo -> street
+  { P: P_W, K: K_W },                                                      // street -> interior
+  { P: P_S, K: K_S },                                                      // interior -> logo
 ];
 const LN = PORTALS.map((p) => Math.log(p.K));
 const CUM = [0, LN[0], LN[0] + LN[1], LN[0] + LN[1] + LN[2]];
 const DUR = cfg.output.durationInFrames;
-// knots (frame, log-zoom) with a periodic monotone cubic (Fritsch-Butland slopes): C1-smooth, never stops, and the
-// speed at frame 449 matches the speed at frame 0, so the loop has no bump
+// knots (frame, log-zoom) with a periodic monotone cubic: smooth, never stops, end speed = start speed (no loop bump)
 const KT = [...T.arrive, DUR], KL = CUM;
 const sec = [0, 1, 2].map((i) => (KL[i + 1] - KL[i]) / (KT[i + 1] - KT[i]));
 const hm = (a: number, b: number) => (2 * a * b) / (a + b);
@@ -257,14 +254,13 @@ const logZoom = (f: number) => {
   return h00 * KL[i] + h10 * h * SL[i] + h01 * KL[i + 1] + h11 * h * SL[i + 1];
 };
 
-// draw scene k with the next scenes nested inside its portal (depth-capped: deeper scenes are too small to see)
 const Scene: React.FC<{ k: number; f: number; depth: number; reveal?: number }> = ({ k, f, depth, reveal = 0 }) => {
-  const nextK = (k + 1) % 3, P = PORTALS[k];
-  const inner = depth < 2 ? <g transform={into(P.P, P.K)}><Scene k={nextK} f={f} depth={depth + 1} /></g> : undefined;
+  const P = PORTALS[k];
+  const inner = depth < 2 ? <g transform={into(P.P, P.K)}><Scene k={(k + 1) % 3} f={f} depth={depth + 1} /></g> : undefined;
   const id = `${k}_${depth}`;
   if (k === 0) return <LogoCard inner={inner} reveal={depth === 0 ? reveal : 0} id={id} />;
-  if (k === 1) return <Designer f={f} inner={inner} id={id} />;
-  return <World f={f} inner={inner} id={id} ui />;
+  if (k === 1) return <Street f={f} inner={inner} id={id} />;
+  return <Interior f={f} inner={inner} id={id} />;
 };
 
 export const Flat2D: React.FC = () => {

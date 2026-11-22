@@ -80,19 +80,28 @@ def at_peak(path, frame, db, pan=0.0, rev=False):
     pk = int(np.argmax(np.abs(s).sum(1)))
     place(mix, s, (frame + 1) / FPS - pk / SR, 10 ** (db / 20), pan)
 
-cues = [  # (file, frame the picture happens, level dB, pan) - v4: one continuous zoom (logo -> designer -> 3D world -> logo)
+cues = [  # (file, frame the picture happens, level dB, pan) - v5: logo -> street (he crosses into the agency) -> interior -> logo
     ("impact/kenney-impact-impactsoft-heavy-000.ogg", 0, -10, 0.0),  # we land back on the logo (wraps round the loop)
-    ("transition/fs-786514-swoosh-v2.ogg", 118, -16, 0.0),      # the dot opens into her room
-    ("../../../../public/sfx/whoosh_fs393811.ogg", 149, -13, 0.0),  # her room fills the frame
-    ("kit/click.ogg", 165, -12, 0.25),                          # she clicks
-    ("pop/kenney-interface-pluck-001.ogg", 167, -17, -0.2),     # the cube pops in on her screen
-    ("pop/kenney-interface-drop-002.ogg", 207, -15, 0.3),       # octahedron
-    ("pop/kenney-interface-pluck-002.ogg", 224, -16, -0.1),     # ring
-    ("pop/fs-824189-pop-in-sfx.ogg", 242, -16, 0.1),            # sphere
-    ("tick/fs384187.ogg", 250, -18, -0.3),                      # cursor grabs the cube
-    ("../../../../public/sfx/whoosh_fs-683101-quick-woosh.ogg", 271, -13, 0.0),  # the 3D world fills the frame
-    ("pop/kenney-interface-drop-003.ogg", 297, -15, -0.3),      # cube set down
-    ("../../../../public/sfx/transition_fs-702773-swipe-wav.ogg", 440, -14, 0.0),  # into the sun, back to the logo
+    ("transition/fs-786514-swoosh-v2.ogg", 96, -16, 0.0),       # the dot opens onto the street
+    ("transition/fs-816262-broomstick-whoosh-3-quiet-okm1.ogg", 112, -15, 0.5),  # a car swishes past
+    ("../../../../public/sfx/whoosh_fs393811.ogg", 124, -14, 0.0),  # the street fills the frame
+    ("transition/fs-816262-broomstick-whoosh-3-quiet-okm1.ogg", 140, -15, -0.5), # another car
+    ("../../../../public/sfx/ui-blip_kenney-digital-twotone1.ogg", 146, -16, 0.4),  # the signal turns to walk
+    ("tick/fs721514.ogg", 154, -24, -0.15),  # footstep
+    ("tick/fs528561.ogg", 163, -24, 0.15),  # footstep
+    ("tick/fs721514.ogg", 171, -24, -0.15),  # footstep
+    ("tick/fs528561.ogg", 180, -24, 0.15),  # footstep
+    ("tick/fs721514.ogg", 189, -24, -0.15),  # footstep
+    ("tick/fs528561.ogg", 197, -24, 0.15),  # footstep
+    ("tick/fs721514.ogg", 206, -24, -0.15),  # footstep
+    ("tick/fs528561.ogg", 215, -24, 0.15),  # footstep
+    ("tick/fs721514.ogg", 224, -24, -0.15),  # footstep
+    ("tick/fs528561.ogg", 232, -24, 0.15),  # footstep
+    ("tick/fs721514.ogg", 241, -24, -0.15),  # footstep
+    ("tick/fs528561.ogg", 250, -24, 0.15),  # footstep
+    ("ding/kenney-interface-glass-001.ogg", 248, -18, 0.2),     # the glass door swings open
+    ("../../../../public/sfx/whoosh_fs-683101-quick-woosh.ogg", 298, -13, 0.0),  # the agency fills the frame
+    ("../../../../public/sfx/transition_fs-702773-swipe-wav.ogg", 440, -14, 0.0),  # into the screen, back to the logo
 ]
 for f, fr, db, pan in cues: at_peak(f, fr, db, pan)
 

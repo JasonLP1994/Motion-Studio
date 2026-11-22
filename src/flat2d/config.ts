@@ -1,36 +1,47 @@
-// Flat 2D "Phillips Digital" film (v2). Grammar learned from a Malika Favre reference: flat vector, a 5-colour red palette,
-// light as negative space, a seamless zoom through a portal. Story: a designer at their PC -> zoom into the screen ->
-// a 3D motion world (flat-shaded) -> zoom back out to the designer -> the screen floods the frame -> Phillips Digital logo.
+// Flat 2D "Phillips Digital" film (v5): ONE continuous zoom, seamless loop, red Favre-style palette.
+// logo -> (the dot of the p.) -> a busy street: a man waits, crosses on the zebra and walks into the agency ->
+// (the agency's glass shopfront) -> inside: he walks to the big wall screen -> (the screen shows the logo) -> logo.
 // Every word, colour, timing and anchor lives here, so a change is one line.
-const fps = 30, bpm = 96;
-
 export const flatConfig = {
-  output: { width: 1920, height: 1080, fps, durationInFrames: 450 }, // 15 s
-  music: { bpm },
+  output: { width: 1920, height: 1080, fps: 30, durationInFrames: 450 }, // 15 s, frame 449 flows into frame 0
+  music: { bpm: 96 },
 
   col: {
     red: "#D3131B", redDeep: "#A30E14", maroon: "#6B0A10", maroonDeep: "#4A070B",
     ink: "#170405", peach: "#F2A27E", cream: "#F6E6D0", lips: "#E52A2F",
   },
 
-  // ONE continuous zoom, like the reference: logo -> (the dot of the p.) -> designer -> (her monitor) -> 3D world ->
-  // (the red sun, which holds the logo) -> logo. The camera never stops; frame 449 flows into frame 0.
   t: {
-    arrive: [0, 150, 272],        // frames where the logo, the designer and the 3D world each fill the frame at scale 1
-    click: 165,                    // she clicks; the cube pops in on her screen
-    pops: [205, 222, 240],         // octahedron, ring, sphere pop in (on the beats)
-    cursor: { in: 232, grab: 250, drop: 296, out: 330 }, // her cursor drags the cube into place
-    ball: [200, 420],              // the ball rides the keyframe curve
-    revealDot: [1.25, 3.0],        // the designer fades into the dot as the logo zooms from x1.25 to x3 (dot is pure ink at rest)
+    arrive: [0, 125, 300],      // frames where the logo, the street and the agency interior each fill the frame at scale 1
+    revealDot: [1.25, 3.0],     // the street fades into the dot as the logo zooms from x1.25 to x3 (the dot is pure ink at rest)
+    walkSignal: 146,            // the crossing light turns to "walk"
+    walk: [150, 262],           // he crosses the street and reaches the glass door
+    doorOpen: [244, 258],       // the glass door swings open as he arrives
+    inside: [262, 372],         // he walks away from us towards the big screen, then stands and looks at it
   },
 
-  screen: { x: 410, y: 240, w: 576, h: 324 }, // the monitor screen (exactly 16:9): the portal into the 3D world
-  dot: { cx: 1038.65, cy: 452.3, r: 19.2 },     // the dot of the p. on the logo card: the portal into the designer's room
-  sun: { cx: 1480, cy: 230, r: 150 },           // the sun in the 3D world: the portal back to the logo
-  cardBg: "#D3131B",
+  // street geometry
+  street: {
+    window: { x: 700, y: 290, w: 480, h: 270 },  // the glass shopfront (exactly 16:9): portal into the interior
+    door: { x: 1066, y: 330, w: 100, h: 230 },   // the glass door, inside the shopfront (on the man's path)
+    farWalk: 560, road: [640, 930],               // far pavement top, road top / bottom
+    lanes: { far: 762, near: 902 },               // car baselines
+    manFrom: { x: 1250, y: 1062, s: 1 }, manTo: { x: 1116, y: 562, s: 0.45 }, // feet position + scale
+    // cars: [start x, colour, length]; near lane drives right at 16 px/frame, far lane left at 13 px/frame,
+    // scheduled so the zebra (x 1000-1400) is clear while he crosses each lane
+    near: [[200, "peach", 280], [-1160, "cream", 290], [-2560, "ink", 270], [-3500, "peach", 300]] as [number, string, number][],
+    far: [[2300, "ink", 240], [3400, "peach", 230], [4460, "cream", 250], [5600, "ink", 230]] as [number, string, number][],
+    vNear: 16, vFar: 13,
+  },
 
-  // 3D world camera: slow orbit across the whole film (radians), so the monitor and the full-screen view agree
-  cam: { yaw: [-0.45, 0.5], pitch: 0.5, dist: 12, focal: 950, cx: 960, cy: 620, light: [-0.55, 0.75, -0.5] },
+  // interior geometry
+  inside: {
+    screen: { x: 720, y: 200, w: 480, h: 270 }, // the big wall screen (16:9): portal back to the logo
+    manTo: { x: 1010, y: 770, s: 0.55 },        // where he stops, below the screen
+  },
+
+  dot: { cx: 1038.65, cy: 452.3, r: 19.2 },     // the dot of the p. on the logo card: portal into the street
+  cardBg: "#D3131B",
 
   // logo pieces (masks cut from inputs/phillips-digital-logo-scene.jpg), placed on a 1920x1080 card
   logo: {
