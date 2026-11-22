@@ -42,15 +42,25 @@ for o in list(S.objects):
 co = np.empty(len(head.data.vertices) * 3); head.data.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
 lo, hi = co.min(0), co.max(0); sc = 1.0 / (hi[2] - lo[2])
 co = (co - [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]]) * sc     # height 1, neck base at z=0, face looks to -Y
+lowz = co[:, 2] < 0.14                                                    # stretch the neck so its cut end sits below frame
+co[lowz, 2] = 0.14 - (0.14 - co[lowz, 2]) * 2.5
 head.data.vertices.foreach_set("co", co.ravel()); head.data.update()
+import bmesh as _bm
+_b = _bm.new(); _b.from_mesh(head.data); _nv = len(_b.verts)
+_bm.ops.remove_doubles(_b, verts=_b.verts, dist=1e-5); print("MERGED", _nv, "->", len(_b.verts))
+_b.to_mesh(head.data); _b.free()
 head.data.polygons.foreach_set("use_smooth", [True] * len(head.data.polygons))
+bpy.context.view_layer.objects.active = head
+if head.data.has_custom_normals: bpy.ops.mesh.customdata_custom_splitnormals_clear()   # imported normals go stale after reshaping
 head.data.materials.clear()
 bvh = BVHTree.FromObject(head, bpy.context.evaluated_depsgraph_get())
 
 RIG = bpy.data.objects.new("HEAD_RIG", None); S.collection.objects.link(RIG); RIG.location = (0, 0, 0.15)
 head.parent = RIG; head.location = (0, 0, -0.15)
-key(RIG, "rotation_euler", 1, (math.radians(-22), 0, math.radians(-20)))
-key(RIG, "rotation_euler", NF, (math.radians(-31), 0, math.radians(10)))
+key(RIG, "rotation_euler", 1, (math.radians(-24), 0, math.radians(-16)))
+key(RIG, "rotation_euler", 148, (math.radians(-30), 0, math.radians(-6)))
+key(RIG, "rotation_euler", 205, (math.radians(-44), math.radians(-7), math.radians(4)))   # end: chin thrown right back, like the reference
+key(RIG, "rotation_euler", NF, (math.radians(-46), math.radians(-8), math.radians(5)))
 
 # ---------------------------------------------------------------- materials
 def nodes_mat(name):
@@ -58,7 +68,7 @@ def nodes_mat(name):
 
 m_head, nt, b = nodes_mat("MAT_ChromeSkin")
 b.inputs["Base Color"].default_value = (0.6, 0.6, 0.64, 1); b.inputs["Metallic"].default_value = 1.0
-b.inputs["Roughness"].default_value = 0.17
+b.inputs["Roughness"].default_value = 0.21
 b.inputs["Coat Weight"].default_value = 0.6; b.inputs["Coat Roughness"].default_value = 0.04
 head.data.materials.append(m_head)
 
@@ -86,7 +96,7 @@ def violet_chrome(name, holes):
         mask = m_('MULTIPLY', m_('SINE', m_('MULTIPLY', sp.outputs["X"], math.pi)), m_('SINE', m_('MULTIPLY', sp.outputs["Y"], math.pi * 0.95)))
         mr = N.new("ShaderNodeMapRange"); mr.inputs["From Min"].default_value = 0.12; mr.inputs["From Max"].default_value = 0.5
         L.new(mask, mr.inputs["Value"])
-        R = N.new("ShaderNodeValue"); drv(R.outputs[0], "min(1,max(0,(frame-58)/80))*0.34")
+        R = N.new("ShaderNodeValue"); drv(R.outputs[0], "min(1,max(0,(frame-100)/80))*0.34")
         thr = m_('MULTIPLY', mr.outputs["Result"], R.outputs[0])
         alpha = m_('GREATER_THAN', vo.outputs["Distance"], thr)
         L.new(alpha, b.inputs["Alpha"])
@@ -110,16 +120,16 @@ HEADC, NECKC = (0, 0.02, 0.62), (0, 0.06, 0.24)
 # (cluster, azimuth, elevation, centre, length, outward sweep, base radius, start frame)
 SPEC = [
     # A: diagonal band from the left forehead, over the right eye, down the right cheek to the jaw
-    ("A", 34, 52, HEADC, 0.62, (0.5, 0.1, 1), 0.020, 12), ("A", 6, 34, HEADC, 0.55, (0.2, -0.3, 1), 0.019, 17),
-    ("A", -18, 14, HEADC, 0.68, (-1, -0.3, 0.55), 0.021, 22), ("A", -38, -6, HEADC, 0.72, (-1, -0.35, 0.05), 0.022, 27),
-    ("A", -52, -30, HEADC, 0.60, (-0.9, -0.2, -0.6), 0.020, 32),
+    ("A", 34, 52, HEADC, 0.62, (0.5, 0.1, 1), 0.020, 40), ("A", 6, 34, HEADC, 0.55, (0.2, -0.3, 1), 0.019, 14),
+    ("A", -18, 14, HEADC, 0.68, (-1, -0.3, 0.55), 0.021, 4), ("A", -38, -6, HEADC, 0.72, (-1, -0.35, 0.05), 0.022, 34),
+    ("A", -52, -30, HEADC, 0.60, (-0.9, -0.2, -0.6), 0.020, 46),
     # B: crown
-    ("B", -40, 70, HEADC, 0.55, (-0.7, 0.2, 1), 0.018, 20), ("B", 10, 80, HEADC, 0.62, (0.1, 0.3, 1), 0.019, 25),
-    ("B", 70, 58, HEADC, 0.5, (1, 0.3, 0.7), 0.018, 30),
+    ("B", -40, 70, HEADC, 0.55, (-0.7, 0.2, 1), 0.018, 66), ("B", 10, 80, HEADC, 0.62, (0.1, 0.3, 1), 0.019, 72),
+    ("B", 70, 58, HEADC, 0.5, (1, 0.3, 0.7), 0.018, 80),
     # C: left ear, down the neck, across the throat
-    ("C", 72, 18, HEADC, 0.6, (1, 0.1, 0.4), 0.019, 36), ("C", 80, -12, HEADC, 0.66, (1, 0.2, -0.2), 0.020, 41),
-    ("C", 55, 20, NECKC, 0.62, (1, -0.1, -0.8), 0.020, 46), ("C", 15, 8, NECKC, 0.6, (0.35, -0.3, -1), 0.021, 51),
-    ("C", -30, 6, NECKC, 0.58, (-0.8, -0.25, -0.8), 0.019, 56),
+    ("C", 72, 18, HEADC, 0.6, (1, 0.1, 0.4), 0.019, 96), ("C", 80, -12, HEADC, 0.66, (1, 0.2, -0.2), 0.020, 104),
+    ("C", 55, 20, NECKC, 0.62, (1, -0.1, -0.8), 0.020, 110), ("C", 15, 8, NECKC, 0.6, (0.35, -0.3, -1), 0.021, 116),
+    ("C", -30, 6, NECKC, 0.58, (-0.8, -0.25, -0.8), 0.019, 124),
 ]
 SP = []
 for i, (cl, az, el, ctr, Ln, sw, r0, t0) in enumerate(SPEC):
@@ -129,7 +139,7 @@ for i, (cl, az, el, ctr, Ln, sw, r0, t0) in enumerate(SPEC):
 WEBS = [(i, i + 1) for i in range(len(SP) - 1) if SP[i]["cl"] == SP[i + 1]["cl"]]
 
 NS, NR, NU, NW = 30, 10, 20, 26        # spike samples, ring verts, web columns, web rows
-GROW = 42                              # frames for one spike to reach full length
+GROW = 48                              # frames for one spike to reach full length
 
 def growth(sp, f):
     x = min(1.0, max(0.0, (f - sp["t0"]) / GROW))
@@ -240,19 +250,46 @@ WL.new(acc, bg.inputs["Color"]); bg.inputs["Strength"].default_value = 1.0
 
 def area(name, loc, energy, size, col):
     ld = bpy.data.lights.new(name, 'AREA'); ld.energy = energy; ld.size = size; ld.color = col
+    ld.shadow_buffer_bias = 0.25   # no stepped shadow edges on the head's coarser triangles
     o = bpy.data.objects.new(name, ld); S.collection.objects.link(o); o.location = loc
     o.rotation_euler = (Vector((0, 0, 0.6)) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler(); return o
 area("L_Key", (-2.2, -2.6, 2.4), 350, 1.6, (1, 1, 1))
 area("L_Rim", (2.0, 1.8, 1.6), 450, 1.0, (0.75, 0.55, 1.0))
 area("L_Under", (0.3, -2.0, -0.8), 120, 1.5, LIME)
 
-# ---------------------------------------------------------------- camera: slow push while the chin lifts
-cam = bpy.data.objects.new("CAM_Main", bpy.data.cameras.new("CAM_Main")); S.collection.objects.link(cam); S.camera = cam
-cam.data.lens = 50; cam.data.clip_start = 0.01
-tgt = bpy.data.objects.new("CAM_Target", None); S.collection.objects.link(tgt)
-tr = cam.constraints.new('TRACK_TO'); tr.target = tgt; tr.track_axis = 'TRACK_NEGATIVE_Z'; tr.up_axis = 'UP_Y'
-key(cam, "location", 1, (-0.35, -3.0, 0.12)); key(cam, "location", NF, (0.05, -2.65, 0.2))
-key(tgt, "location", 1, (-0.14, 0, 0.68)); key(tgt, "location", NF, (-0.12, 0, 0.66))
+# ---------------------------------------------------------------- cameras
+# 0-6.2 s: close-ups that ride the tips of growing spikes (cameras live in the head rig, keyed from the real
+# spike curves, so they follow the tip). 6.2-10 s: pull back to the reference's low angle under the chin.
+def rig_local(p): return Vector(tuple(p)) - Vector((0, 0, 0.15))
+def make_cam(name, lens, fstop, parent=None):
+    c = bpy.data.objects.new(name, bpy.data.cameras.new(name)); S.collection.objects.link(c)
+    c.data.lens = lens; c.data.clip_start = 0.005
+    t = bpy.data.objects.new(name + "_T", None); S.collection.objects.link(t)
+    if parent: c.parent = parent; t.parent = parent
+    tr = c.constraints.new('TRACK_TO'); tr.target = t; tr.track_axis = 'TRACK_NEGATIVE_Z'; tr.up_axis = 'UP_Y'
+    if fstop: c.data.dof.use_dof = True; c.data.dof.focus_object = t; c.data.dof.aperture_fstop = fstop
+    return c, t
+def follow(name, f0, f1, k, lens, D, side, fstop=4.0):
+    """Hovers about half a head off the skin beside the spike's root, looking at the middle of the growing spike,
+    so the chrome skin fills the frame behind it and the tip shoots across; drifts outward as it grows."""
+    c, t = make_cam(name, lens, fstop, RIG); sp = SP[k]
+    frs = list(range(f0, f1, 6)) + [f1]
+    for fr in frs:
+        g = growth(sp, fr); u = (fr - f0) / max(1, f1 - f0)
+        mid = centre(sp, np.array([max(g, 0.06) * 0.5]), fr)[0]
+        pos = sp["A"] + sp["n"] * D + sp["b"] * side + sp["t"] * sp["L"] * (0.05 + 0.3 * u)
+        key(t, "location", fr, rig_local(mid)); key(c, "location", fr, rig_local(pos))
+    S.timeline_markers.new(name, frame=f0).camera = c
+follow("CAM_Eye", 1, 36, 2, 45, 0.42, 0.18)          # strand emerging over the eye
+follow("CAM_Cheek", 37, 72, 3, 45, 0.45, -0.22)      # spike curling off the cheek
+follow("CAM_Crown", 73, 108, 6, 40, 0.5, 0.25)       # crown spikes
+follow("CAM_Neck", 109, 148, 11, 45, 0.45, 0.22)     # webs on the neck, holes tearing open
+hero, ht = make_cam("CAM_Hero", 40, 9.0)
+key(hero, "location", 149, (0.5, -0.75, 0.42)); key(ht, "location", 149, (0.05, 0.2, 0.6))
+key(hero, "location", 205, (0.03, -1.2, 0.16)); key(ht, "location", 205, (0.0, 0.28, 0.68))
+key(hero, "location", NF, (0.02, -1.25, 0.15)); key(ht, "location", NF, (0.0, 0.29, 0.68))
+S.timeline_markers.new("CAM_Hero", frame=149).camera = hero
+S.camera = bpy.data.objects["CAM_Eye"]
 
 # ---------------------------------------------------------------- render
 S.render.engine = 'BLENDER_EEVEE'; e = S.eevee
@@ -269,7 +306,8 @@ S.render.image_settings.file_format = 'PNG'; S.render.image_settings.color_mode 
 os.makedirs(OUT, exist_ok=True)
 if args and args[0] == "still":
     for fr in [int(a) for a in args[1:] if a.isdigit()]:
-        S.frame_set(fr); S.render.filepath = OUT + f"still_{fr:03d}.png"; bpy.ops.render.render(write_still=True)
+        S.frame_set(fr); S.camera = [mk for mk in sorted(S.timeline_markers, key=lambda mk: mk.frame) if mk.frame <= fr][-1].camera
+        S.render.filepath = OUT + f"still_{fr:03d}.png"; bpy.ops.render.render(write_still=True)
 else:
     S.render.filepath = OUT + "f_"; bpy.ops.render.render(animation=True)
 print("DONE")

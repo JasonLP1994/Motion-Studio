@@ -27,3 +27,17 @@ Head: "Female Head Realistic" by recofiv3, CC-BY 4.0, via Objaverse (Hugging Fac
 ## Checks
 - Stills v1 (f30/110/200): notes/frames/mutant-stills-v1.jpg. Fixed after: neck spikes made a shelf across the mouth (re-aimed down
   the throat); coordinate roll stopped short of its value (expo easing never reaches 1 → cubic).
+
+## v2 structure (user: "cinematic close-ups following the growing spikes; text only readable at the end; end shot = the reference's angle")
+| Time | Frames | Shot | Type |
+|---|---|---|---|
+| 0–1.5 s | 1–36 | CAM_Eye: hovers off the skin, a strand grows out over the eye and shoots across frame | none |
+| 1.5–3 s | 37–72 | CAM_Cheek: spike curling off the cheek | none |
+| 3–4.5 s | 73–108 | CAM_Crown: crown spikes | none |
+| 4.5–6.2 s | 109–148 | CAM_Neck: neck webs, holes tearing open | none |
+| 6.2–8.5 s | 149–205 | CAM_Hero pulls back to a low angle under the chin (head thrown back -44°), last spikes finish | top bar, HUD, masthead slices up, blade, cover lines, globe, specimen, coords, barcode, stars, counters |
+| 8.5–10 s | 205–240 | hold, slow drift | BEYOND / FLESH slam, orbit, sparkle, footer; final frame = the cover |
+Close-up cameras live in the head rig and are keyed from the real spike curves (they follow the growth). Spike start frames re-timed per shot.
+Fixes: imported head had every vertex split (1,184,766 -> 201,377 after merge) which made the chrome look faceted; neck stretched so its cut
+end stays below frame; area-light shadow bias; masthead size cap raised once the condensed font loaded (fills 1790 px); blade starts at the
+masthead baseline. Stills: notes/frames/mutant-stills-v2.jpg (f54 / f174 / f229).

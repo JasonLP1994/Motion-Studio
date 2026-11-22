@@ -38,6 +38,7 @@ export const MutantCover: React.FC = () => {
   const m = C.masthead;
   const { fontSize: mSize } = fitText({ text: m.text, withinWidth: m.width, fontFamily: "BarlowCondBlack", fontWeight: "900" });
   const mastSize = Math.min(mSize, m.maxSize);
+  const bladeTop = m.y + mastSize * 0.8; // the blade drops from the masthead's baseline
 
   // ---- top bar
   const tb = prog(f, C.topBar.at, 10, expo);
@@ -76,8 +77,8 @@ export const MutantCover: React.FC = () => {
         })}
       </div>
       <svg width={W} height={1080} style={{ position: "absolute", inset: 0 }}>
-        <clipPath id="bladeClip"><rect x={0} y={0} width={W} height={300 + blade * 800} /></clipPath>
-        <polygon clipPath="url(#bladeClip)" points="1630,300 1708,300 1250,1080 1218,1080" fill={P.ink} />
+        <clipPath id="bladeClip"><rect x={0} y={0} width={W} height={bladeTop + blade * (1080 - bladeTop)} /></clipPath>
+        <polygon clipPath="url(#bladeClip)" points={`1640,${bladeTop - 10} 1722,${bladeTop - 10} 1262,1080 1228,1080`} fill={P.ink} />
       </svg>
 
       {/* the chrome head with its growths (Blender, transparent) */}
@@ -102,12 +103,12 @@ export const MutantCover: React.FC = () => {
       <svg width={W} height={1080} style={{ position: "absolute", inset: 0 }} fill="none" stroke={P.ink} strokeWidth={2.6}>
         {(() => {
           const { x, y, w, h } = C.globe; const cx = x + w / 2, cy = y + h / 2; const turn = f * 0.035;
-          const dash = (len: number) => ({ strokeDasharray: len, strokeDashoffset: len * (1 - g) });
+          const dash = (_len: number) => ({ strokeDasharray: 1, strokeDashoffset: 1 - g });
           return (
-            <g>
-              <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2} style={dash(500)} />
-              {[0, 1, 2].map((k) => <ellipse key={k} cx={cx} cy={cy} rx={Math.abs(Math.cos(turn + (k * Math.PI) / 3)) * w / 2} ry={h / 2} style={dash(300)} />)}
-              {[-0.5, 0, 0.5].map((k) => { const yy = cy + (k * h) / 1.4; const half = (w / 2) * Math.sqrt(1 - (k / 0.7) ** 2 * 0.5); return <line key={k} x1={cx - half} y1={yy} x2={cx + half} y2={yy} style={dash(200)} />; })}
+            <g opacity={g > 0 ? 1 : 0}>
+              <ellipse pathLength={1} cx={cx} cy={cy} rx={w / 2} ry={h / 2} style={dash(500)} />
+              {[0, 1, 2].map((k) => <ellipse key={k} pathLength={1} cx={cx} cy={cy} rx={Math.abs(Math.cos(turn + (k * Math.PI) / 3)) * w / 2} ry={h / 2} style={dash(300)} />)}
+              {[-0.5, 0, 0.5].map((k) => { const yy = cy + (k * h) / 1.4; const half = (w / 2) * Math.sqrt(1 - (k / 0.7) ** 2 * 0.5); return <line key={k} pathLength={1} x1={cx - half} y1={yy} x2={cx + half} y2={yy} style={dash(200)} />; })}
             </g>
           );
         })()}
