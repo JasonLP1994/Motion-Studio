@@ -62,3 +62,12 @@ Now 12 s (288 frames). 3D renders to f258.
 Sound extended: heavy glitch on the B/W flicker, logo hit (sub + bright ping) with a clean tail.
 Stills: notes/frames/mutant-end-v3.jpg.
 - Ending zoom-out: CAM_End pulls back (-2.9 to -4.8) during the B/W flicker so the whole spike form sits centred before the logo card; slice jumps halved. Still: notes/frames/mutant-bw-v2.jpg
+
+## v5 (user: "the head forms the logo, PHILLIPS DIGITAL written underneath")
+- Logo mark = the head itself. `mutant.py -- logo` renders the final frame (CAM_End, f258) as a flat two-tone stencil (Diffuse ->
+  Shader to RGB -> constant ramp at 0.5, one sun from above-left, web holes kept), `scripts/mutant_logo.py` cleans it into a white mark
+  on transparent (`public/mutant/logo-mark.png`, ignored), pixel-aligned with the 3D frame.
+- End card f258-288: the frozen starburst head shrinks (14 f) into the mark position (scale 0.46, centre 960/410); PHILLIPS DIGITAL
+  glitches in underneath at f268 (Barlow Condensed Black Italic 84), rule + ART / MOTION / IDENTITY + rule; holds.
+- After the full 3D render: run the logo pass at full size, then the mark script, before the final Remotion render.
+Stills: notes/frames/mutant-logo-v1.jpg (half-size preview mark).

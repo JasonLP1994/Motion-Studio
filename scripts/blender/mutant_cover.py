@@ -312,7 +312,31 @@ for vt, lk in (("AgX", "AgX - Punchy"), ("AgX", "Punchy"), ("Filmic", "High Cont
 if os.environ.get("NO_OVERWRITE"): S.render.use_overwrite = False; S.render.use_placeholder = False
 S.render.image_settings.file_format = 'PNG'; S.render.image_settings.color_mode = 'RGBA'
 os.makedirs(OUT, exist_ok=True)
-if args and args[0] == "still":
+if args and args[0] == "logo":
+    # flat two-tone stencil pass of the final frame: this becomes the 2D logo mark (white on transparent)
+    for mat in (m_head, m_web, m_spike):
+        nt = mat.node_tree; Nn, Ll = nt.nodes, nt.links; outn = Nn["Material Output"]; pb = Nn["Principled BSDF"]
+        dif = Nn.new("ShaderNodeBsdfDiffuse"); s2r = Nn.new("ShaderNodeShaderToRGB"); rp = Nn.new("ShaderNodeValToRGB")
+        rp.color_ramp.interpolation = 'CONSTANT'; rp.color_ramp.elements[0].color = (0, 0, 0, 1)
+        rp.color_ramp.elements[1].position = 0.5; rp.color_ramp.elements[1].color = (1, 1, 1, 1)
+        em = Nn.new("ShaderNodeEmission"); Ll.new(dif.outputs[0], s2r.inputs[0]); Ll.new(s2r.outputs["Color"], rp.inputs["Fac"])
+        Ll.new(rp.outputs["Color"], em.inputs["Color"])
+        mix = Nn.new("ShaderNodeMixShader"); tr_ = Nn.new("ShaderNodeBsdfTransparent")
+        if pb.inputs["Alpha"].is_linked: Ll.new(pb.inputs["Alpha"].links[0].from_socket, mix.inputs["Fac"])
+        else: mix.inputs["Fac"].default_value = 1.0
+        Ll.new(tr_.outputs[0], mix.inputs[1]); Ll.new(em.outputs[0], mix.inputs[2]); Ll.new(mix.outputs[0], outn.inputs["Surface"])
+    for o in S.objects:
+        if o.type == 'LIGHT': o.hide_render = True
+    sun = bpy.data.objects.new("L_LogoSun", bpy.data.lights.new("L_LogoSun", 'SUN')); S.collection.objects.link(sun)
+    sun.data.energy = 4.0; sun.data.angle = 0.05
+    S.world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.0
+    S.view_settings.view_transform = "Standard"; S.view_settings.look = "None"
+    e.use_motion_blur = False; e.use_gtao = False; e.use_ssr = False
+    fr = NF; S.frame_set(fr); S.camera = bpy.data.objects["CAM_End"]
+    cm = S.camera.matrix_world; sun.rotation_euler = (cm.to_quaternion() @ Vector((0.0, 0.0, 1.0))).to_track_quat('Z', 'Y').to_euler()
+    sun.rotation_euler.x += math.radians(-38); sun.rotation_euler.z += math.radians(34)   # a little from above-left: stencil shadows
+    S.render.filepath = OUT + "logo_pass.png"; bpy.ops.render.render(write_still=True)
+elif args and args[0] == "still":
     for fr in [int(a) for a in args[1:] if a.isdigit()]:
         S.frame_set(fr); S.camera = [mk for mk in sorted(S.timeline_markers, key=lambda mk: mk.frame) if mk.frame <= fr][-1].camera
         S.render.filepath = OUT + f"still_{fr:03d}.png"; bpy.ops.render.render(write_still=True)

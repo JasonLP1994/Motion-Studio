@@ -90,26 +90,27 @@ export const MutantCover: React.FC = () => {
   // ---- logo end card (pure black and white)
   if (f >= C.logo.at) {
     const lg = C.logo; const lf = f - lg.at;
-    const gk = lf < 8 ? 1 - lf / 8 : 0;
-    const blink = gk > 0 && rnd(f * 5.3) < 0.3 * gk;
-    const dx = gk * 14 * (rnd(f) > 0.5 ? 1 : -1);
-    const starP = prog(lf, 3, 8, Easing.out(Easing.back(2)));
-    const orb = prog(lf, 4, 12, Easing.inOut(Easing.cubic));
-    const sub = prog(lf, 10, 8, expo);
+    const blink = lf < 3 && rnd(f * 4.1) < 0.4; // one last flicker as it freezes
+    const sh = prog(lf, 0, lg.shrink.dur, Easing.inOut(Easing.cubic));
+    const sc = 1 + (lg.shrink.scale - 1) * sh;
+    const [mx, my] = lg.markCentre; const [tx, ty] = lg.shrink.to;
+    const wk = prog(lf, lg.wordAt, 8, expo); const wg = lf >= lg.wordAt && lf < lg.wordAt + 7 ? 1 - (lf - lg.wordAt) / 7 : 0;
+    const wBlink = wg > 0 && rnd(f * 5.3) < 0.35 * wg; const wdx = wg * 16 * (rnd(f) > 0.5 ? 1 : -1);
+    const sub = prog(lf, lg.wordAt + 8, 8, expo);
     return (
-      <AbsoluteFill style={{ background: lg.bg, alignItems: "center", justifyContent: "center" }}>
-        {!blink && (
-          <div style={{ display: "flex", alignItems: "center", gap: 34, filter: gk ? `drop-shadow(${dx}px 0 0 rgba(255,255,255,0.55)) drop-shadow(${-dx}px 0 0 rgba(255,255,255,0.3))` : undefined, transform: `translateX(${gk * (rnd(f * 2) - 0.5) * 60}px)` }}>
-            <svg width={150} height={110} viewBox="-75 -55 150 110">
-              <ellipse rx={68} ry={30} fill="none" stroke={lg.ink} strokeWidth={3.5} transform="rotate(-14)" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - orb} />
-              <path transform={`rotate(${(1 - starP) * 90}) scale(${starP})`} d="M0 -44 C5 -5 5 -5 44 0 C5 5 5 5 0 44 C-5 5 -5 5 -44 0 C-5 -5 -5 -5 0 -44Z" fill={lg.ink} />
-            </svg>
-            <div>
-              <div style={{ fontFamily: "BarlowCondBlack", fontStyle: "italic", fontWeight: 900, fontSize: lg.size, color: lg.ink, lineHeight: 0.9, letterSpacing: "0.005em" }}>{lg.word}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 10, opacity: sub }}>
-                <div style={{ width: 80 * sub, height: 3, background: lg.ink }} />
-                <div style={{ ...ital, color: lg.ink, fontSize: 20, letterSpacing: "0.08em" }}>{lg.sub}</div>
-              </div>
+      <AbsoluteFill style={{ background: lg.bg }}>
+        {/* the frozen starburst head, shrinking into the logo mark */}
+        <Img src={staticFile(lg.mark)} style={{ position: "absolute", left: 0, top: 0, width: 1920, height: 1080, transformOrigin: `${mx}px ${my}px`,
+          transform: `translate(${(tx - mx) * sh}px, ${(ty - my) * sh}px) scale(${sc})`, filter: blink ? "invert(1)" : undefined }} />
+        {/* wordmark underneath */}
+        {lf >= lg.wordAt && !wBlink && (
+          <div style={{ position: "absolute", top: lg.wordY, left: 0, width: 1920, display: "flex", flexDirection: "column", alignItems: "center", opacity: wk,
+            filter: wg ? `drop-shadow(${wdx}px 0 0 rgba(255,255,255,0.55)) drop-shadow(${-wdx}px 0 0 rgba(255,255,255,0.3))` : undefined, transform: `translateX(${wg * (rnd(f * 2) - 0.5) * 50}px)` }}>
+            <div style={{ fontFamily: "BarlowCondBlack", fontStyle: "italic", fontWeight: 900, fontSize: lg.size, color: lg.ink, lineHeight: 0.9, letterSpacing: "0.01em" }}>{lg.word}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, opacity: sub }}>
+              <div style={{ width: 60 * sub, height: 3, background: lg.ink }} />
+              <div style={{ ...ital, color: lg.ink, fontSize: 20, letterSpacing: "0.08em" }}>{lg.sub}</div>
+              <div style={{ width: 60 * sub, height: 3, background: lg.ink }} />
             </div>
           </div>
         )}

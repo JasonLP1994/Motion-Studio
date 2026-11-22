@@ -34,5 +34,7 @@ export const mutantConfig = {
 
   // the head glitches into flat black-and-white, then a cut to the logo end card
   bw: { from: 249, to: 258 },
-  logo: { at: 258, word: "PHILLIPS DIGITAL", sub: "ART / MOTION / IDENTITY", size: 92, bg: "#000000", ink: "#FFFFFF" },
+  logo: { at: 258, word: "PHILLIPS DIGITAL", sub: "ART / MOTION / IDENTITY", size: 84, bg: "#000000", ink: "#FFFFFF",
+    mark: "mutant/logo-mark.png", markCentre: [915, 540] as [number, number], // the frozen head becomes the mark (scripts/mutant_logo.py)
+    shrink: { dur: 14, scale: 0.46, to: [960, 410] as [number, number] }, wordAt: 10, wordY: 712 },
 };
