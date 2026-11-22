@@ -150,7 +150,7 @@ export const MutantCover: React.FC = () => {
       {inBW
         ? Array.from({ length: 6 }).map((_, i) => {
             const top = (i / 6) * 100, bottom = 100 - ((i + 1) / 6) * 100;
-            const shift = rnd(f * 0.9 + i * 11) < 0.5 ? (rnd(f + i * 7) - 0.5) * 220 : 0;
+            const shift = rnd(f * 0.9 + i * 11) < 0.5 ? (rnd(f + i * 7) - 0.5) * 110 : 0;
             return <Img key={i} src={headSrc} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: headFilter, clipPath: `inset(${top}% 0 ${bottom}% 0)`, transform: `translateX(${shift}px)` }} />;
           })
         : <Img src={headSrc} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: headFilter }} />}

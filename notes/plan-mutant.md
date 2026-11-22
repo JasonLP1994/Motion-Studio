@@ -61,3 +61,4 @@ Now 12 s (288 frames). 3D renders to f258.
 | 10.75–12 s | 258–288 | black end card: small logo glitches in (orbit ellipse + 4-point star mark, PHILLIPS DIGITAL in Barlow Condensed Black Italic, rule + ART / MOTION / IDENTITY), holds |
 Sound extended: heavy glitch on the B/W flicker, logo hit (sub + bright ping) with a clean tail.
 Stills: notes/frames/mutant-end-v3.jpg.
+- Ending zoom-out: CAM_End pulls back (-2.9 to -4.8) during the B/W flicker so the whole spike form sits centred before the logo card; slice jumps halved. Still: notes/frames/mutant-bw-v2.jpg
