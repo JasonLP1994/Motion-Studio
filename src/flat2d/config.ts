@@ -7,8 +7,11 @@ export const flatConfig = {
   music: { bpm: 96 },
 
   col: {
-    red: "#D3131B", redDeep: "#A30E14", maroon: "#6B0A10", maroonDeep: "#4A070B",
-    ink: "#170405", peach: "#F2A27E", cream: "#F6E6D0", lips: "#E52A2F",
+    // v6 palette: cyberpunk mecha comic (grammar from the user's yellow robot poster): yellow ground, hot magenta,
+    // teal / navy, lavender chrome, purple accents, heavy navy ink outlines. Token names kept so each role stays put.
+    red: "#FFE01A", redDeep: "#FF2D95", maroon: "#2C8FB0", maroonDeep: "#1E2B57",
+    ink: "#121733", peach: "#B9BCD6", cream: "#F4F1FF", lips: "#8A3CF0",
+    yellowDeep: "#E9B400", tealDeep: "#1C6A8A", pinkDeep: "#C9157A", outline: 5,
   },
 
   t: {
@@ -41,14 +44,14 @@ export const flatConfig = {
   },
 
   dot: { cx: 1038.65, cy: 452.3, r: 19.2 },     // the dot of the p. on the logo card: portal into the street
-  cardBg: "#D3131B",
+  cardBg: "#FFE01A",
 
   // logo pieces (masks cut from inputs/phillips-digital-logo-scene.jpg), placed on a 1920x1080 card
   logo: {
-    circle: { src: "flat2d/pd-circle.png", x: 785, y: 243, w: 352, h: 352, col: "#F6E6D0" },
-    p: { src: "flat2d/pd-p-hd.png", x: 877, y: 366, w: 182, h: 170, col: "#170405" },
-    word: { src: "flat2d/pd-word-hd.png", x: 565, y: 644, w: 793, h: 124, col: "#F6E6D0" },
-    tag: { src: "flat2d/pd-tag-hd.png", x: 484, y: 830, w: 934, h: 25, col: "#F2A27E" },
+    circle: { src: "flat2d/pd-circle.png", x: 785, y: 243, w: 352, h: 352, col: "#FF2D95" },
+    p: { src: "flat2d/pd-p-hd.png", x: 877, y: 366, w: 182, h: 170, col: "#121733" },
+    word: { src: "flat2d/pd-word-hd.png", x: 565, y: 644, w: 793, h: 124, col: "#121733" },
+    tag: { src: "flat2d/pd-tag-hd.png", x: 484, y: 830, w: 934, h: 25, col: "#C9157A" },
   },
 };
 export type FlatConfig = typeof flatConfig;

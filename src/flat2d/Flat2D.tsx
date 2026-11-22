@@ -9,7 +9,8 @@ const ease = (f: number, a: number, b: number, from = 0, to = 1, e = Easing.inOu
   interpolate(f, [a, b], [from, to], { easing: e, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 // draw a full scene shrunk into a portal centred on P at scale 1/K
 const into = (P: { x: number; y: number }, K: number) => `translate(${P.x} ${P.y}) scale(${1 / K}) translate(${-CX} ${-CY})`;
-const colOf = (k: string) => (c as Record<string, string>)[k];
+const colOf = (k: string) => (c as unknown as Record<string, string>)[k];
+const OUT = { stroke: c.ink, strokeWidth: c.outline, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
 
 // ---------------- the man (back view, walking away from us) ----------------
 // origin = between his feet; at s = 1 he is ~460 px tall
@@ -20,7 +21,7 @@ const Man: React.FC<{ x: number; y: number; s: number; phase: number; walking: b
   const arm = sw * 14;
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`}>
-      <ellipse cx={0} cy={4} rx={78} ry={12} fill={c.maroonDeep} opacity={0.55} />
+      <ellipse cx={0} cy={4} rx={78} ry={12} fill={c.maroonDeep} opacity={0.55} stroke="none" />
       <g transform={`translate(0 ${bob})`}>
         {/* legs + shoes */}
         <rect x={-52} y={-190 - lL} width={40} height={180} fill={c.ink} />
@@ -28,17 +29,19 @@ const Man: React.FC<{ x: number; y: number; s: number; phase: number; walking: b
         <rect x={-56} y={-14 - lL} width={48} height={16} rx={6} fill={c.maroonDeep} />
         <rect x={8} y={-14 - lR} width={48} height={16} rx={6} fill={c.maroonDeep} />
         {/* long coat with a cream light edge on the right (light from the right, as negative space) */}
-        <path d="M-74 -392 L74 -392 L96 -168 L-96 -168 Z" fill={c.ink} />
+        <path d="M-74 -392 L74 -392 L96 -168 L-96 -168 Z" fill={c.maroon} />
+        <path d="M-74 -392 L-40 -392 L-50 -168 L-96 -168 Z" fill={c.tealDeep} />
         <path d="M58 -392 L74 -392 L96 -168 L76 -168 Z" fill={c.cream} />
         <rect x={-4} y={-300} width={8} height={132} fill={c.maroonDeep} />
         {/* arms swing */}
-        <path d={`M-74 -386 L-96 -386 L-110 ${-210 + arm} L-84 ${-210 + arm} Z`} fill={c.ink} />
-        <path d={`M74 -386 L96 -386 L110 ${-210 - arm} L84 ${-210 - arm} Z`} fill={c.ink} />
+        <path d={`M-74 -386 L-96 -386 L-110 ${-210 + arm} L-84 ${-210 + arm} Z`} fill={c.tealDeep} />
+        <path d={`M74 -386 L96 -386 L110 ${-210 - arm} L84 ${-210 - arm} Z`} fill={c.maroon} />
         <circle cx={-97} cy={-200 + arm} r={13} fill={c.maroon} />
         <circle cx={97} cy={-200 - arm} r={13} fill={c.maroon} />
         {/* bag strap + messenger bag */}
-        <path d="M60 -390 L-70 -230" stroke={c.peach} strokeWidth={9} />
-        <rect x={-104} y={-252} width={66} height={56} rx={6} fill={c.peach} />
+        <path d="M60 -390 L-70 -230" stroke={c.cream} strokeWidth={9} />
+        <rect x={-104} y={-252} width={66} height={56} rx={6} fill={c.redDeep} />
+        <rect x={-96} y={-240} width={50} height={10} fill={c.red} />
         {/* collar, neck, head from behind */}
         <rect x={-44} y={-412} width={88} height={26} rx={10} fill={c.peach} />
         <rect x={-18} y={-436} width={36} height={30} fill={c.maroon} />
@@ -56,10 +59,12 @@ const Car: React.FC<{ x: number; y: number; len: number; col: string; dir: 1 | -
   const body = colOf(col), glass = col === "ink" ? c.maroon : c.redDeep;
   return (
     <g transform={`translate(${x} ${y}) scale(${dir * s * k} ${s})`}>
-      <ellipse cx={140} cy={2} rx={150} ry={10} fill={c.maroonDeep} opacity={0.5} />
+      <ellipse cx={140} cy={2} rx={150} ry={10} fill={c.maroonDeep} opacity={0.5} stroke="none" />
       <path d="M0 -26 C0 -60 18 -72 50 -76 L84 -116 C92 -124 104 -128 118 -128 L196 -128 C212 -128 222 -122 230 -112 L256 -80 C272 -78 280 -66 280 -48 L280 -26 Z" fill={body} />
       <path d="M96 -112 L118 -118 L150 -118 L150 -80 L80 -80 Z" fill={glass} />
       <path d="M160 -118 L196 -118 C204 -118 210 -114 216 -106 L234 -80 L160 -80 Z" fill={glass} />
+      <path d="M0 -40 L280 -40 L280 -26 L0 -26 Z" fill={col === "ink" ? c.maroonDeep : c.peach} />
+      <path d="M60 -70 L250 -70" stroke={c.cream} strokeWidth={5} />
       <rect x={262} y={-70} width={16} height={10} rx={3} fill={c.cream} />
       {[64, 218].map((wx) => (
         <g key={wx}>
@@ -88,7 +93,8 @@ const LogoPieces: React.FC<{ id: string; tag?: boolean }> = ({ id, tag = true })
   return (
     <g>
       {/* the circle and the dot are vectors so they stay crisp at any zoom */}
-      <circle cx={L.circle.x + L.circle.w / 2} cy={L.circle.y + L.circle.h / 2} r={L.circle.w / 2 - 1.5} fill={L.circle.col} />
+      <circle cx={L.circle.x + L.circle.w / 2} cy={L.circle.y + L.circle.h / 2} r={L.circle.w / 2 - 1.5} fill={L.circle.col} stroke={c.ink} strokeWidth={9} />
+      <path d={`M${L.circle.x + 66} ${L.circle.y + 128} A 140 140 0 0 1 ${L.circle.x + 146} ${L.circle.y + 52}`} fill="none" stroke={c.cream} strokeWidth={13} strokeLinecap="round" />
       {piece("p")}{piece("word")}{tag && piece("tag")}
       <circle cx={DOT.cx} cy={DOT.cy} r={DOT.r + 1.4} fill={L.p.col} />
     </g>
@@ -132,21 +138,27 @@ const Street: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ 
   return (
     <g>
       <rect {...BLEED} fill={c.red} />
+      <g {...OUT}>
       <circle cx={1720} cy={130} r={140} fill={c.cream} />
+      <circle cx={1720} cy={130} r={96} fill="none" stroke={c.redDeep} strokeWidth={10} />
       {/* neighbours */}
-      <rect x={-1400} y={60} width={2040} height={560} fill={c.maroon} />
+      <rect x={-1400} y={60} width={2040} height={560} fill={c.lips} />
+      <rect x={580} y={60} width={60} height={560} fill={c.maroonDeep} />
       {[0, 1, 2, 3].map((r) => [0, 1, 2, 3].map((k) => <rect key={`l${r}${k}`} x={80 + k * 140} y={110 + r * 110} width={70} height={64} fill={c.redDeep} />))}
-      <rect x={1500} y={20} width={1900} height={600} fill={c.redDeep} />
+      <rect x={1500} y={20} width={1900} height={600} fill={c.maroon} />
+      <rect x={1500} y={20} width={60} height={600} fill={c.tealDeep} />
       {[0, 1, 2, 3, 4].map((r) => [0, 1, 2].map((k) => <rect key={`r${r}${k}`} x={1560 + k * 130} y={70 + r * 104} width={64} height={60} fill={c.maroon} />))}
       {/* the agency: peach facade, ink sign band with the real logo, a glass shopfront (the portal) */}
       <rect x={640} y={40} width={860} height={580} fill={c.peach} />
+      {[260, 600].map((y) => <line key={y} x1={640} y1={y + 10} x2={1500} y2={y + 10} stroke={c.ink} strokeWidth={3} />)}
+      {[690, 1450].map((x) => <rect key={x} x={x - 14} y={250} width={28} height={370} fill={c.redDeep} />)}
       <path d="M1500 40 L1540 60 L1540 620 L1500 620 Z" fill={c.maroonDeep} />
-      <rect x={680} y={92} width={780} height={150} fill={c.ink} />
+      <rect x={680} y={92} width={780} height={150} fill={c.cream} />
       <g transform="translate(1070 168) scale(0.19) translate(-960 -549)"><LogoPieces id={`sign${id}`} tag={false} /></g>
       <rect x={WN.x - 14} y={WN.y - 14} width={WN.w + 28} height={WN.h + 18} fill={c.ink} />
       <defs><clipPath id={`win${id}`}><rect x={WN.x} y={WN.y} width={WN.w} height={WN.h} /></clipPath></defs>
-      <rect x={WN.x} y={WN.y} width={WN.w} height={WN.h} fill={c.red} />
-      {inner && <g clipPath={`url(#win${id})`}>{inner}</g>}
+      <rect x={WN.x} y={WN.y} width={WN.w} height={WN.h} fill={c.red} stroke="none" />
+      {inner && <g clipPath={`url(#win${id})`} stroke="none">{inner}</g>}
       {/* glass door: frame, then the leaf swinging open */}
       <rect x={D.x} y={D.y} width={D.w} height={D.h} fill="none" stroke={c.ink} strokeWidth={8} />
       <rect x={D.x + D.w - 16} y={D.y + D.h / 2 - 20} width={6} height={40} fill={c.cream} />
@@ -165,6 +177,7 @@ const Street: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = ({ 
       <circle cx={1459} cy={670} r={20} fill={walk ? c.maroonDeep : c.lips} />
       <circle cx={1459} cy={720} r={20} fill={walk ? c.cream : c.maroonDeep} />
       {items.map((it) => it.el)}
+      </g>
     </g>
   );
 };
@@ -203,6 +216,7 @@ const Interior: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = (
   return (
     <g>
       <rect {...BLEED} fill={c.red} />
+      <g {...OUT}>
       <path d="M-1400 820 L3320 820 L3320 2480 L-1400 2480 Z" fill={c.maroonDeep} />
       {[...Array(9)].map((_, i) => <line key={i} x1={960} y1={820} x2={-1400 + i * 590} y2={2480} stroke={c.maroon} strokeWidth={4} />)}
       {/* a tall cream light shape from the shopfront behind us */}
@@ -217,14 +231,15 @@ const Interior: React.FC<{ f: number; inner?: React.ReactNode; id: string }> = (
       {/* the big wall screen (portal back to the logo) */}
       <rect x={S.x - 18} y={S.y - 18} width={S.w + 36} height={S.h + 36} rx={8} fill={c.ink} />
       <defs><clipPath id={`scr${id}`}><rect x={S.x} y={S.y} width={S.w} height={S.h} /></clipPath></defs>
-      <rect x={S.x} y={S.y} width={S.w} height={S.h} fill={cfg.cardBg} />
-      {inner && <g clipPath={`url(#scr${id})`}>{inner}</g>}
+      <rect x={S.x} y={S.y} width={S.w} height={S.h} fill={cfg.cardBg} stroke="none" />
+      {inner && <g clipPath={`url(#scr${id})`} stroke="none">{inner}</g>}
       <Seated x={180} f={f} ph={0} />
       <Seated x={1740} flip f={f} ph={2} />
       {/* plant */}
       <rect x={1270} y={740} width={70} height={80} fill={c.peach} />
       <path d="M1305 740 C1260 680 1250 620 1270 580 C1300 620 1306 680 1305 740 C1310 670 1330 620 1360 600 C1366 650 1340 700 1305 740 Z" fill={c.maroon} />
       {f >= T.walk[1] && <Man {...man} />}
+      </g>
     </g>
   );
 };
