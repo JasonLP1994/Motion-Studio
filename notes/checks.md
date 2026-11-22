@@ -55,3 +55,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (RedGlitch Ferrari): palette red, black, white (the reference's own); keep every effect in palette: negative flashes as black-and-white (never CSS invert on red, it turns cyan), split as red/white (no RGB green/blue fringes). User asked for "more crazy, more glitchy, more wild" than LostData.
 - DO (RedGlitch Ferrari v2): flat paper-white background with SAM 2 cut-outs; graphics in black ink on paper, red as the accent.
 - DO: when a word sits behind a rotoscoped subject, keep the identifying letters visible (move it, or put a solid copy in front with an outline copy behind). DON'T let type touch the frame edge (KINGZ v1 clipped C and F).
+- DO: when footage is inverted (negative), switch yellow/white graphics to black ink so they stay readable on the light negative.

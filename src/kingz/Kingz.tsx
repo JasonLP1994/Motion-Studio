@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { loadFont } from "@remotion/fonts";
 import { kingzConfig as K, P } from "./config";
 import TRACK from "./track.json";
@@ -32,9 +32,36 @@ const Wobble: React.FC<{ f: number }> = ({ f }) => (
   </svg>
 );
 
+// ---------- v3 effects ----------
+const inSpan = (f: number, spans: [number, number][]) => spans.some(([a, b]) => f >= a && f < b);
+const RGBDefs: React.FC<{ dx: number; dy: number }> = ({ dx, dy }) => (
+  <svg width={0} height={0} style={{ position: "absolute" }}>
+    <filter id="rgb" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+      <feOffset in="r" dx={dx} dy={0} result="ro" />
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+      <feOffset in="b" dx={-dx} dy={dy} result="bo" />
+      <feBlend in="ro" in2="g" mode="screen" result="rg" />
+      <feBlend in="rg" in2="bo" mode="screen" />
+    </filter>
+  </svg>
+);
+const Strobe: React.FC<{ f: number }> = ({ f }) => {
+  for (const st of K.fx.strobes) {
+    const i = f - st.at;
+    if (i >= 0 && i < st.pattern.length) {
+      const c = st.pattern[i];
+      if (c === "none") return null;
+      return <AbsoluteFill style={{ background: c === "white" ? P.white : c === "black" ? P.black : P.yellow }} />;
+    }
+  }
+  return null;
+};
+
 // ---------- type ----------
 type WordT = { text: string; at: number; out: number; x: number; y: number; size: number; font: string; rot: number; behind?: boolean; outlineOnly?: boolean };
-const Word: React.FC<{ w: WordT; f: number }> = ({ w, f }) => {
+const Word: React.FC<{ w: WordT; f: number; ink: string }> = ({ w, f, ink }) => {
   const t = f - w.at;
   if (t < 0 || f >= w.out || (f >= w.out - 2 && f % 2 === 0)) return null;
   const s = interpolate(t, [0, K.slamFrames], [1.45, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
@@ -42,11 +69,11 @@ const Word: React.FC<{ w: WordT; f: number }> = ({ w, f }) => {
     position: "absolute", left: w.x, top: w.y, transform: `translate(-50%, -50%) rotate(${w.rot}deg) scale(${s})`,
     fontFamily: w.font, fontSize: w.size, lineHeight: 1, whiteSpace: "nowrap", letterSpacing: "0.01em",
   };
-  if (w.outlineOnly) return <div style={{ ...base, color: "transparent", WebkitTextStroke: `${K.ghost.stroke + 2}px ${P.yellow}` }}>{w.text}</div>;
+  if (w.outlineOnly) return <div style={{ ...base, color: "transparent", WebkitTextStroke: `${K.ghost.stroke + 2}px ${ink}` }}>{w.text}</div>;
   return (
     <>
-      <div style={{ ...base, left: w.x + K.ghost.dx, top: w.y + K.ghost.dy, color: "transparent", WebkitTextStroke: `${K.ghost.stroke}px ${P.yellow}` }}>{w.text}</div>
-      <div style={{ ...base, color: P.yellow }}>{w.text}</div>
+      <div style={{ ...base, left: w.x + K.ghost.dx, top: w.y + K.ghost.dy, color: "transparent", WebkitTextStroke: `${K.ghost.stroke}px ${ink}` }}>{w.text}</div>
+      <div style={{ ...base, color: ink }}>{w.text}</div>
     </>
   );
 };
@@ -66,7 +93,7 @@ const Tape: React.FC<{ b: (typeof K.tape.bands)[number]; f: number }> = ({ b, f 
 };
 
 // ---------- poster furniture ----------
-const Barcode: React.FC<{ x: number; y: number; w: number; h: number; seed: number; vertical?: boolean }> = ({ x, y, w, h, seed, vertical }) => {
+const Barcode: React.FC<{ x: number; y: number; w: number; h: number; seed: number; vertical?: boolean; fill?: string }> = ({ x, y, w, h, seed, vertical, fill = P.white }) => {
   const bars = [];
   let p = 0;
   const len = vertical ? h : w;
@@ -74,51 +101,53 @@ const Barcode: React.FC<{ x: number; y: number; w: number; h: number; seed: numb
     const thick = 3 + Math.floor(rnd(seed + i) * 4) * 4;
     const gap = 4 + Math.floor(rnd(seed + i + 50) * 3) * 4;
     if (p + thick > len) break;
-    bars.push(vertical ? <rect key={i} x={x} y={y + p} width={w} height={thick} fill={P.white} /> : <rect key={i} x={x + p} y={y} width={thick} height={h} fill={P.white} />);
+    bars.push(vertical ? <rect key={i} x={x} y={y + p} width={w} height={thick} fill={fill} /> : <rect key={i} x={x + p} y={y} width={thick} height={h} fill={fill} />);
     p += thick + gap;
   }
   return <>{bars}</>;
 };
 
-const Poster: React.FC<{ f: number }> = ({ f }) => {
+const Poster: React.FC<{ f: number; inv: boolean }> = ({ f, inv }) => {
+  const fg = inv ? P.black : P.white;
   const Q = K.poster;
   const slide = interpolate(f, [Q.barcodesAt, Q.barcodesAt + 8], [1, 0], { ...clamp, easing: Easing.out(Easing.exp) });
   const chev = f >= Q.chevronsAt ? "<<<<" : "";
   return (
     <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
-      <g transform={`translate(${-160 * slide} 0)`}><Barcode x={70} y={120} w={44} h={360} seed={3} vertical /><Barcode x={70} y={620} w={44} h={300} seed={9} vertical /></g>
-      <g transform={`translate(${160 * slide} 0)`}><Barcode x={W - 114} y={160} w={44} h={420} seed={17} vertical /></g>
+      <g transform={`translate(${-160 * slide} 0)`}><Barcode x={70} y={120} w={44} h={360} seed={3} fill={fg} /><Barcode x={70} y={620} w={44} h={300} seed={9} vertical fill={fg} /></g>
+      <g transform={`translate(${160 * slide} 0)`}><Barcode x={W - 114} y={160} w={44} h={420} seed={17} vertical fill={fg} /></g>
       {f >= Q.chevronsAt && (
         <>
-          <text x={150} y={92} fill={P.white} fontFamily="Inter" fontWeight={800} fontSize={54} letterSpacing="-0.05em">{chev}</text>
-          <text x={W - 330} y={H - 60} fill={P.white} fontFamily="Inter" fontWeight={800} fontSize={54} letterSpacing="-0.05em">{">>>>"}</text>
+          <text x={150} y={92} fill={fg} fontFamily="Inter" fontWeight={800} fontSize={54} letterSpacing="-0.05em">{chev}</text>
+          <text x={W - 330} y={H - 60} fill={fg} fontFamily="Inter" fontWeight={800} fontSize={54} letterSpacing="-0.05em">{">>>>"}</text>
         </>
       )}
       {Q.xAt.map((a, i) => (f >= a ? (
-        <text key={i} x={W - 250} y={300 + i * 150} fill={P.yellow} fontFamily="Inter" fontWeight={800} fontSize={170} textAnchor="middle">×</text>
+        <text key={i} x={W - 250} y={300 + i * 150} fill={inv ? P.black : P.yellow} fontFamily="Inter" fontWeight={800} fontSize={170} textAnchor="middle">×</text>
       ) : null))}
-      <Barcode x={150} y={H - 120} w={300} h={44} seed={31} />
+      <Barcode x={150} y={H - 120} w={300} h={44} seed={31} fill={fg} />
       {Q.code.map((c, i) => (
-        <text key={i} x={150} y={H - 160 - (Q.code.length - 1 - i) * 22} fill={P.white} fontFamily="LiberationMono" fontSize={16} letterSpacing="0.08em">{c}</text>
+        <text key={i} x={150} y={H - 160 - (Q.code.length - 1 - i) * 22} fill={fg} fontFamily="LiberationMono" fontSize={16} letterSpacing="0.08em">{c}</text>
       ))}
     </svg>
   );
 };
 
 // ---------- matte-driven layers ----------
-const Outline: React.FC<{ f: number }> = ({ f }) => {
+const Outline: React.FC<{ f: number; inv: boolean }> = ({ f, inv }) => {
   const O = K.outline;
   const reveal = interpolate(f, [0, O.drawFrames], [0, 100], clamp);
   const style: React.CSSProperties = { position: "absolute", left: 0, top: 0, width: W, height: H, clipPath: `inset(${100 - reveal}% 0 0 0)` };
   return (
     <>
-      <Img src={staticFile(`statue/ring/${pad(f)}.png`)} style={{ ...style, left: O.shadow[0], top: O.shadow[1], filter: "url(#toWhite) url(#wob)", opacity: 0.9 }} />
-      <Img src={staticFile(`statue/ring/${pad(f)}.png`)} style={{ ...style, filter: "url(#wob)" }} />
+      {!inv && <Img src={staticFile(`statue/ring/${pad(f)}.png`)} style={{ ...style, left: O.shadow[0], top: O.shadow[1], filter: "url(#toWhite) url(#wob)", opacity: 0.9 }} />}
+      <Img src={staticFile(`statue/ring/${pad(f)}.png`)} style={{ ...style, filter: inv ? "brightness(0) url(#wob)" : "url(#wob)" }} />
     </>
   );
 };
 
-const Nodes: React.FC<{ f: number }> = ({ f }) => {
+const Nodes: React.FC<{ f: number; inv: boolean }> = ({ f, inv }) => {
+  const fg = inv ? P.black : P.white;
   const N = K.nodes;
   if (f < N.at || f >= N.out) return null;
   const t = f - N.at;
@@ -132,11 +161,11 @@ const Nodes: React.FC<{ f: number }> = ({ f }) => {
         if (!p || !q) return null;
         const draw = interpolate(t, [(i + 1) * N.every, (i + 1) * N.every + N.wireFrames], [0, 1], clamp);
         const mx = (p[0] + q[0]) / 2 + (i % 2 ? -160 : 160);
-        return <path key={i} d={`M${p[0]} ${p[1]} Q${mx} ${(p[1] + q[1]) / 2} ${q[0]} ${q[1]}`} fill="none" stroke={P.white} strokeWidth={2.5} pathLength={1} strokeDasharray={`${draw} 1`} />;
+        return <path key={i} d={`M${p[0]} ${p[1]} Q${mx} ${(p[1] + q[1]) / 2} ${q[0]} ${q[1]}`} fill="none" stroke={fg} strokeWidth={2.5} pathLength={1} strokeDasharray={`${draw} 1`} />;
       })}
       {live.map((p, i) => (p ? (
         <g key={`n${i}`}>
-          <rect x={p[0] - 8} y={p[1] - 8} width={16} height={16} fill={P.white} />
+          <rect x={p[0] - 8} y={p[1] - 8} width={16} height={16} fill={fg} />
           <rect x={p[0] + 18} y={p[1] - 22} width={140} height={40} fill={P.yellow} />
           <text x={p[0] + 30} y={p[1] + 7} fill={P.black} fontFamily="Inter" fontWeight={800} fontSize={22}>{N.labels[i].slice(0, Math.max(0, Math.floor((t - i * N.every) * 2.5)))}</text>
         </g>
@@ -146,7 +175,7 @@ const Nodes: React.FC<{ f: number }> = ({ f }) => {
 };
 
 // Crown, X eyes and smile doodle drawn onto her face in the close-up (follows the tracked face box).
-const FaceMarks: React.FC<{ f: number }> = ({ f }) => {
+const FaceMarks: React.FC<{ f: number; ink: string }> = ({ f, ink }) => {
   const F = K.face;
   const box = T.face[f];
   if (f < F.at || !box) return null;
@@ -155,14 +184,14 @@ const FaceMarks: React.FC<{ f: number }> = ({ f }) => {
   const X = (u: number) => x0 + u * w, Y = (v: number) => y0 + v * h;
   const sw = Math.max(6, w * F.stroke);
   const d = (i: number) => interpolate(f, [F.at + i * F.every, F.at + i * F.every + F.drawFrames], [0, 1], clamp);
-  const st = (i: number) => ({ fill: "none", stroke: P.yellow, strokeWidth: sw, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, pathLength: 1, strokeDasharray: `${d(i)} 1` });
+  const st = (i: number) => ({ fill: "none", stroke: ink, strokeWidth: sw, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, pathLength: 1, strokeDasharray: `${d(i)} 1` });
   const ex = (cx: number, cy: number, r: number) => `M${X(cx) - r} ${Y(cy) - r} L${X(cx) + r} ${Y(cy) + r} M${X(cx) + r} ${Y(cy) - r} L${X(cx) - r} ${Y(cy) + r}`;
   const r = w * 0.09;
   const crown = `M${X(0.2)} ${Y(-0.08)} L${X(0.2)} ${Y(-0.32)} L${X(0.35)} ${Y(-0.18)} L${X(0.5)} ${Y(-0.38)} L${X(0.65)} ${Y(-0.18)} L${X(0.8)} ${Y(-0.32)} L${X(0.8)} ${Y(-0.08)} Z`;
   return (
     <svg width={W} height={H} style={{ position: "absolute", inset: 0, filter: "url(#wob)" }}>
       <path d={crown} {...st(0)} />
-      {d(0) >= 1 && [0.2, 0.5, 0.8].map((u, i) => <circle key={i} cx={X(u)} cy={Y(i === 1 ? -0.38 : -0.32) - sw} r={sw * 0.9} fill={P.yellow} />)}
+      {d(0) >= 1 && [0.2, 0.5, 0.8].map((u, i) => <circle key={i} cx={X(u)} cy={Y(i === 1 ? -0.38 : -0.32) - sw} r={sw * 0.9} fill={ink} />)}
       <path d={ex(0.33, 0.42, r)} {...st(1)} />
       <path d={ex(0.67, 0.42, r)} {...st(2)} />
       <path d={`M${X(0.28)} ${Y(0.7)} Q${X(0.5)} ${Y(0.9)} ${X(0.74)} ${Y(0.66)} M${X(0.66)} ${Y(0.64)} L${X(0.75)} ${Y(0.65)} L${X(0.73)} ${Y(0.75)}`} {...st(3)} />
@@ -185,21 +214,35 @@ export const Kingz: React.FC = () => {
   const shaking = f - lastSlam < S.frames;
   const sx = shaking ? (rnd(f * 1.7) - 0.5) * 2 * S.px : 0;
   const sy = shaking ? (rnd(f * 2.9) - 0.5) * 2 * S.px : 0;
+  const X = K.fx;
+  const inv = inSpan(f, X.invert);
+  const ink = inv ? P.black : P.yellow;
+  const rgbOn = X.rgb.some(([a, l]) => f >= a && f < a + l);
+  const dx = rgbOn ? (rnd(f * 3.3) > 0.5 ? 1 : -1) * X.rgbAmount * (0.6 + rnd(f) * 0.8) : 0;
+  const jolt = rgbOn ? (rnd(f * 5.1) - 0.5) * 2 * X.jolt : 0;
+  const footFilter = K.grade + (inv ? " invert(1)" : "");
   return (
     <AbsoluteFill style={{ background: P.black }}>
       <Wobble f={f} />
-      <AbsoluteFill style={{ transform: `translate(${sx}px, ${sy}px)` }}>
-        <OffthreadVideo src={staticFile("statue/clip.mp4")} style={{ width: W, height: H, filter: K.grade }} muted />
-        {(K.words as WordT[]).filter((w) => w.behind).map((w, i) => <Word key={`b${i}`} w={w} f={f} />)}
-        <Img src={staticFile(`statue/cut/${pad(f)}.webp`)} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, filter: K.grade }} />
-        <Outline f={f} />
-        <FaceMarks f={f} />
-        <Nodes f={f} />
+      <RGBDefs dx={dx} dy={dx * 0.25} />
+      <AbsoluteFill style={{ transform: `translate(${sx + jolt}px, ${sy}px)`, filter: rgbOn ? "url(#rgb)" : undefined }}>
+        <OffthreadVideo src={staticFile("statue/clip.mp4")} style={{ width: W, height: H, filter: footFilter }} muted />
+        {(K.words as WordT[]).filter((w) => w.behind).map((w, i) => <Word key={`b${i}`} w={w} f={f} ink={ink} />)}
+        <Img src={staticFile(`statue/cut/${pad(f)}.webp`)} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, filter: footFilter }} />
+        <Outline f={f} inv={inv} />
+        <FaceMarks f={f} ink={ink} />
+        <Nodes f={f} inv={inv} />
         {K.tape.bands.map((b, i) => <Tape key={i} b={b} f={f} />)}
-        {(K.words as WordT[]).filter((w) => !w.behind).map((w, i) => <Word key={`f${i}`} w={w} f={f} />)}
-        <Poster f={f} />
+        {(K.words as WordT[]).filter((w) => !w.behind).map((w, i) => <Word key={`f${i}`} w={w} f={f} ink={ink} />)}
+        <Poster f={f} inv={inv} />
       </AbsoluteFill>
+      <Strobe f={f} />
       <Grain f={f} />
+      {X.rgb.map(([a], i) => (
+        <Sequence key={`sfx${i}`} from={a} durationInFrames={8}>
+          <Audio src={staticFile(X.sfx)} volume={X.sfxVolume} />
+        </Sequence>
+      ))}
       <Audio src={staticFile(K.audio.music)} volume={K.audio.volume} />
     </AbsoluteFill>
   );

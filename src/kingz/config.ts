@@ -44,5 +44,23 @@ export const kingzConfig = {
     code: ["KNGZ-001  //  ROTO 241F", "JN47B5WBGC  0x3F", "SAM2.1  CONF 0.98"],
   },
 
+  // v3 effects (user: "strobe effects, rgb glitches and inverted scenes").
+  fx: {
+    // Full-frame flashes; a pattern steps one colour per frame ("none" = no flash that frame).
+    strobes: [
+      { at: 9, pattern: ["white"] },
+      { at: 59, pattern: ["yellow", "black", "white"] },
+      { at: 126, pattern: ["white", "black", "yellow"] },
+      { at: 170, pattern: ["black", "none", "white", "none", "yellow", "none", "black", "none", "white", "none", "yellow", "none", "white", "none", "black"] },
+      { at: 190, pattern: ["white", "white"] },
+    ] as { at: number; pattern: ("white" | "black" | "yellow" | "none")[] }[],
+    // RGB channel split + sideways jolt: [start, length] in frames.
+    rgb: [[30, 5], [68, 5], [100, 5], [138, 5], [188, 7], [214, 5], [231, 6]] as [number, number][],
+    rgbAmount: 26, jolt: 34,
+    // Inverted (negative) footage: [start, end) in frames. Graphics switch to black ink while inverted.
+    invert: [[80, 100], [148, 166], [200, 204], [208, 212], [222, 226]] as [number, number][],
+    sfx: "car/sfx/kenney-interface-glitch-002.ogg", sfxVolume: 0.6,
+  },
+
   audio: { music: "statue/music.wav", volume: 1 },
 };
