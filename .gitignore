@@ -85,3 +85,6 @@ public/statue/
 # Mutant cover: Blender frame sequences (local renders, never in Git)
 public/mutant/frames/
 public/mutant/logo-mark.png
+
+# Pixel sneaker sprites (rendered locally)
+public/pixel/

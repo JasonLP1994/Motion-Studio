@@ -1,0 +1,44 @@
+{
+  "pop": {
+    "label": "Pop: off-white page, red masthead (closest to the reference)",
+    "page": "#F2F0EB", "masthead": "#E8352B", "accent": "#2FB4E9", "ink": "#121212",
+    "roles": {
+      "1": ["#B9C3D6", "#E9EEF5", "#FFFFFF"],
+      "2": ["#C22A2A", "#E8352B", "#FF7A4D"],
+      "3": ["#1E7FD0", "#2FB4E9", "#8EE3FF"],
+      "4": ["#8C8F99", "#C9CBD1", "#F2F2F2"],
+      "5": ["#2A2A33", "#44444F", "#6A6A78"],
+      "6": ["#C9CBD1", "#F4F4F4", "#FFFFFF"],
+      "7": ["#2E9E3E", "#5BD146", "#B6F25C"],
+      "8": ["#121212", "#121212", "#E8352B"]
+    }
+  },
+  "candy": {
+    "label": "Candy: pink page, hot-pink masthead, lilac / mint / lemon shoe",
+    "page": "#FFE3EE", "masthead": "#FF3D8B", "accent": "#7A5CFF", "ink": "#2A1240",
+    "roles": {
+      "1": ["#9F86E8", "#C7B3FF", "#EDE4FF"],
+      "2": ["#E0356F", "#FF5C99", "#FFA3C6"],
+      "3": ["#2CBFA3", "#4FE8C4", "#B8FFE9"],
+      "4": ["#E8B92E", "#FFE15C", "#FFF6B8"],
+      "5": ["#5A3E8C", "#7A5CFF", "#A894FF"],
+      "6": ["#F2EAFF", "#FFFFFF", "#FFFFFF"],
+      "7": ["#FF8A3D", "#FFB25C", "#FFDDA3"],
+      "8": ["#2A1240", "#2A1240", "#FF3D8B"]
+    }
+  },
+  "studio": {
+    "label": "Studio: off-white page, violet masthead, lime / violet / black shoe (silver-lady colours)",
+    "page": "#F4F4EE", "masthead": "#6A3BFF", "accent": "#C8FA14", "ink": "#0E0E12",
+    "roles": {
+      "1": ["#1C1C24", "#2C2C38", "#4A4A5C"],
+      "2": ["#4E24D6", "#6A3BFF", "#A98BFF"],
+      "3": ["#86B800", "#C8FA14", "#EEFF9C"],
+      "4": ["#A9ABB5", "#E2E3E8", "#FFFFFF"],
+      "5": ["#4E24D6", "#6A3BFF", "#A98BFF"],
+      "6": ["#C8FA14", "#E4FF6B", "#F7FFC9"],
+      "7": ["#86B800", "#C8FA14", "#EEFF9C"],
+      "8": ["#0E0E12", "#0E0E12", "#C8FA14"]
+    }
+  }
+}
