@@ -71,3 +71,12 @@ Stills: notes/frames/mutant-end-v3.jpg.
   glitches in underneath at f268 (Barlow Condensed Black Italic 84), rule + ART / MOTION / IDENTITY + rule; holds.
 - After the full 3D render: run the logo pass at full size, then the mark script, before the final Remotion render.
 Stills: notes/frames/mutant-logo-v1.jpg (half-size preview mark).
+
+## Render checks
+- v1b (renders/mutant-cover-v1b.mp4 + -silent): 12.0 s, 1920x1080, 24 fps. -14.0 LUFS, peak -1.0 dBFS. Pipeline: Blender 3D (258 f)
+  -> logo stencil pass -> Remotion comp (type, glitches, logo card) -> lens pass (cover preset, skipped on f249-287) -> postfx
+  cover_punch 0.8 -> encode + soundtrack. v1 had the lens streaks smearing the B/W flicker and the logo card; fixed in v1b.
+- Frames checked across the whole video (contact sheets in notes/frames/mutant-cover-v1/). Sound measured, not heard.
+- Score 8.6/10: layout 8.5, timing 8.5, readability 8.5, polish 9. Weakest: the close-ups are very abstract (some frames are just
+  violet ribbons on lime); the cover hold is short (type glitches out 1 s after the title lands).
+- Credit line for posts: "Head model: Female Head Realistic by recofiv3 (CC-BY 4.0)".
