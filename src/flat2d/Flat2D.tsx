@@ -12,17 +12,6 @@ const ease = (f: number, a: number, b: number, from = 0, to = 1, e = Easing.inOu
   interpolate(f, [a, b], [from, to], { easing: e, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 // draw a full scene shrunk into a portal centred on P at scale 1/K
 const into = (P: { x: number; y: number }, K: number) => `translate(${P.x} ${P.y}) scale(${1 / K}) translate(${-CX} ${-CY})`;
-// camera on scene A: z = scale, g = how far the portal centre has travelled to the frame centre
-const camTr = (z: number, g: number) => {
-  const sx = P_S.x + (CX - P_S.x) * g, sy = P_S.y + (CY - P_S.y) * g;
-  return `translate(${sx} ${sy}) scale(${z}) translate(${-P_S.x} ${-P_S.y})`;
-};
-const zoomState = (e: number) => { // e: 0 = scene A at the push scale, 1 = screen fills the frame
-  const l0 = Math.log(T.push), l1 = Math.log(K_S);
-  const z = Math.exp(l0 + (l1 - l0) * e);
-  return { z, g: (Math.log(z) - l0) / (l1 - l0) };
-};
-
 // ---------------- 3D world (flat-shaded) ----------------
 type V = [number, number, number];
 const norm = (v: V): V => { const l = Math.hypot(...v); return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -70,7 +59,7 @@ const Shadow: React.FC<{ proj: ReturnType<typeof makeCam>; x: number; z: number;
 };
 const popS = (f: number, at: number) => spring({ frame: f - at, fps: FPS, config: { damping: 11, stiffness: 160, mass: 0.7 } });
 
-const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
+const World: React.FC<{ f: number; ui?: boolean; inner?: React.ReactNode; id?: string }> = ({ f, ui = true, inner, id = "w" }) => {
   const proj = makeCam(f);
   // floor + grid
   // infinite floor: the floor and the sky are the same deep red, so only the grid shows (no horizon line)
@@ -88,7 +77,7 @@ const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
   const cubeLift = f > cu.grab && f < cu.drop ? Math.sin(((f - cu.grab) / (cu.drop - cu.grab)) * Math.PI) * 0.7 : 0;
   const cubePos: V = [cubeX, 1.1 + cubeLift, 0.6];
   const items: { z: number; el: React.ReactNode }[] = [];
-  const s1 = popS(f, T.pops[0]), s2 = popS(f, T.pops[1]), s3 = popS(f, T.pops[2]), s0 = popS(f, T.click), sb = popS(f, T.boot);
+  const s1 = popS(f, T.pops[0]), s2 = popS(f, T.pops[1]), s3 = popS(f, T.pops[2]), s0 = popS(f, T.click);
   if (s0 > 0.01) items.push({ z: proj(cubePos)[2], el: <Solid key="cube" proj={proj} verts={CUBE_V} faces={CUBE_F} pos={cubePos} s={1.05 * s0} ry={f * 0.012 + 0.5} rx={0.25} /> });
   if (s1 > 0.01) items.push({ z: proj([2.4, 1.6, -0.4])[2], el: <Solid key="oct" proj={proj} verts={OCT_V} faces={OCT_F} pos={[2.4, 1.6, -0.4]} s={1.4 * s1} ry={f * 0.03} rx={0.3} /> });
   // sphere with a flat crescent shadow
@@ -133,8 +122,10 @@ const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
   return (
     <g>
       <rect {...BLEED} fill={c.redDeep} />
-      {sb > 0.01 && <circle cx={1480} cy={230} r={150 * sb} fill={c.red} />}
-      <g opacity={ease(f, T.boot, T.boot + 12, 0, 1, Easing.out(Easing.quad))}>{grid}</g>
+      <defs><clipPath id={`sun${id}`}><circle cx={SUN.cx} cy={SUN.cy} r={SUN.r} /></clipPath></defs>
+      <circle cx={SUN.cx} cy={SUN.cy} r={SUN.r} fill={c.red} />
+      {inner && <g clipPath={`url(#sun${id})`}>{inner}</g>}
+      {grid}
       {s0 > 0.01 && <Shadow proj={proj} x={cubeX} z={0.6} r={(1.25 - cubeLift * 0.3) * s0} />}
       {s1 > 0.01 && <Shadow proj={proj} x={2.4} z={-0.4} r={1.1 * s1} />}
       {s3 > 0.01 && <Shadow proj={proj} x={0.2} z={-3.4} r={1.2 * s3} />}
@@ -168,7 +159,7 @@ const World: React.FC<{ f: number; ui?: boolean }> = ({ f, ui = true }) => {
 };
 
 // ---------------- Scene A: the designer at the desk ----------------
-const Designer: React.FC<{ f: number }> = ({ f }) => {
+const Designer: React.FC<{ f: number; inner?: React.ReactNode; id?: string }> = ({ f, inner, id = "d" }) => {
   const click = f >= T.click && f < T.click + 5 ? 3 : 0; // the finger presses on the click
   return (
     <g>
@@ -176,14 +167,15 @@ const Designer: React.FC<{ f: number }> = ({ f }) => {
         <pattern id="stripeA" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(28)">
           <rect width="26" height="26" fill={c.ink} /><rect width="7" height="26" fill={c.peach} />
         </pattern>
-        <clipPath id="screenClip"><rect x={SC.x} y={SC.y} width={SC.w} height={SC.h} /></clipPath>
+        <clipPath id={`screen${id}`}><rect x={SC.x} y={SC.y} width={SC.w} height={SC.h} /></clipPath>
       </defs>
       <rect {...BLEED} fill={c.red} />
       {/* her big shadow on the wall, thrown by the monitor */}
       <path d="M1360 120 C1360 10 1450 -40 1560 -40 C1700 -40 1790 50 1790 170 L1800 520 C1760 545 1700 545 1660 520 L1640 600 L1720 640 C1800 700 1840 820 1860 1100 L1400 1100 C1400 900 1440 760 1500 700 L1440 520 Z" fill={c.redDeep} />
       {/* monitor */}
       <rect x={SC.x - 16} y={SC.y - 16} width={SC.w + 32} height={SC.h + 32} rx={10} fill={c.ink} />
-      <g clipPath="url(#screenClip)"><g transform={into(P_S, K_S)}><World f={f} /></g></g>
+      <rect x={SC.x} y={SC.y} width={SC.w} height={SC.h} fill={c.redDeep} />
+      {inner && <g clipPath={`url(#screen${id})`}>{inner}</g>}
       <rect x={SC.x + SC.w / 2 - 24} y={SC.y + SC.h + 16} width={48} height={150} fill={c.ink} />
       <path d={`M${SC.x + SC.w / 2 - 120} 800 L${SC.x + SC.w / 2 + 120} 800 L${SC.x + SC.w / 2 + 90} 780 L${SC.x + SC.w / 2 - 90} 780 Z`} fill={c.ink} />
       {/* light from the screen pooling on the desk */}
@@ -215,67 +207,79 @@ const Designer: React.FC<{ f: number }> = ({ f }) => {
 };
 
 // ---------------- the logo card (pieces masked from the real logo, recoloured to the palette) ----------------
-const Piece: React.FC<{ p: { src: string; x: number; y: number; w: number; h: number; col: string }; style?: React.CSSProperties }> = ({ p, style }) => (
-  <div style={{ position: "absolute", left: p.x, top: p.y, width: p.w, height: p.h, backgroundColor: p.col,
-    WebkitMaskImage: `url(${staticFile(p.src)})`, maskImage: `url(${staticFile(p.src)})`, WebkitMaskSize: "100% 100%", maskSize: "100% 100%", ...style }} />
-);
-const Logo: React.FC<{ f: number }> = ({ f }) => {
-  const L = cfg.logo, t = T.logo;
-  let sc: number, sp: number, wy: number, tg: number;
-  if (f < T.flood[0]) { // start of the loop: the finished logo holds, then steps away (exits ~45% shorter than entrances)
-    const o = T.logoOut;
-    tg = ease(f, o, o + 6, 1, 0, Easing.in(Easing.cubic));
-    wy = ease(f, o + 1, o + 8, 0, 1, Easing.in(Easing.cubic));
-    sp = ease(f, o + 3, o + 10, 1, 0, Easing.in(Easing.cubic));
-    sc = ease(f, o + 4, o + 12, 1, 0, Easing.in(Easing.cubic));
-  } else {
-    sc = spring({ frame: f - t.circle, fps: FPS, config: { damping: 12, stiffness: 150, mass: 0.8 } });
-    sp = spring({ frame: f - t.p, fps: FPS, config: { damping: 11, stiffness: 170, mass: 0.6 } });
-    wy = ease(f, t.word, t.word + 14, 1, 0, Easing.out(Easing.exp));
-    tg = ease(f, t.tag, t.tag + 10, 0, 1, Easing.out(Easing.quad));
-  }
+const LogoCard: React.FC<{ inner?: React.ReactNode; reveal?: number; id?: string }> = ({ inner, reveal = 0, id = "l" }) => {
+  const L = cfg.logo;
+  const piece = (k: keyof typeof L) => {
+    const p = L[k];
+    return (
+      <g key={k}>
+        <mask id={`m${k}${id}`} maskUnits="userSpaceOnUse" x={p.x} y={p.y} width={p.w} height={p.h}>
+          <image href={staticFile(p.src)} x={p.x} y={p.y} width={p.w} height={p.h} preserveAspectRatio="none" />
+        </mask>
+        <rect x={p.x} y={p.y} width={p.w} height={p.h} fill={p.col} mask={`url(#m${k}${id})`} />
+      </g>
+    );
+  };
   return (
-    <AbsoluteFill>
-      <Piece p={L.circle} style={{ transform: `scale(${sc})` }} />
-      <Piece p={L.p} style={{ transform: `rotate(${(1 - sp) * -50}deg) scale(${0.4 + 0.6 * sp})`, opacity: sp > 0.02 ? 1 : 0 }} />
-      <div style={{ position: "absolute", left: L.word.x, top: L.word.y - 10, width: L.word.w, height: L.word.h + 40, overflow: "hidden" }}>
-        <Piece p={{ ...L.word, x: 0, y: 10 }} style={{ transform: `translateY(${wy * 190}px)` }} />
-      </div>
-      <Piece p={L.tag} style={{ opacity: tg, filter: `blur(${(1 - tg) * 6}px)` }} />
-    </AbsoluteFill>
+    <g>
+      <rect {...BLEED} fill={cfg.cardBg} />
+      {/* the circle and the dot are drawn as vectors so they stay crisp at any zoom */}
+      <circle cx={L.circle.x + L.circle.w / 2} cy={L.circle.y + L.circle.h / 2} r={L.circle.w / 2 - 1.5} fill={L.circle.col} />
+      {piece("p")}{piece("word")}{piece("tag")}
+      <circle cx={DOT.cx} cy={DOT.cy} r={DOT.r + 1.4} fill={L.p.col} />
+      <defs><clipPath id={`dot${id}`}><circle cx={DOT.cx} cy={DOT.cy} r={DOT.r + 1.4} /></clipPath></defs>
+      {inner && reveal > 0 && <g clipPath={`url(#dot${id})`} opacity={reveal}>{inner}</g>}
+    </g>
   );
 };
 
-// ---------------- the film ----------------
+// ---------------- one continuous zoom through the three portals ----------------
+const DOT = cfg.dot, SUN = cfg.sun;
+const HALF_DIAG = Math.hypot(CX, CY);
+const PORTALS = [
+  { P: { x: DOT.cx, y: DOT.cy }, K: (HALF_DIAG / (DOT.r + 1.4)) * 1.02 },  // logo -> designer
+  { P: P_S, K: K_S },                                               // designer -> 3D world
+  { P: { x: SUN.cx, y: SUN.cy }, K: (HALF_DIAG / SUN.r) * 1.02 },  // 3D world -> logo
+];
+const LN = PORTALS.map((p) => Math.log(p.K));
+const CUM = [0, LN[0], LN[0] + LN[1], LN[0] + LN[1] + LN[2]];
+const DUR = cfg.output.durationInFrames;
+// knots (frame, log-zoom) with a periodic monotone cubic (Fritsch-Butland slopes): C1-smooth, never stops, and the
+// speed at frame 449 matches the speed at frame 0, so the loop has no bump
+const KT = [...T.arrive, DUR], KL = CUM;
+const sec = [0, 1, 2].map((i) => (KL[i + 1] - KL[i]) / (KT[i + 1] - KT[i]));
+const hm = (a: number, b: number) => (2 * a * b) / (a + b);
+const SL = [hm(sec[2], sec[0]), hm(sec[0], sec[1]), hm(sec[1], sec[2]), hm(sec[2], sec[0])];
+const logZoom = (f: number) => {
+  let i = 0; while (i < 2 && f >= KT[i + 1]) i++;
+  const h = KT[i + 1] - KT[i], u = (f - KT[i]) / h;
+  const h00 = 2 * u ** 3 - 3 * u ** 2 + 1, h10 = u ** 3 - 2 * u ** 2 + u, h01 = -2 * u ** 3 + 3 * u ** 2, h11 = u ** 3 - u ** 2;
+  return h00 * KL[i] + h10 * h * SL[i] + h01 * KL[i + 1] + h11 * h * SL[i + 1];
+};
+
+// draw scene k with the next scenes nested inside its portal (depth-capped: deeper scenes are too small to see)
+const Scene: React.FC<{ k: number; f: number; depth: number; reveal?: number }> = ({ k, f, depth, reveal = 0 }) => {
+  const nextK = (k + 1) % 3, P = PORTALS[k];
+  const inner = depth < 2 ? <g transform={into(P.P, P.K)}><Scene k={nextK} f={f} depth={depth + 1} /></g> : undefined;
+  const id = `${k}_${depth}`;
+  if (k === 0) return <LogoCard inner={inner} reveal={depth === 0 ? reveal : 0} id={id} />;
+  if (k === 1) return <Designer f={f} inner={inner} id={id} />;
+  return <World f={f} inner={inner} id={id} ui />;
+};
+
 export const Flat2D: React.FC = () => {
   const f = useCurrentFrame();
-  const [zi0, zi1] = T.zoomIn, [zo0, zo1] = T.zoomOut;
-  let tr: string | null = null; // null = full-screen 3D world
-  if (f < zi0) {
-    const z = ease(f, T.unflood[1], zi0, 1, T.push, Easing.inOut(Easing.quad));
-    tr = camTr(z, 0);
-  } else if (f < zi1) {
-    const s = zoomState(ease(f, zi0, zi1, 0, 1, Easing.inOut(Easing.cubic))); tr = camTr(s.z, s.g);
-  } else if (f < zo0) {
-    tr = null;
-  } else if (f < zo1) {
-    const e = ease(f, zo0, zo1, 1, 0, Easing.inOut(Easing.cubic));
-    const l1 = Math.log(K_S); const z = Math.exp(l1 * e); tr = camTr(z, e); // back to scale 1, centred as at rest
-  } else {
-    tr = camTr(1, 0);
-  }
-  // deep red covers the frame around the logo: it shrinks back into the monitor at the start, and floods out at the end
-  const fl = f < T.flood[0]
-    ? ease(f, T.unflood[0], T.unflood[1], 1, 0, Easing.inOut(Easing.cubic))
-    : ease(f, T.flood[0], T.flood[1], 0, 1, Easing.in(Easing.cubic));
-  const floodR = fl * Math.hypot(W, H);
+  const L = logZoom(f) % CUM[3];
+  let k = 0; while (k < 2 && L >= CUM[k + 1]) k++;
+  const lz = L - CUM[k], z = Math.exp(lz), g = lz / LN[k], P = PORTALS[k].P;
+  const sx = P.x + (CX - P.x) * g, sy = P.y + (CY - P.y) * g;
+  const tr = `translate(${sx} ${sy}) scale(${z}) translate(${-P.x} ${-P.y})`;
+  const reveal = k === 0 ? interpolate(z, T.revealDot as [number, number], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
   return (
     <AbsoluteFill style={{ backgroundColor: c.red }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%">
-        {tr === null ? <World f={f} /> : <g transform={tr}><Designer f={f} /></g>}
-        {fl > 0 && <circle cx={P_S.x} cy={P_S.y} r={floodR} fill={c.redDeep} />}
+        <g transform={tr}><Scene k={k} f={f} depth={0} reveal={reveal} /></g>
       </svg>
-      {(f >= T.logo.circle - 2 || f < T.logoOut + 14) && <Logo f={f} />}
     </AbsoluteFill>
   );
 };

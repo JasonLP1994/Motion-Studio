@@ -80,24 +80,19 @@ def at_peak(path, frame, db, pan=0.0, rev=False):
     pk = int(np.argmax(np.abs(s).sum(1)))
     place(mix, s, (frame + 1) / FPS - pk / SR, 10 ** (db / 20), pan)
 
-cues = [  # (file, frame the picture happens, level dB, pan)
-    ("transition/fs-786514-swoosh-v2.ogg", 42, -16, 0.0),        # logo steps away
-    ("kit/whoosh.ogg", 58, -13, -0.2),                          # deep red shrinks into the monitor
-    ("../../../../public/sfx/ui-blip_kenney-digital-twotone1.ogg", 76, -18, -0.3),  # the app wakes
-    ("kit/click.ogg", 94, -12, 0.25),                           # she clicks
-    ("pop/kenney-interface-pluck-001.ogg", 96, -17, -0.2),      # cube pops in on the screen
-    ("../../../../public/sfx/whoosh_fs393811.ogg", 149, -12, 0.0),  # zoom into the monitor
-    ("pop/kenney-interface-drop-002.ogg", 152, -15, 0.3),       # octahedron
-    ("pop/kenney-interface-pluck-002.ogg", 171, -16, -0.1),     # ring
-    ("pop/fs-824189-pop-in-sfx.ogg", 190, -16, 0.1),            # sphere
-    ("tick/fs384187.ogg", 188, -18, -0.3),                      # cursor grabs the cube
-    ("pop/kenney-interface-drop-003.ogg", 226, -15, -0.3),      # cube set down
-    ("../../../../public/sfx/whoosh_fs-683101-quick-woosh.ogg", 299, -12, 0.0),  # zoom back out
-    ("../../../../public/sfx/transition_fs-702773-swipe-wav.ogg", 366, -14, 0.0),  # the screen floods the frame
-    ("impact/kenney-impact-impactsoft-heavy-000.ogg", 369, -9, 0.0),  # logo circle lands
-    ("kit/pop.ogg", 378, -15, 0.15),                            # the p. spins in
-    ("transition/fs-816262-broomstick-whoosh-3-quiet-okm1.ogg", 388, -17, 0.0),  # wordmark rises
-    ("ding/kenney-interface-glass-001.ogg", 400, -20, 0.2),     # services line
+cues = [  # (file, frame the picture happens, level dB, pan) - v4: one continuous zoom (logo -> designer -> 3D world -> logo)
+    ("impact/kenney-impact-impactsoft-heavy-000.ogg", 0, -10, 0.0),  # we land back on the logo (wraps round the loop)
+    ("transition/fs-786514-swoosh-v2.ogg", 118, -16, 0.0),      # the dot opens into her room
+    ("../../../../public/sfx/whoosh_fs393811.ogg", 149, -13, 0.0),  # her room fills the frame
+    ("kit/click.ogg", 165, -12, 0.25),                          # she clicks
+    ("pop/kenney-interface-pluck-001.ogg", 167, -17, -0.2),     # the cube pops in on her screen
+    ("pop/kenney-interface-drop-002.ogg", 207, -15, 0.3),       # octahedron
+    ("pop/kenney-interface-pluck-002.ogg", 224, -16, -0.1),     # ring
+    ("pop/fs-824189-pop-in-sfx.ogg", 242, -16, 0.1),            # sphere
+    ("tick/fs384187.ogg", 250, -18, -0.3),                      # cursor grabs the cube
+    ("../../../../public/sfx/whoosh_fs-683101-quick-woosh.ogg", 271, -13, 0.0),  # the 3D world fills the frame
+    ("pop/kenney-interface-drop-003.ogg", 297, -15, -0.3),      # cube set down
+    ("../../../../public/sfx/transition_fs-702773-swipe-wav.ogg", 440, -14, 0.0),  # into the sun, back to the logo
 ]
 for f, fr, db, pan in cues: at_peak(f, fr, db, pan)
 

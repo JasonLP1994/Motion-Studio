@@ -55,3 +55,5 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (Phillips Digital flat 2D): make brand films an infinite loop that starts AND ends on the logo (user: "I want it an infinite loop so the logo is the beginning and end"). Check frame 0 against the last frame (mean diff ~0) and wrap sound tails round the loop.
 - DO: use the user's real logo file, cut into masks and recoloured to the film's palette; never redraw it.
 - DO: check true peak on the encoded MP4, not just the WAV (AAC adds ~1 dB): put a fast limiter before the AAC encode so the file stays at or below -1 dBTP.
+- DO (endless-zoom references): keep the zoom CONTINUOUS like the reference: the camera never stops; each scene holds the next inside a portal (logo dot -> room -> monitor -> 3D world -> sun -> logo). DON'T use holds, floods or dissolves between scenes (user: "I want it to be a zoom continuous like the reference"). Drive it with one smooth log-zoom curve whose speed at the end matches the start; check the loop step equals a normal frame step.
+- DO: draw anything the camera zooms deep into as vectors, or upscale+smooth raster masks; a small logo JPEG goes jagged at x10+.
