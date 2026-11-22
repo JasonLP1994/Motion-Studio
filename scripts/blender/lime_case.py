@@ -48,7 +48,7 @@ def smooth(o):
 # ---------------------------------------------------------------- growth field (shared by shader + geometry nodes)
 # Arrival time A(p) for each point of the case, in "growth units": the back spreads out from the bottom
 # centre, then the side walls rise, then the front lip, and the camera bump forms last as its own piece.
-GROW_EXPR = "2.55*min(1,max(0,(frame-4)/80))"   # growth clock T: frames 4-84
+GROW_EXPR = "2.55*(min(1,max(0,(frame-4)/80))*min(1,max(0,(frame-4)/80))*(3-2*min(1,max(0,(frame-4)/80))))"   # growth clock T: frames 4-84
 START = (0.0, -0.74, -0.053)
 def arrival(nt, pos):
     def m(op, a, b=None, c=None, clamp=False):
@@ -62,23 +62,23 @@ def arrival(nt, pos):
     x, y, z = sep.outputs["X"], sep.outputs["Y"], sep.outputs["Z"]
     dv = nt.nodes.new("ShaderNodeVectorMath"); dv.operation = 'DISTANCE'; dv.inputs[1].default_value = START
     nt.links.new(pos, dv.inputs[0]); d = dv.outputs["Value"]
-    is_bump = m('LESS_THAN', z, -0.056)
-    is_lip = m('GREATER_THAN', z, 0.03)
+    is_bump = m('LESS_THAN', z, -0.063)
+    is_lip = m('GREATER_THAN', z, 0.04)
     is_backz = m('LESS_THAN', z, -0.04)
     is_back = m('MULTIPLY', is_backz, m('SUBTRACT', 1.0, is_bump))
     is_side = m('SUBTRACT', m('SUBTRACT', 1.0, is_backz), is_lip, clamp=True)
-    a_back = m('MULTIPLY_ADD', d, 1.0, 0.25)
-    a_side = m('ADD', m('MULTIPLY', d, 0.72), m('MULTIPLY', m('ADD', z, 0.04), 2.0))
-    a_lip = m('MULTIPLY_ADD', d, 0.85, 0.3)
+    a_back = m('MULTIPLY_ADD', d, 1.0, 0.08)
+    a_side = m('ADD', m('MULTIPLY', d, 0.92), m('MULTIPLY', m('ADD', z, 0.04), 1.2))
+    a_lip = m('MULTIPLY_ADD', d, 0.95, 0.16)
     bx = m('SUBTRACT', x, -0.19); by = m('SUBTRACT', y, 0.55)
     db = m('SQRT', m('ADD', m('MULTIPLY', bx, bx), m('MULTIPLY', by, by)))
     a_bump = m('MULTIPLY_ADD', db, 2.0, 2.05)
     base = m('ADD', m('ADD', m('MULTIPLY', is_back, a_back), m('MULTIPLY', is_side, a_side)),
              m('ADD', m('MULTIPLY', is_lip, a_lip), m('MULTIPLY', is_bump, a_bump)))
     # torn edge: the same noise in both trees (same input, same settings) roughens the growth front
-    nz = nt.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 7.0; nz.inputs["Detail"].default_value = 2.0
+    nz = nt.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 3.5; nz.inputs["Detail"].default_value = 0.0
     nz.inputs["Roughness"].default_value = 0.5; nt.links.new(pos, nz.inputs["Vector"])
-    return m('ADD', base, m('MULTIPLY_ADD', nz.outputs["Fac"], 0.1, -0.05))
+    return m('ADD', base, m('MULTIPLY_ADD', nz.outputs["Fac"], 0.05, -0.025))
 
 # ---------------------------------------------------------------- materials
 def lime_oil(name, metal=0.85, rough=0.18, grow=False):
@@ -108,8 +108,8 @@ def lime_oil(name, metal=0.85, rough=0.18, grow=False):
         vis = nt.nodes.new("ShaderNodeMath"); vis.operation = 'GREATER_THAN'; vis.inputs[1].default_value = 0.0
         nt.links.new(age.outputs[0], vis.inputs[0]); nt.links.new(vis.outputs[0], b.inputs["Alpha"])
         band = nt.nodes.new("ShaderNodeMapRange"); band.clamp = True
-        band.inputs["From Min"].default_value = 0.02; band.inputs["From Max"].default_value = 0.0
-        band.inputs["To Min"].default_value = 0.0; band.inputs["To Max"].default_value = 0.0  # no glow: clean like the reference
+        band.inputs["From Min"].default_value = 0.022; band.inputs["From Max"].default_value = 0.0
+        band.inputs["To Min"].default_value = 0.0; band.inputs["To Max"].default_value = 26.0
         live = nt.nodes.new("ShaderNodeMath"); live.operation = 'LESS_THAN'; live.inputs[1].default_value = 2.48
         glow = nt.nodes.new("ShaderNodeMath"); glow.operation = 'MULTIPLY'
         nt.links.new(age.outputs[0], band.inputs["Value"]); nt.links.new(T.outputs[0], live.inputs[0])
@@ -130,7 +130,8 @@ m_glass = principled("MAT_PhoneGlass", (0.005, 0.006, 0.008), 0.05, coat=1.0)
 m_frame = principled("MAT_PhoneFrame", (0.08, 0.085, 0.09), 0.25, metal=1.0)
 m_lens = principled("MAT_Lens", (0.0, 0.0, 0.0), 0.02, coat=1.0)
 m_lensring = principled("MAT_LensRing", (0.6, 0.62, 0.65), 0.2, metal=1.0)
-m_cyc = principled("MAT_Cyclorama", (0.006, 0.007, 0.007), 0.6)
+m_cyc = principled("MAT_Cyclorama", (0.004, 0.016, 0.001), 0.9)
+m_cyc.node_tree.nodes["Principled BSDF"].inputs["Specular IOR Level"].default_value = 0.08   # matte: stop it mirroring the bright environment
 
 # ---------------------------------------------------------------- product (local axes: X width, Y height, Z depth, back = -Z)
 PROD = bpy.data.objects.new("PRODUCT", None); S.collection.objects.link(PROD)
@@ -145,26 +146,28 @@ for i, (lx, ly) in enumerate(LENSES):
     le = cyl(f"SM_Lens_{i}", lx, ly, -0.067, -0.05, 0.038); le.data.materials.append(m_lens); smooth(le); le.parent = PHONE
 
 # case shell: outer slab minus cavity minus front opening, plus camera bump with lens holes
-case = rounded_slab("SM_Case", 0.38, 0.76, -0.053, 0.05, 0.12, edge=0.018)
-boolean(case, rounded_slab("CUT_Cavity", 0.362, 0.742, -0.041, 0.042, 0.108))
-boolean(case, rounded_slab("CUT_Opening", 0.342, 0.722, 0.0, 0.2, 0.095))
-bump_ = rounded_slab("ADD_Bump", 0.15, 0.15, -0.068, -0.045, 0.06, edge=0.008)
+case = rounded_slab("SM_Case", 0.385, 0.765, -0.058, 0.058, 0.125, edge=0.032)
+boolean(case, rounded_slab("CUT_Cavity", 0.362, 0.742, -0.04, 0.045, 0.108))
+boolean(case, rounded_slab("CUT_Opening", 0.338, 0.718, 0.0, 0.2, 0.092))
+bump_ = rounded_slab("ADD_Bump", 0.155, 0.155, -0.074, -0.05, 0.065, edge=0.012)
 bump_.location = (-0.19, 0.55, 0); bpy.context.view_layer.objects.active = bump_; bpy.ops.object.transform_apply(location=True)
 boolean(case, bump_, 'UNION')
 for i, (lx, ly) in enumerate(LENSES):
     boolean(case, cyl(f"CUT_Lens_{i}", lx, ly, -0.2, -0.03, 0.055))
 for i, by in enumerate((0.32, 0.18)):          # side button cut-outs
-    c = rounded_slab(f"CUT_Btn_{i}", 0.03, 0.05, -0.01, 0.02, 0.012); c.location = (0.39, by, 0)
+    c = rounded_slab(f"CUT_Btn_{i}", 0.03, 0.05, -0.012, 0.022, 0.012); c.location = (0.395, by, 0)
     bpy.context.view_layer.objects.active = c; bpy.ops.object.transform_apply(location=True); boolean(case, c)
-rm = case.modifiers.new("Remesh", 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = 0.0045; rm.use_smooth_shade = True
+rm = case.modifiers.new("Remesh", 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = 0.0035; rm.use_smooth_shade = True
 bpy.context.view_layer.objects.active = case; bpy.ops.object.modifier_apply(modifier="Remesh")
+sm = case.modifiers.new("Smooth", 'SMOOTH'); sm.factor = 0.6; sm.iterations = 6   # soften voxel steps before the engraving
+bpy.ops.object.modifier_apply(modifier="Smooth")
 case.data.materials.append(m_case)
 # engraving: PHILLIPS / DIGITAL cut into the back in a typewriter ("analog") face, darker lime in the grooves
 m_engrave = lime_oil("MAT_Engrave", metal=0.6, rough=0.45, grow=True)
 er = m_engrave.node_tree.nodes["Color Ramp"].color_ramp
 for el in er.elements: el.color = (el.color[0] * 0.35, el.color[1] * 0.35, el.color[2] * 0.35, 1)
 font = bpy.data.fonts.load("/home/user/Motion-Studio/public/fonts/SpecialElite-Regular.ttf")
-bpy.ops.object.text_add(location=(0, -0.45, -0.058), rotation=(0, math.pi, 0))
+bpy.ops.object.text_add(location=(0, -0.45, -0.059), rotation=(0, math.pi, 0))
 eng = bpy.context.object; eng.name = "CUT_Engraving"
 eng.data.body = "PHILLIPS\nDIGITAL"; eng.data.font = font; eng.data.size = 0.085
 eng.data.align_x = 'CENTER'; eng.data.align_y = 'CENTER'; eng.data.space_line = 0.95; eng.data.extrude = 0.006
@@ -191,10 +194,10 @@ L.new(gi.outputs[0], store.inputs["Geometry"]); L.new(pos.outputs[0], vin)
 A = arrival(gn, pos.outputs[0])
 T = N.new("ShaderNodeValue"); drv(T.outputs[0], GROW_EXPR)
 age = N.new("ShaderNodeMath"); age.operation = 'SUBTRACT'; L.new(T.outputs[0], age.inputs[0]); L.new(A, age.inputs[1])
-f = N.new("ShaderNodeMath"); f.operation = 'MULTIPLY_ADD'; f.use_clamp = True; f.inputs[1].default_value = -1 / 0.12; f.inputs[2].default_value = 1.0
+f = N.new("ShaderNodeMath"); f.operation = 'MULTIPLY_ADD'; f.use_clamp = True; f.inputs[1].default_value = -1 / 0.2; f.inputs[2].default_value = 1.0
 L.new(age.outputs[0], f.inputs[0])                       # 1 at the front, 0 once the band is 0.16 behind it
 f2 = N.new("ShaderNodeMath"); f2.operation = 'POWER'; f2.inputs[1].default_value = 2.0; L.new(f.outputs[0], f2.inputs[0])
-amt = N.new("ShaderNodeMath"); amt.operation = 'MULTIPLY'; amt.inputs[1].default_value = 0.035; L.new(f2.outputs[0], amt.inputs[0])
+amt = N.new("ShaderNodeMath"); amt.operation = 'MULTIPLY'; amt.inputs[1].default_value = 0.022; L.new(f2.outputs[0], amt.inputs[0])
 off = N.new("ShaderNodeVectorMath"); off.operation = 'SCALE'; L.new(nrm.outputs[0], off.inputs[0]); L.new(amt.outputs[0], off.inputs["Scale"])
 setp = N.new("GeometryNodeSetPosition"); L.new(store.outputs[0], setp.inputs["Geometry"]); L.new(off.outputs[0], setp.inputs["Offset"])
 L.new(setp.outputs[0], go.inputs[0])
@@ -208,7 +211,7 @@ ring.parent = RING
 hinge = rounded_slab("SM_RingHinge", 0.035, 0.02, -0.01, 0.01, 0.01); hinge.location = (0, -0.18, 0)
 hinge.data.materials.append(m_ring); smooth(hinge); hinge.parent = RING
 key(RING, "location", 1, (0.9, -0.6, -0.9)); key(RING, "location", 86, (0.9, -0.6, -0.9))
-key(RING, "location", 104, (0, -0.08, -0.07)); key(RING, "location", 108, (0, -0.08, -0.062)); key(RING, "location", 112, (0, -0.08, -0.068))
+key(RING, "location", 104, (0, -0.08, -0.077)); key(RING, "location", 108, (0, -0.08, -0.069)); key(RING, "location", 112, (0, -0.08, -0.073))
 key(RING, "rotation_euler", 86, (math.radians(80), math.radians(-40), math.radians(90)))
 key(RING, "rotation_euler", 104, (math.radians(-6), 0, 0)); key(RING, "rotation_euler", 112, (0, 0, 0))
 
@@ -249,10 +252,10 @@ wt = W.node_tree; bgn = wt.nodes["Background"]
 wtc = wt.nodes.new("ShaderNodeTexCoord"); wsp = wt.nodes.new("ShaderNodeSeparateXYZ")
 wmr = wt.nodes.new("ShaderNodeMapRange"); wmr.inputs["From Min"].default_value = -0.1; wmr.inputs["From Max"].default_value = 0.9
 wramp = wt.nodes.new("ShaderNodeValToRGB")
-wramp.color_ramp.elements[0].color = (0.0, 0.0, 0.0, 1); wramp.color_ramp.elements[1].color = (0.55, 0.58, 0.55, 1)
+wramp.color_ramp.elements[0].color = (0.0, 0.01, 0.0, 1); wramp.color_ramp.elements[1].color = (0.3, 0.4, 0.26, 1)
 wt.links.new(wtc.outputs["Generated"], wsp.inputs[0]); wt.links.new(wsp.outputs["Z"], wmr.inputs["Value"])
 wt.links.new(wmr.outputs["Result"], wramp.inputs["Fac"]); wt.links.new(wramp.outputs["Color"], bgn.inputs["Color"])
-bgn.inputs["Strength"].default_value = 0.9
+bgn.inputs["Strength"].default_value = 0.45
 
 # ---------------------------------------------------------------- cameras
 def camera(name, lens, f0, f1, c0, c1, t0, t1, fstop=None):
