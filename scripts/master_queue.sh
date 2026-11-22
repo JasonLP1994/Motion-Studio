@@ -19,6 +19,6 @@ mkdir -p work/blender/case/v2_seq && for p in work/blender/case/v2_frames/d_*.pn
 PYTHONPATH=tools/ai-py:tools/rife .object-separation/bin/python scripts/ai/interpolate.py --fill work/blender/case/v2_seq --threads 4 >> work/blender/case/v2_rife.log 2>&1
 PYTHONPATH=tools/ai-py:tools/rife THREADS=4 .object-separation/bin/python scripts/ai/retime.py work/blender/case/v2_seq work/blender/case/v2_retimed work/blender/case/v2_retime.json >> work/blender/case/v2_retime.log 2>&1
 PYTHONPATH=tools/ai-py .object-separation/bin/python scripts/ai/upscale.py work/blender/case/v2_retimed work/blender/case/v2_up 1080 1920 --model fast --threads 4 --skip-existing >> work/blender/case/v2_up.log 2>&1
-PYTHONPATH=tools/finish-py python3 scripts/finish/lensfx.py work/blender/case/v2_up work/blender/case/v2_lens --preset product >> work/blender/case/v2_finish.log 2>&1
-bash scripts/finish/finish.sh work/blender/case/v2_lens work/blender/case/v2_final scripts/finish/themes/product_premium.yaml 0.9 >> work/blender/case/v2_finish.log 2>&1
+PYTHONPATH=tools/finish-py python3 scripts/finish/lensfx.py work/blender/case/v2_up work/blender/case/v2_lens --preset minimal >> work/blender/case/v2_finish.log 2>&1
+bash scripts/finish/finish.sh work/blender/case/v2_lens work/blender/case/v2_final scripts/finish/themes/product_minimal.yaml 1.0 >> work/blender/case/v2_finish.log 2>&1
 echo "case v2 done $(ls work/blender/case/v2_up/*.png | wc -l)" >> work/master_queue.status

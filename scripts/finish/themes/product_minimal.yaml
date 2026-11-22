@@ -1,0 +1,27 @@
+# Motion Studio house finish: minimal (user's pick for clean premium products). Colour stays true (no white-balance shift, no
+# split-toning, no halation, no CA); only a soft vignette to hold the eye, a gentle highlight roll-off and fine moving grain
+# (also stops gradients banding on social compression).
+name: product_minimal
+description: True colour, soft vignette, gentle roll-off, fine grain
+white_balance: { temp: 0.0, tint: 0.0 }
+exposure: { stops: 0.0 }
+highlight_rolloff: { knee: 0.85, strength: 0.25 }
+lift_gamma_gain:
+  lift:  [0.0, 0.0, 0.0]
+  gamma: [1.0, 1.0, 1.0]
+  gain:  [1.0, 1.0, 1.0]
+split_toning:
+  shadow:    [0.0, 0.0, 0.0]
+  highlight: [0.0, 0.0, 0.0]
+  strength: 0.0
+tone_curve: { strength: 0.12, pivot: 0.5 }
+vibrance: { vibrance: 0.0, saturation: 1.0, skin_protect: 0.7 }
+halation: { threshold: 0.9, radius_frac: 0.01, tint: [1.0, 1.0, 1.0], strength: 0.0 }
+distortion: { k: 0.0 }
+chromatic_aberration: { amount: 0.0 }
+vignette: { strength: 0.22, feather: 0.62 }
+black_point: { lift: 0.0 }
+clarity: { amount: 0.08, radius_frac: 0.02 }
+grain: { luma: 0.007, chroma: 0.0, size: 0.5, floor: 0.2 }
+sharpen: { amount: 0.2, radius_frac: 0.0012, halo: 0.0 }
+jpeg: { quality: 100, cycles: 0 }

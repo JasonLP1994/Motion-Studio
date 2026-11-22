@@ -2,13 +2,14 @@
 # ghosts (Chapman-style mirrored bright spots), drifting light leaks, radial chromatic aberration, optional barrel distortion.
 # Techniques follow the classic real-time ones (KinoStreak, Chapman pseudo lens flare, FidelityFX Lens CA), written for frames.
 # Runs BEFORE the finishing grade (scripts/finish/finish.sh), like glass in front of the sensor.
-# Usage: PYTHONPATH=tools/finish-py python3 scripts/finish/lensfx.py IN_DIR OUT_DIR [--preset product|cover|none] [overrides]
+# Usage: PYTHONPATH=tools/finish-py python3 scripts/finish/lensfx.py IN_DIR OUT_DIR [--preset product|minimal|cover|none] [overrides]
 import sys, os, glob, re, argparse, math
 import numpy as np, cv2
 
 P = {
     "product": dict(threshold=0.94, streak=0.22, streak_len=0.12, streak_tint=(0.75, 0.85, 1.0), ghost=0.04, leak=0.03, ca=0.001, distort=0.0),
     "cover": dict(threshold=0.9, streak=0.18, streak_len=0.09, streak_tint=(0.9, 0.85, 1.0), ghost=0.0, leak=0.0, ca=0.0008, distort=0.0),
+    "minimal": dict(threshold=0.97, streak=0.12, streak_len=0.1, streak_tint=(0.9, 0.95, 1.0), ghost=0.0, leak=0.0, ca=0.0, distort=0.0),
     "none": dict(threshold=1.0, streak=0.0, streak_len=0.1, streak_tint=(1, 1, 1), ghost=0.0, leak=0.0, ca=0.0, distort=0.0),
 }
 ap = argparse.ArgumentParser(); ap.add_argument("inp"); ap.add_argument("out"); ap.add_argument("--preset", default="product")
