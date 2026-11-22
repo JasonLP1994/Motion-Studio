@@ -29,6 +29,8 @@ import { RedGlitch } from "./ferrari/RedGlitch";
 import { redConfig as rc } from "./ferrari/config";
 import { Kingz } from "./kingz/Kingz";
 import { kingzConfig as kz } from "./kingz/config";
+import { MutantCover } from "./mutant/MutantCover";
+import { mutantConfig as mu } from "./mutant/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -50,6 +52,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="LostData" component={LostData} durationInFrames={cc2.output.durationInFrames} fps={cc2.output.fps} width={cc2.output.width} height={cc2.output.height} />
       <Composition id="RedGlitch" component={RedGlitch} durationInFrames={rc.output.durationInFrames} fps={rc.output.fps} width={rc.output.width} height={rc.output.height} />
       <Composition id="Kingz" component={Kingz} durationInFrames={kz.output.durationInFrames} fps={kz.output.fps} width={kz.output.width} height={kz.output.height} />
+      <Composition id="MutantCover" component={MutantCover} durationInFrames={mu.output.durationInFrames} fps={mu.output.fps} width={mu.output.width} height={mu.output.height} />
     </>
   );
 };

@@ -81,3 +81,6 @@ public/ferrari/
 
 # KINGZ statue piece: working copy of the stock clip + roto layers (local only)
 public/statue/
+
+# Mutant cover: Blender frame sequences (local renders, never in Git)
+public/mutant/frames/
