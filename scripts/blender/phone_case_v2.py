@@ -14,11 +14,11 @@ RES = (720, 1280)
 END = 240
 bpy.ops.wm.read_factory_settings(use_empty=True)
 S = bpy.context.scene; S.render.fps = 24; S.frame_start, S.frame_end = 1, END
-ORANGE = (1.0, 0.16, 0.0)          # tangerine oil
-GOLD = (1.0, 0.42, 0.0)
-GRAZE = (0.5, 0.02, 0.16)          # magenta-red at grazing angles
-GLOW = (1.0, 0.62, 0.18)           # warm growth edge
-TEAL = (0.004, 0.045, 0.055)       # petrol backdrop (complementary)
+ORANGE = (1.0, 0.70, 0.30)         # gold (facing)  [palette v3: gold case on a silver set]
+GOLD = (0.95, 0.56, 0.18)
+GRAZE = (0.62, 0.30, 0.08)         # deep amber gold at grazing angles
+GLOW = (1.0, 0.82, 0.5)            # warm gold-white growth edge
+TEAL = (0.42, 0.43, 0.45)          # silver-grey set (name kept for the code below)
 
 def drv(sock, expr):
     d = sock.driver_add("default_value").driver; d.type = 'SCRIPTED'; d.expression = expr
@@ -89,7 +89,7 @@ def arrival(nt, pos):
     return m('ADD', base, m('MULTIPLY_ADD', nz.outputs["Fac"], 0.07, -0.035))
 
 # ---------------------------------------------------------------- materials
-def lime_oil(name, metal=0.85, rough=0.16, grow=False):
+def lime_oil(name, metal=0.97, rough=0.17, grow=False):
     m = bpy.data.materials.new(name); m.use_nodes = True
     nt = m.node_tree; b = nt.nodes["Principled BSDF"]
     b.inputs["Metallic"].default_value = metal; b.inputs["Roughness"].default_value = rough
@@ -141,8 +141,9 @@ m_lensring = principled("MAT_LensRing", (0.6, 0.62, 0.65), 0.2, metal=1.0)
 BG_GREEN = TEAL
 m_cyc = principled("MAT_Cyclorama", BG_GREEN, 0.95)
 _cb = m_cyc.node_tree.nodes["Principled BSDF"]
-_cb.inputs["Specular IOR Level"].default_value = 0.0
-_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.75   # the set keeps its teal everywhere (no black floor)  # mostly self-lit = flat, seamless
+_cb.inputs["Metallic"].default_value = 0.35; _cb.inputs["Roughness"].default_value = 0.55   # soft satin silver
+_cb.inputs["Specular IOR Level"].default_value = 0.3
+_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.35   # the set keeps its teal everywhere (no black floor)  # mostly self-lit = flat, seamless
 
 # ---------------------------------------------------------------- product (local axes: X width, Y height, Z depth, back = -Z)
 PROD = bpy.data.objects.new("PRODUCT", None); S.collection.objects.link(PROD)
@@ -314,18 +315,18 @@ L2 = light("LGT_Strip_Right_Grazing", (2.0, -0.3, 1.15), 380, 0.18, 3.2, (1.0, 0
 L3 = light("LGT_Rim_Top", (0, -1.4, 3.0), 260, 1.6, 0.22, (0.92, 0.96, 1.0)); link_to(L3, COL_P)
 L4 = light("LGT_Fill_Soft", (2.6, 1.6, 0.9), 22, 2.0, 2.0, (1.0, 0.96, 0.92)); link_to(L4, COL_P)
 L4.visible_glossy = False          # fill lifts the shading only: no hard rectangle in the glossy back
-L5 = light("LGT_Kick_Teal", (-1.9, -0.7, 0.55), 160, 0.3, 2.0, (0.1, 0.75, 0.85))   # behind-left, grazing: a teal edge line, not a front reflection; link_to(L5, COL_P)
+L5 = light("LGT_Kick_Cool", (-1.9, -0.7, 0.55), 160, 0.3, 2.0, (0.82, 0.9, 1.0))   # behind-left, grazing: a teal edge line, not a front reflection; link_to(L5, COL_P)
 bpy.ops.object.light_add(type='SPOT', location=(0, -1.2, 4.2)); BGP = bpy.context.object; BGP.name = "LGT_Backdrop_Pool"
-BGP.data.energy = 1600; BGP.data.spot_size = math.radians(85); BGP.data.spot_blend = 1.0; BGP.data.color = (0.6, 0.95, 1.0)
+BGP.data.energy = 1100; BGP.data.spot_size = math.radians(85); BGP.data.spot_blend = 1.0; BGP.data.color = (1.0, 1.0, 1.0)
 aim(BGP, (0, -4.0, 1.6)); link_to(BGP, COL_BG)
-FL = light("LGT_Backdrop_Floor", (0, 1.5, 4.5), 700, 6.0, 6.0, (0.7, 0.95, 1.0), look=(0, 0.5, 0)); link_to(FL, COL_BG)   # soft wash on the floor, set only
+FL = light("LGT_Backdrop_Floor", (0, 1.5, 4.5), 500, 6.0, 6.0, (1.0, 1.0, 1.0), look=(0, 0.5, 0)); link_to(FL, COL_BG)   # soft wash on the floor, set only
 W = bpy.data.worlds.new("WLD"); S.world = W; W.use_nodes = True
 # studio gradient environment: bright overhead, dark below, so the clear coat carries a smooth oily reflection
 wt = W.node_tree; bgn = wt.nodes["Background"]
 wtc = wt.nodes.new("ShaderNodeTexCoord"); wsp = wt.nodes.new("ShaderNodeSeparateXYZ")
 wmr = wt.nodes.new("ShaderNodeMapRange"); wmr.inputs["From Min"].default_value = -0.1; wmr.inputs["From Max"].default_value = 0.9
 wramp = wt.nodes.new("ShaderNodeValToRGB")
-wramp.color_ramp.elements[0].color = (0.003, 0.02, 0.025, 1); wramp.color_ramp.elements[1].color = (0.05, 0.16, 0.18, 1)
+wramp.color_ramp.elements[0].color = (0.05, 0.05, 0.055, 1); wramp.color_ramp.elements[1].color = (0.45, 0.46, 0.48, 1)
 wt.links.new(wtc.outputs["Generated"], wsp.inputs[0]); wt.links.new(wsp.outputs["Z"], wmr.inputs["Value"])
 wt.links.new(wmr.outputs["Result"], wramp.inputs["Fac"]); wt.links.new(wramp.outputs["Color"], bgn.inputs["Color"])
 bgn.inputs["Strength"].default_value = 0.3
