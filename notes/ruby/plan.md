@@ -68,3 +68,13 @@ Waiting on the user's pick. Downloads go to an ignored folder (never GitHub); cr
 - scripts/blender/ruby_pendant.py appends the groups (mm -> cm, flipped face-up, bail at +Y), diamond / ruby / rose gold materials,
   own cable chain threaded through the bail at (0, 1.76, -0.92). Cameras re-framed for the taller piece; hero raised to ~58 deg.
 - Stills v2: renders/ruby-pendant-still-v2-*.png (~64 s/frame at 720p, 64 spp, while the shoe renders).
+
+## v3 (user): C4D-style dynamics at the end
+"Can we have dynamics at the end like in cinema 4D when it drops and can interact with the floor."
+- Frame 289 (beat): the pendant switches from animated to rigid body (invisible box proxy, the real 1M-face model rides on it) and
+  falls (gravity -14 cm/s^2-scale = a weighty ~0.4 s fall), lands ~301 on a corner after a small tip nudge, settles on its chain.
+- The arrayed chain is swapped on the same frame for 124 real links (convex hulls) joined by point constraints, two links pinned
+  to the pendant at the bail; the chain rises out of frame (held) so on release it pours down ~3 cm and lies on the floor by ~315.
+- Rigid-body cache baked into renders/farm/ruby-pendant-v1/ruby-v3.blend (frames render in any order).
+- Hero camera lowered to ~35 deg and barely follows, so the fall reads; final glint moved onto the landing (302).
+- Glare threshold 5 (only the brightest gem highlights glint); hidden reflection dome brighter for the diamond.

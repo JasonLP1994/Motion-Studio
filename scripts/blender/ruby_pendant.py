@@ -14,7 +14,9 @@ CFG = {
     "explode": (145, 181), "hold_end": 199,
     "land": {"dia": (199, 208), "halo": (199, 208), "bail": (217, 226), "chain": (235, 244)},
     "apart": {"dia": (0, -0.1, 1.5), "halo": (0, -0.35, -0.65), "bail": (0, 0.7, 0.6), "chain": (0, 1.3, 1.1)},
-    "glints": [109, 325],          # sparkle-light spikes (star glare) on the beats
+    "glints": [109, 302],          # sparkle-light spikes (star glare) on the beats
+    # the drop (rigid-body dynamics, C4D-style): pendant + chain fall onto the floor on the last bar and settle
+    "drop": 289, "gravity": -14.0, "nudge": (281, 289),
     # cameras: name, first frame, (pos start, pos end), (target start, target end), lens, f-stop, interpolation
     "cams": [
         ("MAC", 1, ((0.05, -0.3, 1.7), (0.12, -0.6, 3.5)), ((0, 0, 0.42), (0, 0, 0.4)), 100, 2.8, "LINEAR"),
@@ -23,7 +25,7 @@ CFG = {
         ("MA", 199, ((2.7, -4.7, 5.9), (2.4, -4.3, 5.3)), ((0, 0, 0.36), (0, 0, 0.34)), 85, 5.6, "LINEAR"),
         ("MB", 217, ((-3.5, 0.3, 4.3), (-3.2, 0.5, 3.9)), ((0, 1.3, -0.7), (0, 1.32, -0.7)), 85, 5.6, "LINEAR"),
         ("MC", 235, ((4.0, 4.16, 2.68), (3.6, 3.9, 2.3)), ((0, 1.76, -0.92), (0, 1.76, -0.92)), 85, 5.6, "LINEAR"),
-        ("HERO", 253, ((-2.4, -4.6, 8.0), (-0.6, -5.8, 10.6)), ((0, 0.55, 0.0), (0, 0.6, 0.0)), 45, 11, "EXPO"),
+        ("HERO", 253, ((-3.0, -6.6, 5.4), (-1.5, -8.2, 6.0)), ((0, 0.6, -0.35), (0, 0.6, -1.1)), 45, 11, "EXPO"),
     ],
 }
 OUT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "/tmp/ruby.blend"
@@ -151,7 +153,7 @@ link_o = bpy.context.object; link_o.name = "Chain"; link_o.data.materials.append
 arr = link_o.modifiers.new("Arr", "ARRAY"); arr.use_relative_offset = False; arr.use_constant_offset = True
 arr.constant_offset_displace = (2 * PITCH, 0, 0); arr.count = int(L / (2 * PITCH)) + 12
 path = bpy.data.curves.new("chain_path", "CURVE"); path.dimensions = "3D"; sp = path.splines.new("BEZIER")
-P = [(-2.6, 11.0, -1.55), (-1.05, 3.8, -1.2), (-0.36, BY + 0.2, BZ - 0.03), (0, BY, BZ), (0.36, BY + 0.2, BZ - 0.03), (1.05, 3.8, -1.2), (2.6, 11.0, -1.55)]  # a V running back into the set
+P = [(-2.4, 8.5, 3.4), (-1.0, 3.5, 1.0), (-0.34, BY + 0.2, BZ + 0.06), (0, BY, BZ), (0.34, BY + 0.2, BZ + 0.06), (1.0, 3.5, 1.0), (2.4, 8.5, 3.4)]  # a V rising back out of frame (held), so it can fall at the end
 sp.bezier_points.add(len(P) - 1)
 for bp, p in zip(sp.bezier_points, P): bp.co = p; bp.handle_left_type = bp.handle_right_type = "AUTO"
 path_o = bpy.data.objects.new("ChainPath", path); path_o.parent = CHAIN; link(path_o)
@@ -169,8 +171,8 @@ bg_black = wn.nodes["Background"]; bg_black.inputs[1].default_value = 0.0
 bg_ref = wn.nodes.new("ShaderNodeBackground"); grad = wn.nodes.new("ShaderNodeValToRGB"); sep = wn.nodes.new("ShaderNodeSeparateXYZ")
 tc = wn.nodes.new("ShaderNodeTexCoord"); wn.links.new(tc.outputs["Generated"], sep.inputs[0])
 cr = grad.color_ramp; cr.elements[0].position = 0.0; cr.elements[0].color = (0.0, 0.0, 0.0, 1)
-cr.elements[1].position = 0.97; cr.elements[1].color = (1.4, 1.38, 1.35, 1)
-for pos, v in ((0.30, 0.0), (0.42, 0.55), (0.52, 0.02), (0.70, 0.03), (0.78, 0.9), (0.86, 0.05)):
+cr.elements[1].position = 0.97; cr.elements[1].color = (2.2, 2.17, 2.12, 1)
+for pos, v in ((0.30, 0.0), (0.42, 0.8), (0.52, 0.02), (0.70, 0.03), (0.78, 1.6), (0.86, 0.05)):
     e = cr.elements.new(pos); e.color = (v, v, v * 1.02, 1)
 wn.links.new(sep.outputs["Z"], grad.inputs[0]); wn.links.new(grad.outputs[0], bg_ref.inputs[0]); bg_ref.inputs[1].default_value = 1.0
 lp = wn.nodes.new("ShaderNodeLightPath"); mx = wn.nodes.new("ShaderNodeMath"); mx.operation = "MAXIMUM"
@@ -228,8 +230,6 @@ keyv(BAIL, "rotation_euler", [(E0, Euler()), (E1, Euler((math.radians(28), 0, 0)
 keyv(DIAG, "rotation_euler", [(E0, Euler()), (E1, Euler((0.12, -0.1, 0.3))), (199, Euler((0.13, -0.11, 0.33))), (208, Euler())], "LINEAR")
 # the chain threads through the bail as it comes home
 keyv(link_o, "location", [(1, Vector((-0.6, 0, 0))), (235, Vector((-1.4, 0, 0))), (247, Vector((-0.6, 0, 0)))], "LINEAR")
-# hero sway
-keyv(ROOT, "rotation_euler", [(253, Euler((0, 0, 0))), (300, Euler((0.04, -0.05, 0.06))), (360, Euler((0.0, -0.02, 0.1)))], "BEZIER")
 # glints: sparkle lights spike on the beats -> star glare
 for f in CFG["glints"]:
     for s_ in SPARK[:1]:
@@ -252,6 +252,79 @@ for name, f0, (p0, p1), (t0, t1), lens, fstop, interp in CFG["cams"]:
         keyv(tgt, "location", [(f0, Vector((0, 0, 1.05))), (f0 + 22, Vector(t0)), (f1, Vector(t1))], "BEZIER")
 S.camera = bpy.data.objects["MAC"]
 
+# ---------------- the drop: rigid-body dynamics ----------------
+# At DROP the floating pendant switches from animated to dynamic and falls; the chain is swapped (same frame, same pose) for
+# ~120 real links joined by point constraints, which fall, slither and coil on the floor. Baked into the .blend.
+DROP = CFG["drop"]
+S.frame_set(DROP)
+dg = bpy.context.evaluated_depsgraph_get()
+bpy.ops.object.select_all(action="DESELECT")
+cme = bpy.data.meshes.new_from_object(link_o.evaluated_get(dg))
+chain_sim = bpy.data.objects.new("ChainSim", cme); chain_sim.matrix_world = link_o.matrix_world.copy(); link(chain_sim)
+bpy.context.view_layer.objects.active = chain_sim; chain_sim.select_set(True)
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+bpy.ops.object.mode_set(mode="EDIT"); bpy.ops.mesh.select_all(action="SELECT"); bpy.ops.mesh.separate(type="LOOSE")
+bpy.ops.object.mode_set(mode="OBJECT")
+links = [o for o in bpy.context.selected_objects]
+for o in links:
+    bpy.context.view_layer.objects.active = o
+for o in links: o.select_set(True)
+bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
+# keep links that are near the visible set (far ones out of frame only cost time); order them along the chain path
+links = [o for o in links if o.location.length < 10.5]
+bpy.ops.object.select_all(action="DESELECT")
+# pendant proxy: an invisible box around the body that does the physics; the visible pendant rides on it
+pv = [o.matrix_world @ Vector(c) for o in HALO.children if o.type == "MESH" for c in o.bound_box]
+mn = Vector(map(min, zip(*pv))); mx = Vector(map(max, zip(*pv))); ctr = (mn + mx) / 2; ext = mx - mn
+bpy.ops.mesh.primitive_cube_add(size=1, location=ctr); proxy = bpy.context.object; proxy.name = "PendantProxy"
+proxy.scale = ext; bpy.ops.object.transform_apply(scale=True); link(proxy)
+proxy.hide_render = True; proxy.display_type = "WIRE"
+ROOT.parent = proxy; ROOT.matrix_parent_inverse = proxy.matrix_world.inverted()
+# a small nudge before the drop so it tips as it lands (dynamics inherit the animated velocity)
+n0, n1 = CFG["nudge"]
+keyv(proxy, "location", [(n0, ctr), (n1, ctr + Vector((0.03, 0.05, -0.16)))], "LINEAR")
+keyv(proxy, "rotation_euler", [(n0, Euler()), (n1, Euler((math.radians(16), math.radians(-11), math.radians(5))))], "LINEAR")
+# swap the chain: arrayed chain until DROP-1, simulated links from DROP
+for o, before in ((link_o, False), *[(l, True) for l in links]):
+    o.hide_render = before; o.keyframe_insert("hide_render", frame=DROP - 1)
+    o.hide_render = not before; o.keyframe_insert("hide_render", frame=DROP)
+    o.hide_viewport = o.hide_render
+bpy.ops.rigidbody.world_add(); rbw = S.rigidbody_world
+rbw.point_cache.frame_start = DROP - 2; rbw.point_cache.frame_end = CFG["frames"]
+rbw.substeps_per_frame = 30; rbw.solver_iterations = 40
+S.gravity = (0, 0, CFG["gravity"]); S.use_gravity = True
+rbc = bpy.data.collections.new("RigidBodyWorld"); rbw.collection = rbc
+rcc = bpy.data.collections.new("RigidBodyConstraints"); rbw.constraints = rcc
+def rb(o, kind="ACTIVE", shape="CONVEX_HULL", mass=1.0, fr=0.6, bounce=0.15):
+    rbc.objects.link(o); o.rigid_body.type = kind; o.rigid_body.collision_shape = shape; o.rigid_body.mass = mass
+    o.rigid_body.friction = fr; o.rigid_body.restitution = bounce; o.rigid_body.collision_margin = 0.004
+    o.rigid_body.linear_damping = 0.15; o.rigid_body.angular_damping = 0.25
+rb(fl, "PASSIVE", "BOX", bounce=0.45)
+fl.rigid_body.collision_margin = 0.0
+rb(proxy, "ACTIVE", "BOX", mass=0.6, bounce=0.4)
+proxy.rigid_body.kinematic = True; proxy.rigid_body.keyframe_insert("kinematic", frame=DROP - 1)
+proxy.rigid_body.kinematic = False; proxy.rigid_body.keyframe_insert("kinematic", frame=DROP)
+for l in links: rb(l, mass=0.004, fr=0.7, bounce=0.05)
+# join neighbouring links (and the link in the bail to the pendant) with point constraints
+P0 = Vector((0, BY, BZ))
+def joint(a, b, at):
+    e = bpy.data.objects.new(f"J_{a.name}_{b.name}", None); e.location = at; e.empty_display_size = 0.02; link(e, "SET")
+    rcc.objects.link(e); e.rigid_body_constraint.type = "POINT"; e.rigid_body_constraint.object1 = a; e.rigid_body_constraint.object2 = b
+    e.rigid_body_constraint.disable_collisions = True
+used = set()
+for a in links:
+    near = sorted((b for b in links if b is not a), key=lambda b: (b.location - a.location).length)[:2]
+    for b in near:
+        k = tuple(sorted((a.name, b.name)))
+        if k in used or (b.location - a.location).length > PITCH * 1.6: continue
+        used.add(k); joint(a, b, (a.location + b.location) / 2)
+for l in sorted(links, key=lambda l: (l.location - P0).length)[:2]: joint(proxy, l, l.location.copy())
+print("dynamics:", len(links), "links,", len(used), "link joints")
+bpy.ops.object.select_all(action="DESELECT")
+with bpy.context.temp_override(scene=S, point_cache=rbw.point_cache):
+    bpy.ops.ptcache.bake(bake=True)
+S.frame_set(1)
+
 # ---------------- render ----------------
 S.render.engine = "CYCLES"; cy = S.cycles
 cy.device = "CPU"; cy.samples = 64; cy.use_adaptive_sampling = True; cy.adaptive_threshold = 0.03; cy.use_denoising = False
@@ -268,7 +341,7 @@ S.view_settings.exposure = -0.3
 S.use_nodes = True; ct = S.node_tree
 for n in list(ct.nodes): ct.nodes.remove(n)
 rl = ct.nodes.new("CompositorNodeRLayers"); gl = ct.nodes.new("CompositorNodeGlare"); co = ct.nodes.new("CompositorNodeComposite")
-gl.glare_type = "STREAKS"; gl.streaks = 4; gl.angle_offset = math.radians(22); gl.fade = 0.88; gl.threshold = 2.2; gl.mix = -0.55; gl.quality = "HIGH"
+gl.glare_type = "STREAKS"; gl.streaks = 4; gl.angle_offset = math.radians(22); gl.fade = 0.88; gl.threshold = 5.0; gl.mix = -0.7; gl.quality = "HIGH"
 ct.links.new(rl.outputs["Image"], gl.inputs["Image"]); ct.links.new(gl.outputs["Image"], co.inputs["Image"])
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(OUT))
 print("saved", OUT)
