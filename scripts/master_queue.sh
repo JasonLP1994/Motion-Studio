@@ -1,6 +1,6 @@
 #!/bin/bash
 # Resumable master render queue (run as a tracked background task; relaunch after each 2 h limit, every step skips finished work).
-# 1) Mutant 3D layer -> 2) Mutant logo pass + mark -> 3) Phone case v2 (Cycles + OIDN, 145 real frames) -> 4) RIFE fill -> 5) AI upscale.
+# 1) Mutant 3D -> 2) Mutant logo pass -> 3) Phone case v2 (Cycles + OIDN, 145 real frames) -> 4) RIFE fill -> 5) speed-ramp retime -> 6) AI upscale.
 cd /home/user/Motion-Studio
 while pgrep -f "blender.*mutant/mutant.py" >/dev/null; do sleep 30; done
 if [ "$(ls work/mutant/frames/f_*.png 2>/dev/null | wc -l)" -lt 258 ]; then
@@ -17,5 +17,6 @@ PYTHONPATH=tools/py312 blender -b work/blender/case/case_v2_final.blend -P scrip
 n=$(ls work/blender/case/v2_frames/d_*.png | wc -l); [ "$n" -ge 145 ] || exit 1
 mkdir -p work/blender/case/v2_seq && for p in work/blender/case/v2_frames/d_*.png; do b=$(basename $p); cp -n "$p" "work/blender/case/v2_seq/f_${b#d_}"; done
 PYTHONPATH=tools/ai-py:tools/rife .object-separation/bin/python scripts/ai/interpolate.py --fill work/blender/case/v2_seq --threads 4 >> work/blender/case/v2_rife.log 2>&1
-PYTHONPATH=tools/ai-py .object-separation/bin/python scripts/ai/upscale.py work/blender/case/v2_seq work/blender/case/v2_up 1080 1920 --model fast --threads 4 --skip-existing >> work/blender/case/v2_up.log 2>&1
+PYTHONPATH=tools/ai-py:tools/rife THREADS=4 .object-separation/bin/python scripts/ai/retime.py work/blender/case/v2_seq work/blender/case/v2_retimed work/blender/case/v2_retime.json >> work/blender/case/v2_retime.log 2>&1
+PYTHONPATH=tools/ai-py .object-separation/bin/python scripts/ai/upscale.py work/blender/case/v2_retimed work/blender/case/v2_up 1080 1920 --model fast --threads 4 --skip-existing >> work/blender/case/v2_up.log 2>&1
 echo "case v2 done $(ls work/blender/case/v2_up/*.png | wc -l)" >> work/master_queue.status

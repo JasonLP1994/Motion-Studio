@@ -4,9 +4,16 @@
 # f181 reveal hit (sub drop + bright chord) with a shimmer tail to the end.
 import numpy as np, wave, sys
 SR, FPS, N = 48000, 24, 240
+# optional speed-ramp time map (scripts/ai/retime.py writes timemap.json): source frame -> output time, so every hit lands
+# on the retimed picture. Usage: python3 scripts/case_audio.py OUT.wav [timemap.json]
+TM = None
+if len(sys.argv) > 2:
+    import json as _json
+    TM = _json.load(open(sys.argv[2])); N = TM["out_frames"]; _src = np.array(TM["src_times"])
 t = np.arange(int(SR * N / FPS)) / SR
 L = np.zeros_like(t); R = np.zeros_like(t); rng = np.random.default_rng(7)
-F = lambda f: f / FPS
+F = (lambda f: f / FPS) if TM is None else (lambda f: float(np.interp(f, _src, np.arange(1, len(_src) + 1))) / FPS)
+SRC_FRAME = (t * FPS) if TM is None else np.interp(t * FPS, np.arange(1, len(_src) + 1), _src)   # source frame under each sample
 def add(sig, at, g=1.0, pan=0.0):
     i = int(at * SR); n = min(len(sig), len(t) - i)
     if n > 0:
@@ -18,7 +25,7 @@ def lp(x, a):  # one-pole low-pass with a per-sample coefficient (0..1)
     y = np.empty_like(x); s = 0.0
     for i in range(len(x)): s += a[i] * (x[i] - s); y[i] = s
     return y
-grow_u = np.clip((t * FPS - 4) / 136, 0, 1); speed = 6 * grow_u * (1 - grow_u)   # derivative of the growth smoothstep
+grow_u = np.clip((SRC_FRAME - 4) / 136, 0, 1); speed = 6 * grow_u * (1 - grow_u)   # derivative of the growth smoothstep
 myst = t < F(140)
 # dark pad: detuned saws on A1 + E2, low-pass opens as the shell grows
 saw = lambda f: 2 * ((t * f) % 1) - 1
@@ -59,7 +66,7 @@ for f0, g, p in [(220, 0.18, -0.3), (277.2, 0.14, 0.3), (329.6, 0.14, -0.1), (44
     add((np.sin(2 * np.pi * f0 * tt) + 0.3 * np.sin(2 * np.pi * f0 * 2.002 * tt)) * (1 - np.exp(-tt * 30)) * np.exp(-tt * 0.55), F(181), g, p)
 add(band(len(tt), 7000, 15000) * np.exp(-tt * 0.9) * (1 - np.exp(-tt * 8)), F(181), 0.12, 0.5)
 add(band(len(tt), 7000, 15000) * np.exp(-tt * 0.9) * (1 - np.exp(-tt * 8)), F(181), 0.12, -0.5)
-fade = np.clip((10 - t) / 0.6, 0, 1); L *= fade; R *= fade
+fade = np.clip((N / FPS - t) / 0.6, 0, 1); L *= fade; R *= fade
 st = np.tanh(np.stack([L, R], 1) * 1.1) / np.tanh(1.1); st = st / np.abs(st).max() * 0.9
 with wave.open(sys.argv[1], "wb") as wf:
     wf.setnchannels(2); wf.setsampwidth(2); wf.setframerate(SR); wf.writeframes((st * 32767).astype(np.int16).tobytes())

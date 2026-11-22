@@ -46,3 +46,8 @@ v6 (user: keep the glow but follow the growth, smoother growth, smoother + thick
   RIFE fills the other 95; compact AI 2x upscale to 1080x1920. Comparison: notes/frames/phone-case-compare*.jpg.
 - Queue: scripts/master_queue.sh (copy of work/master_queue.sh), run as a tracked background task and relaunched after each 2 h limit.
 - Palette v3 (user: silver background, gold case): metallic gold (facing 1.0/0.70/0.30 -> amber at grazing, metal 0.97, rough 0.17, clear coat), satin silver-grey set (0.42 grey, metallic 0.35, rough 0.55), all-white lights, cool-white edge kick, black cards kept so the gold reads deep. Stills: notes/frames/phone-case-gold.jpg.
+- Speed ramps (user: "some slow motion, some fast movement, slightly longer"): post retime with scripts/ai/retime.py and the plan
+  scripts/phone_case_v2_retime.json (source frames -> speed): chip 0.5x, rim 1.6x, sweep 1x ramping to 0.5x on the engraving focus,
+  camera rim 2x, phone slide 1.5x, ring click 0.35x, reveal whip 1.6x then settle 0.6x. Slow-mo frames are RIFE in-betweens (no extra
+  3D rendering), fast sections skip frames, ramps smoothed inside shots, never interpolated across a cut. 240 source frames -> 273
+  output frames (11.4 s). Sound follows the same time map (scripts/case_audio.py OUT.wav timemap.json).
