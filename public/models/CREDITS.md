@@ -15,3 +15,6 @@
   (Sketchfab model 4328dea00e47497dbeac73c556121bc9), CC-BY 4.0, via Objaverse (Hugging Face). Apple logo removed; scaled and posed.
   Credit line for posts: "Phone model: Apple iPhone 13 Pro Max by DatSketch (CC-BY 4.0)".
 - Finishing pass: postfx by 0xBeycan (MIT), local in ignored `tools/finish-py/`.
+- Pixel sneaker (not stored in Git; ignored `work/shoes/`): "Sci-fi Sneaker" by erdemdagdelen (Sketchfab 31032bcf56a44166afbb4e73ee3d7051),
+  CC-BY 4.0, via Objaverse. Rendered as pixel sprites, original logo replaced with the Phillips Digital "p." badge.
+  Credit line for posts: "Sneaker model: Sci-fi Sneaker by erdemdagdelen (CC-BY 4.0)". Pixel fonts: Silkscreen, Pixelify Sans (OFL).

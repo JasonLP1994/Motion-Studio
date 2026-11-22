@@ -44,3 +44,22 @@ big pixel type line at the bottom. Restricted palette, whole-pixel positions, no
 ## Approval checkpoints
 1. Plan + skill stack + second-by-second timing. 2. Three style frames (with palette options). 3. Key-frame preview of the motion.
 4. Final render: frame check, score /10, P0/P1/P2, deliver (never via GitHub).
+
+## Build + v1 (user: Phillips Digital colours, shoe rotating, text typewrites on while it rotates, constant loop)
+- Shoe: free "Sci-fi Sneaker" by erdemdagdelen (CC-BY 4.0, Objaverse), rendered in Blender as ID-coded tiny sprites
+  (scripts/blender/pixel_sneaker_sprite.py: 24 angles, 200x150, camera roll -12 deg, inverted-hull outline) and repainted into the
+  palette by scripts/pixel_palette.py (exact palette colours, Phillips Digital lime "p." badge drawn as a pixel glyph on the badge).
+- Brand palette (from inputs/phillips-digital-logo.jpg): deep green page #0E1A0E, lime #CEFA43, white type, charcoal.
+- Remotion comp `PixelSneaker` (src/pixel/): pixel masthead, shoe on whole-pixel steps (3 frames per angle = one turn per 3 s),
+  editorial column, barcode, corner print, tab, MOTION DESIGN, twinkling pixel stars. Typewriter schedule in src/pixel/typing.json
+  (types on with a blinking block cursor, holds, backspaces off).
+- Seamless 12 s loop: 288 frames = 4 turns, 3 bobs, one type cycle; chiptune at 120 BPM (6 bars) with a click per letter
+  (scripts/pixel_audio.py wraps tails around the loop point).
+- No grain/lens/AI upscale (pixels stay crisp).
+
+## Render checks
+- v1 (renders/pixel-sneaker-loop-v1.mp4 + -silent): 12.0 s, 1920x1080, 24 fps. -14.1 LUFS, true peak -1.2 dB (first mix clipped:
+  clicks too spiky; rebalanced the mix, then gain + limiter). Frames checked across the loop. Sound measured, not heard.
+- Score 8.4/10: layout 8.5, timing 8.5, readability 8, polish 8.5. Weakest: the side tab box shows empty before its letters type;
+  small-print copy is still placeholder (needs the user's words).
+- Credit line for posts: "Sneaker model: Sci-fi Sneaker by erdemdagdelen (CC-BY 4.0)".

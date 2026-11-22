@@ -1,0 +1,11 @@
+{
+  "loopFrames": 288,
+  "elements": {
+    "mast":   { "lines": ["PHILLIPS"], "start": 0, "fpc": 5, "erase": 252, "efpc": 3 },
+    "side":   { "lines": ["PHILLIPS", "DIGITAL", "2026"], "start": 34, "fpc": 2, "erase": 248, "efpc": 1 },
+    "corner": { "lines": ["PLAY IN PIXELS", "MOVE DIFFERENT"], "start": 60, "fpc": 2, "erase": 244, "efpc": 1 },
+    "tab":    { "lines": ["PHIL"], "start": 100, "fpc": 6, "erase": 250, "efpc": 2 },
+    "blurb":  { "lines": ["PIXELS IN MOTION.", "BUILT FRAME BY FRAME", "IN THE STUDIO."], "start": 80, "fpc": 1.5, "erase": 240, "efpc": 0.5 },
+    "bottom": { "lines": ["MOTION DESIGN"], "start": 120, "fpc": 4, "erase": 236, "efpc": 1 }
+  }
+}
