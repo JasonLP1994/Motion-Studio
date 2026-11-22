@@ -28,3 +28,15 @@ v6 (user: keep the glow but follow the growth, smoother growth, smoother + thick
   the whole video. Measured, not heard.
 - Score 8.4/10: layout 8.5, timing 8, readability 8.5, polish 8.5. Weakest: ~6.0-6.8 s the ring camera holds on a blank stretch of the
   case back while the phone slides in unseen behind it (fix idea: start CAM_Ring on the lens holes so the phone's lenses appear in them).
+
+## v2 remake (user: "use the original scene, add the downloaded phone, better colours, render images to compare")
+- `work/blender/case/case_v2.py` (copy `scripts/blender/phone_case_v2.py`): same growth, cameras and timing as v1.
+- Phone: "Apple iPhone 13 Pro Max" by DatSketch (CC-BY 4.0, Objaverse), Apple logo deleted, scaled 1.49 so it matches v1's size.
+  Gotchas: glTF objects import in QUATERNION rotation mode (set rotation_mode XYZ before using rotation_euler); deselect the phone
+  before any later transform_apply (it applies to every selected object).
+- Case built from the phone's measurements: outer = phone + 3 mm clearance + 20 mm wall, measured corner radius (0.107), raised lip over
+  the screen, camera hole matched to the phone's camera island with a protective rim, button slots both sides, port opening. No voxel
+  remesh: EXACT booleans + auto smooth 35° keep the edges crisp.
+- Colours: tangerine oil (orange -> gold -> magenta at grazing) on a petrol-teal infinite set with a teal accent light (complementary
+  contrast; v1's lime on green had none). Warm gold growth edge, compositor fog glow.
+- Pipeline: Cycles 96 spp (adaptive) + OIDN (scripts/denoise/oidn_render.py on case_v2.blend), 720x1280 then AI 2x upscale.

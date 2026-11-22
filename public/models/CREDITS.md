@@ -11,3 +11,6 @@
 - AI enhancement models (local, in ignored `tools/ai-models/`): Real-ESRGAN x2 / x4plus by Xintao Wang et al. (BSD-3-Clause);
   2xNomosUni_compact_multijpg_ldl by Philip Hofmann (CC-BY 4.0); RIFE 4.9 by Zhewei Huang / hzwer (Practical-RIFE, MIT), network code
   from Fannovel16/ComfyUI-Frame-Interpolation (MIT). Intel Open Image Denoise (Apache-2.0).
+- Phone case v2 phone (not stored in Git; downloaded to the ignored `work/phonemodels/`): "Apple iPhone 13 Pro Max" by DatSketch
+  (Sketchfab model 4328dea00e47497dbeac73c556121bc9), CC-BY 4.0, via Objaverse (Hugging Face). Apple logo removed; scaled and posed.
+  Credit line for posts: "Phone model: Apple iPhone 13 Pro Max by DatSketch (CC-BY 4.0)".
