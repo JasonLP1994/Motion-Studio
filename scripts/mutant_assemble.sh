@@ -8,9 +8,10 @@ V=${1:-v1}
 mkdir -p public/mutant/frames && cp work/mutant/frames/f_*.png public/mutant/frames/
 [ -f public/mutant/logo-mark.png ] || python3 scripts/mutant_logo.py work/mutant/frames/logo_pass.png public/mutant/logo-mark.png
 python3 scripts/mutant_audio.py public/mutant/mutant.wav
-rm -rf work/mutant/comp work/mutant/comp_fin && mkdir -p work/mutant/comp
+rm -rf work/mutant/comp work/mutant/comp_lens work/mutant/comp_fin && mkdir -p work/mutant/comp
 npx remotion render MutantCover work/mutant/comp --sequence --image-format=png --log=error      # composited frames
-bash scripts/finish/finish.sh work/mutant/comp work/mutant/comp_fin scripts/finish/themes/cover_punch.yaml 0.8   # finishing pass over everything
+PYTHONPATH=tools/finish-py python3 scripts/finish/lensfx.py work/mutant/comp work/mutant/comp_lens --preset cover            # lens pass
+bash scripts/finish/finish.sh work/mutant/comp_lens work/mutant/comp_fin scripts/finish/themes/cover_punch.yaml 0.8   # finishing pass over everything
 ffmpeg -v error -y -framerate 24 -pattern_type glob -i 'work/mutant/comp_fin/*.png' -vf format=yuv420p -c:v libx264 -crf 16 -preset slow -movflags +faststart renders/mutant-cover-$V-silent.mp4
 LUFS=$(ffmpeg -nostats -i public/mutant/mutant.wav -af ebur128 -f null - 2>&1 | grep -E "^\s+I:" | tail -1 | awk '{print $2}')
 GAIN=$(python3 -c "print(round(-14-($LUFS),2))")

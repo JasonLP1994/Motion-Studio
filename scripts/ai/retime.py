@@ -1,5 +1,5 @@
-# Speed-ramp a rendered frame sequence: slow motion via RIFE in-betweens (no extra 3D rendering), fast sections by skipping
-# frames, ramps smoothed inside a shot, hard speed changes allowed at cuts, and never interpolates across a cut.
+# Speed-ramp a rendered frame sequence: slow motion via RIFE in-betweens (no extra 3D rendering), fast sections blend the
+# frames they skip (natural motion blur, the frame-blending idea behind f0e/blur, Smoothie, Teres), ramps smoothed inside a shot, hard speed changes allowed at cuts, and never interpolates across a cut.
 # Speed plan JSON: {"cuts": [31, 67, ...], "segments": [[src_start, src_end, speed], ...], "ramp": 6}
 #   segments are in source frames (start inclusive, end exclusive), speed 0.5 = half speed (slow-mo), 2 = double speed.
 # Usage: PYTHONPATH=tools/ai-py:tools/rife .object-separation/bin/python scripts/ai/retime.py IN_DIR OUT_DIR PLAN.json
@@ -49,6 +49,17 @@ for i, s in enumerate(times, 1):
     dst = os.path.join(out, f"f_{i:04d}.png")
     if os.path.exists(dst): continue
     k0 = int(math.floor(s)); fr = s - k0
+    sp = speed(s)
+    if sp > 1.15:   # fast section: blend the source frames this output frame "covers" = natural motion blur (shutter open)
+        lo, hi = shot_start(s), min([c for c in cuts if c > s] + [src_last + 1]) - 1
+        ks = [k for k in range(int(math.ceil(s - sp / 2)), int(math.floor(s + sp / 2)) + 1) if lo <= k <= hi] or [int(round(s))]
+        frames = [load(k).astype(np.float32) for k in ks]
+        samples = list(frames)
+        for fa, fb in zip(frames, frames[1:]):      # RIFE midpoints make the blur continuous instead of stepped copies
+            m = mid(tens(fa[..., :3].astype(np.uint8)), tens(fb[..., :3].astype(np.uint8)), 0.5)[0].clamp(0, 1).permute(1, 2, 0).numpy() * 255
+            samples.append(np.dstack([m, (fa[..., 3] + fb[..., 3]) / 2]))
+        acc = np.mean(samples, axis=0)
+        Image.fromarray((acc + 0.5).astype(np.uint8), "RGBA").save(dst); done += 1; continue
     if fr < 0.04 or k0 + 1 > src_last or (k0 + 1) in cuts or fr > 0.96:   # near a real frame, at the end, or the next frame is across a cut
         k = k0 if (fr <= 0.5 or (k0 + 1) in cuts or k0 + 1 > src_last) else k0 + 1
         shutil.copyfile(os.path.join(inp, f"f_{k:04d}.png"), dst)

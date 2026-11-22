@@ -46,7 +46,7 @@ Suggest these alongside the kit's 10 templates. Each has a guide, prompt.txt, wo
 
 - **AI render enhancement (local, free):** `notes/ai-enhance.md`. Compact AI 2x upscaler (`scripts/ai/upscale.py --model fast`, render 720p -> 1080p), Real-ESRGAN for hero stills, RIFE in-betweens (`scripts/ai/interpolate.py`, render every other frame of slow shots only, never across cuts/glitches), OIDN for Cycles. **User rule: use all of them on every 3D render to get the best look in the fastest time (default recipe at the end of notes/ai-enhance.md); free tools only (never paid/cloud enhancers).** Everything lives in ignored `tools/`. Long cloud renders must run as a tracked background task (see `notes/blender-setup.md`).
 
-- **Finishing pass (After Effects-style touch-ups, free/local):** `notes/finishing.md`. postfx (MIT) over the final frames after the type is composited: grade, halation, vignette, CA, clarity, sharpening, moving grain. House looks in `scripts/finish/themes/` (`product_premium`, `cover_punch`). Run it on every finished video before encoding.
+- **Finishing pass (After Effects-style touch-ups, free/local):** `notes/finishing.md`. postfx (MIT) over the final frames after the type is composited: grade, halation, vignette, CA, clarity, sharpening, moving grain. House looks in `scripts/finish/themes/` (`product_premium`, `cover_punch`). Before it, the lens pass `scripts/finish/lensfx.py` (streaks, ghosts, light leaks, CA); speed ramps add post motion blur in `scripts/ai/retime.py`. Run lens + finish on every finished video before encoding.
 
 ## Extra skills (from the user's motion-graphics pack, MIT, in .claude/skills/)
 - `motion-broll`: one-shape motion B-roll cut into a talking-head video, timed to words.
