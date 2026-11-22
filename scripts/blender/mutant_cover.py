@@ -293,8 +293,8 @@ S.timeline_markers.new("CAM_Hero", frame=149).camera = hero
 # end shot (cut hidden in the type glitch-out): straight on to the face, head centred, slow push. Lives in the head rig so it
 # stays square to the face whatever the pose.
 endc, endt = make_cam("CAM_End", 50, 8.0, RIG)
-key(endc, "location", 226, rig_local((0, -2.45, 0.5))); key(endt, "location", 226, rig_local((0, 0, 0.5)))
-key(endc, "location", NF, rig_local((0, -2.15, 0.5))); key(endt, "location", NF, rig_local((0, 0, 0.5)))
+key(endc, "location", 226, rig_local((0, -3.0, 0.55))); key(endt, "location", 226, rig_local((0, 0, 0.55)))
+key(endc, "location", NF, rig_local((0, -2.7, 0.55))); key(endt, "location", NF, rig_local((0, 0, 0.55)))
 S.timeline_markers.new("CAM_End", frame=226).camera = endc
 S.camera = bpy.data.objects["CAM_Eye"]
 
