@@ -14,8 +14,8 @@ RES = (720, 1280)
 END = 240
 bpy.ops.wm.read_factory_settings(use_empty=True)
 S = bpy.context.scene; S.render.fps = 24; S.frame_start, S.frame_end = 1, END
-ORANGE = (1.0, 0.24, 0.015)        # tangerine oil
-GOLD = (1.0, 0.55, 0.04)
+ORANGE = (1.0, 0.16, 0.0)          # tangerine oil
+GOLD = (1.0, 0.42, 0.0)
 GRAZE = (0.5, 0.02, 0.16)          # magenta-red at grazing angles
 GLOW = (1.0, 0.62, 0.18)           # warm growth edge
 TEAL = (0.004, 0.045, 0.055)       # petrol backdrop (complementary)
@@ -305,7 +305,7 @@ def camera(name, lens, f0, f1, c0, c1, t0, t1, fstop=None):
 camera("CAM_Chip", 70, 1, 30, (0.95, 0.75, 0.12), (0.85, 0.66, 0.18), (0.33, 0.05, 0.27), (0.3, 0.05, 0.32), fstop=2.0)
 camera("CAM_Rim", 50, 31, 66, (1.15, 0.85, 0.1), (1.05, 0.8, 0.78), (0.36, 0.0, 0.2), (0.34, 0.0, 0.78), fstop=2.8)
 camera("CAM_Sweep", 50, 67, 102, (0.12, 0.3, 2.0), (-0.02, 0.26, 1.9), (0.1, 0.05, 1.0), (0.0, 0.05, 1.2), fstop=2.8)
-camera("CAM_Bump", 85, 103, 140, (-0.25, 0.8, 1.8), (0.5, 0.75, 1.72), (0.172, 0.07, 1.53), (0.172, 0.07, 1.53), fstop=2.4)
+camera("CAM_Bump", 60, 103, 140, (-0.42, 0.62, 1.12), (-0.24, 0.58, 1.22), (0.02, 0.06, 1.37), (0.04, 0.06, 1.4), fstop=2.8)   # oblique onto the rim corner (the cut-out is an open hole until the phone arrives)
 camera("CAM_Ring", 60, 141, 180, (0.6, 1.6, 0.75), (0.3, 1.45, 0.85), (0, 0.06, 0.93), (0, 0.06, 0.93), fstop=2.8)
 camera("CAM_Hero", 40, 181, 240, (0.25, 1.7, 0.85), (0.0, 3.1, 1.1), (0, 0, 0.95), (0, 0, 1.0), fstop=8.0)
 S.camera = bpy.data.objects["CAM_Chip"]
@@ -323,8 +323,13 @@ except TypeError:
 S.use_nodes = True; ct = S.node_tree
 for n in list(ct.nodes): ct.nodes.remove(n)
 _rl = ct.nodes.new("CompositorNodeRLayers"); _gl = ct.nodes.new("CompositorNodeGlare"); _co_ = ct.nodes.new("CompositorNodeComposite")
-_gl.glare_type = 'FOG_GLOW'; _gl.threshold = 1.2; _gl.mix = 0.0; _gl.quality = 'HIGH'; _gl.size = 7
+_gl.glare_type = 'FOG_GLOW'; _gl.threshold = 3.0; _gl.mix = 0.0; _gl.quality = 'HIGH'; _gl.size = 7
 ct.links.new(_rl.outputs["Image"], _gl.inputs["Image"]); ct.links.new(_gl.outputs["Image"], _co_.inputs["Image"])
+if os.environ.get("CASE_ENGINE") == "EEVEE":      # fast option: same scene in Eevee (compositor glare still applies)
+    S.render.engine = 'BLENDER_EEVEE'; e = S.eevee
+    e.taa_render_samples = 48; e.use_ssr = True; e.use_ssr_halfres = False; e.use_gtao = True; e.gtao_distance = 0.15
+    e.use_motion_blur = True; e.motion_blur_shutter = 0.4; e.use_soft_shadows = True; e.gi_cubemap_resolution = '1024'
+    m_case.blend_method = 'CLIP'
 if os.environ.get("NO_OVERWRITE"): S.render.use_overwrite = False; S.render.use_placeholder = False
 S.render.image_settings.file_format = 'PNG'; os.makedirs(OUT, exist_ok=True)
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
