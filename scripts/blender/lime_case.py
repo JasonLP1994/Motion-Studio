@@ -48,7 +48,7 @@ def smooth(o):
 # ---------------------------------------------------------------- growth field (shared by shader + geometry nodes)
 # Arrival time A(p) for each point of the case, in "growth units": the back spreads out from the bottom
 # centre, then the side walls rise, then the front lip, and the camera bump forms last as its own piece.
-GROW_EXPR = "2.15*(min(1,max(0,(frame-4)/80))*min(1,max(0,(frame-4)/80))*(3-2*min(1,max(0,(frame-4)/80))))"   # growth clock T: frames 4-84
+GROW_EXPR = "2.15*(min(1,max(0,(frame-4)/136))*min(1,max(0,(frame-4)/136))*(3-2*min(1,max(0,(frame-4)/136))))"   # growth clock T: frames 4-140
 START = (0.36, -0.75, -0.055)   # one bottom corner (the reference starts from a corner chip)
 def arrival(nt, pos):
     def m(op, a, b=None, c=None, clamp=False):
@@ -130,11 +130,11 @@ m_glass = principled("MAT_PhoneGlass", (0.005, 0.006, 0.008), 0.05, coat=1.0)
 m_frame = principled("MAT_PhoneFrame", (0.08, 0.085, 0.09), 0.25, metal=1.0)
 m_lens = principled("MAT_Lens", (0.0, 0.0, 0.0), 0.02, coat=1.0)
 m_lensring = principled("MAT_LensRing", (0.6, 0.62, 0.65), 0.2, metal=1.0)
-BG_GREEN = (0.24, 0.48, 0.1)
+BG_GREEN = (0.035, 0.085, 0.012)
 m_cyc = principled("MAT_Cyclorama", BG_GREEN, 0.95)
 _cb = m_cyc.node_tree.nodes["Principled BSDF"]
 _cb.inputs["Specular IOR Level"].default_value = 0.0
-_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.22  # mostly self-lit = flat, seamless
+_cb.inputs["Emission Color"].default_value = (*BG_GREEN, 1); _cb.inputs["Emission Strength"].default_value = 0.35  # mostly self-lit = flat, seamless
 
 # ---------------------------------------------------------------- product (local axes: X width, Y height, Z depth, back = -Z)
 PROD = bpy.data.objects.new("PRODUCT", None); S.collection.objects.link(PROD)
@@ -213,23 +213,23 @@ RING = bpy.data.objects.new("RING_PIVOT", None); S.collection.objects.link(RING)
 ring.parent = RING
 hinge = rounded_slab("SM_RingHinge", 0.035, 0.02, -0.01, 0.01, 0.01); hinge.location = (0, -0.18, 0)
 hinge.data.materials.append(m_ring); smooth(hinge); hinge.parent = RING
-key(RING, "location", 1, (0.9, -0.6, -0.9)); key(RING, "location", 86, (0.9, -0.6, -0.9))
-key(RING, "location", 104, (0, -0.08, -0.077)); key(RING, "location", 108, (0, -0.08, -0.069)); key(RING, "location", 112, (0, -0.08, -0.073))
-key(RING, "rotation_euler", 86, (math.radians(80), math.radians(-40), math.radians(90)))
-key(RING, "rotation_euler", 104, (math.radians(-6), 0, 0)); key(RING, "rotation_euler", 112, (0, 0, 0))
+key(RING, "location", 1, (0.9, -0.6, -0.9)); key(RING, "location", 156, (0.9, -0.6, -0.9))
+key(RING, "location", 168, (0, -0.08, -0.077)); key(RING, "location", 172, (0, -0.08, -0.069)); key(RING, "location", 176, (0, -0.08, -0.073))
+key(RING, "rotation_euler", 156, (math.radians(80), math.radians(-40), math.radians(90)))
+key(RING, "rotation_euler", 168, (math.radians(-6), 0, 0)); key(RING, "rotation_euler", 176, (0, 0, 0))
 
 # phone: absent while the case builds, then slides in from the open front and seats at frame 104
-key(PHONE, "location", 1, (0, 0, 1.4)); key(PHONE, "location", 88, (0, 0, 1.4))
-key(PHONE, "location", 102, (0, 0, -0.004)); key(PHONE, "location", 106, (0, 0, 0.0))
+key(PHONE, "location", 1, (0, 0, 1.4)); key(PHONE, "location", 144, (0, 0, 1.4))
+key(PHONE, "location", 156, (0, 0, -0.004)); key(PHONE, "location", 160, (0, 0, 0.0))
 for o in [PHONE] + list(PHONE.children):
-    o.hide_render = True; o.keyframe_insert("hide_render", frame=87)
-    o.hide_render = False; o.keyframe_insert("hide_render", frame=88)
+    o.hide_render = True; o.keyframe_insert("hide_render", frame=143)
+    o.hide_render = False; o.keyframe_insert("hide_render", frame=144)
 
 # hero turn: the whole product rotates slowly in the last shot
-key(PROD, "rotation_euler", 187, (math.radians(90), 0, math.radians(-28)))
+key(PROD, "rotation_euler", 181, (math.radians(90), 0, math.radians(-28)))
 key(PROD, "rotation_euler", 240, (math.radians(90), 0, math.radians(18)))
 key(PROD, "rotation_euler", 1, (math.radians(90), 0, math.radians(-18)))
-key(PROD, "rotation_euler", 168, (math.radians(90), 0, math.radians(-10)))
+key(PROD, "rotation_euler", 176, (math.radians(90), 0, math.radians(-10)))
 
 # ---------------------------------------------------------------- set + lights
 bm = bmesh.new()                                     # cyclorama: floor curving up into a back wall
@@ -255,10 +255,10 @@ wt = W.node_tree; bgn = wt.nodes["Background"]
 wtc = wt.nodes.new("ShaderNodeTexCoord"); wsp = wt.nodes.new("ShaderNodeSeparateXYZ")
 wmr = wt.nodes.new("ShaderNodeMapRange"); wmr.inputs["From Min"].default_value = -0.1; wmr.inputs["From Max"].default_value = 0.9
 wramp = wt.nodes.new("ShaderNodeValToRGB")
-wramp.color_ramp.elements[0].color = (0.12, 0.25, 0.05, 1); wramp.color_ramp.elements[1].color = (0.55, 0.7, 0.45, 1)
+wramp.color_ramp.elements[0].color = (0.02, 0.05, 0.01, 1); wramp.color_ramp.elements[1].color = (0.09, 0.15, 0.05, 1)
 wt.links.new(wtc.outputs["Generated"], wsp.inputs[0]); wt.links.new(wsp.outputs["Z"], wmr.inputs["Value"])
 wt.links.new(wmr.outputs["Result"], wramp.inputs["Fac"]); wt.links.new(wramp.outputs["Color"], bgn.inputs["Color"])
-bgn.inputs["Strength"].default_value = 0.32
+bgn.inputs["Strength"].default_value = 0.3
 
 # ---------------------------------------------------------------- cameras
 def camera(name, lens, f0, f1, c0, c1, t0, t1, fstop=None):
@@ -270,14 +270,13 @@ def camera(name, lens, f0, f1, c0, c1, t0, t1, fstop=None):
     if fstop: c.data.dof.use_dof = True; c.data.dof.focus_object = t; c.data.dof.aperture_fstop = fstop
     mk = S.timeline_markers.new(name, frame=f0); mk.camera = c; return c
 # build is seen only in close-ups; the whole case is held back for the pull-back reveal at the end
-camera("CAM_Chip", 70, 1, 22, (0.95, 0.75, 0.12), (0.85, 0.66, 0.18), (0.33, 0.05, 0.27), (0.28, 0.05, 0.34), fstop=2.0)
-camera("CAM_Rim", 50, 23, 48, (1.15, 0.85, 0.42), (1.05, 0.8, 1.2), (0.36, 0.0, 0.52), (0.34, 0.0, 1.2), fstop=2.8)
-camera("CAM_Sweep", 40, 49, 84, (-0.15, 0.6, 2.1), (0.1, 0.55, 2.0), (-0.05, 0.05, 1.25), (-0.1, 0.05, 1.35), fstop=4.0)
-camera("CAM_Ring", 60, 85, 120, (0.6, 1.6, 0.75), (0.3, 1.45, 0.85), (0, 0.06, 0.93), (0, 0.06, 0.93), fstop=2.8)
-camera("CAM_Bump", 70, 121, 144, (0.1, 0.95, 1.85), (-0.15, 0.88, 1.75), (-0.19, 0.06, 1.55), (-0.19, 0.06, 1.55), fstop=2.4)
-camera("CAM_Engrave", 50, 145, 166, (0.3, 1.6, 0.42), (-0.25, 1.6, 0.48), (0.05, 0.06, 0.55), (-0.05, 0.06, 0.55), fstop=2.8)
-camera("CAM_Edge", 50, 167, 186, (1.4, 0.55, 0.7), (1.3, 0.85, 1.3), (0.3, 0.0, 0.9), (0.3, 0.0, 1.1), fstop=2.8)
-camera("CAM_Hero", 40, 187, 240, (0.25, 1.7, 0.85), (0.0, 3.1, 1.1), (0, 0, 0.95), (0, 0, 1.0), fstop=8.0)
+# 0-5.8 s: mystery. Tight macros ride the growth front so the object can't be read; 5.8-7.5 s phone + ring; 7.5-10 s pull-back reveal
+camera("CAM_Chip", 70, 1, 30, (0.95, 0.75, 0.12), (0.85, 0.66, 0.18), (0.33, 0.05, 0.27), (0.3, 0.05, 0.32), fstop=2.0)
+camera("CAM_Rim", 50, 31, 66, (1.15, 0.85, 0.1), (1.05, 0.8, 0.78), (0.36, 0.0, 0.2), (0.34, 0.0, 0.78), fstop=2.8)
+camera("CAM_Sweep", 50, 67, 102, (0.12, 0.3, 2.0), (-0.02, 0.26, 1.9), (0.1, 0.05, 1.0), (0.0, 0.05, 1.2), fstop=2.8)
+camera("CAM_Bump", 85, 103, 140, (0.3, 0.8, 1.8), (-0.4, 0.75, 1.72), (-0.19, 0.07, 1.55), (-0.19, 0.07, 1.55), fstop=2.4)
+camera("CAM_Ring", 60, 141, 180, (0.6, 1.6, 0.75), (0.3, 1.45, 0.85), (0, 0.06, 0.93), (0, 0.06, 0.93), fstop=2.8)
+camera("CAM_Hero", 40, 181, 240, (0.25, 1.7, 0.85), (0.0, 3.1, 1.1), (0, 0, 0.95), (0, 0, 1.0), fstop=8.0)
 S.camera = bpy.data.objects["CAM_Chip"]
 
 # ---------------------------------------------------------------- render
