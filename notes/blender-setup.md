@@ -6,3 +6,4 @@
 - No GPU: Eevee previews are fine; Cycles is CPU-only and slow. Keep blockouts small (480x270 previews).
 - Fast-render plan (pending): Blender blockout → control passes (depth, normal, mask) → AI video-to-video service (not chosen yet; ask before any paid job) → graphics, type, effects and sound in Remotion.
 - Test: `work/blender/test_scene.py` rendered `work/blender/test.png` OK.
+- Renders: a detached (setsid/nohup) job does not keep the cloud machine awake; it pauses when idle and kills it. Run long renders as a harness-tracked background task (2 h limit) and relaunch the resumable queue (NO_OVERWRITE) each time it times out.
