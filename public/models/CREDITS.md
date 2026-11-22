@@ -14,3 +14,4 @@
 - Phone case v2 phone (not stored in Git; downloaded to the ignored `work/phonemodels/`): "Apple iPhone 13 Pro Max" by DatSketch
   (Sketchfab model 4328dea00e47497dbeac73c556121bc9), CC-BY 4.0, via Objaverse (Hugging Face). Apple logo removed; scaled and posed.
   Credit line for posts: "Phone model: Apple iPhone 13 Pro Max by DatSketch (CC-BY 4.0)".
+- Finishing pass: postfx by 0xBeycan (MIT), local in ignored `tools/finish-py/`.

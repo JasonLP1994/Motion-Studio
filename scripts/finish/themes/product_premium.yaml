@@ -1,0 +1,27 @@
+# Motion Studio house finish: premium product (gold/silver, glossy). Based on postfx clean_commercial, plus a gentle warm
+# halation on the speculars, a soft vignette to hold the eye, a whisper of chromatic aberration at the edges and fine
+# moving grain so CG reads as photographed. Apply with postfx --strength 0.6-1.0.
+name: product_premium
+description: Clean premium product finish with soft halation, vignette and fine grain
+white_balance: { temp: 0.02, tint: 0.0 }
+exposure: { stops: 0.03 }
+highlight_rolloff: { knee: 0.8, strength: 0.4 }
+lift_gamma_gain:
+  lift:  [0.0, 0.0, 0.004]
+  gamma: [1.0, 1.0, 1.0]
+  gain:  [1.02, 1.01, 1.0]
+split_toning:
+  shadow:    [-0.004, 0.0, 0.008]
+  highlight: [0.008, 0.005, -0.004]
+  strength: 0.3
+tone_curve: { strength: 0.32, pivot: 0.46 }
+vibrance: { vibrance: 0.14, saturation: 1.03, skin_protect: 0.7 }
+halation: { threshold: 0.82, radius_frac: 0.012, tint: [1.0, 0.78, 0.5], strength: 0.12 }
+distortion: { k: 0.0 }
+chromatic_aberration: { amount: 0.0006 }
+vignette: { strength: 0.2, feather: 0.6 }
+black_point: { lift: 0.006 }
+clarity: { amount: 0.22, radius_frac: 0.028 }
+grain: { luma: 0.009, chroma: 0.0, size: 0.6, floor: 0.2 }
+sharpen: { amount: 0.4, radius_frac: 0.0013, halo: 0.0 }
+jpeg: { quality: 100, cycles: 0 }
