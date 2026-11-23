@@ -11,9 +11,10 @@ const col = C.colors;
 const ease = Easing.bezier(0.16, 1, 0.3, 1);
 
 // each HUD element reveals with a short wipe; i = order index
+export const HudStart = React.createContext<number>(C.hud.start);
 const useReveal = (i: number) => {
-  const f = useCurrentFrame();
-  const t0 = (C.hud.start + i * C.hud.stagger) * C.fps;
+  const f = useCurrentFrame(); const start = React.useContext(HudStart);
+  const t0 = (start + i * C.hud.stagger) * C.fps;
   return interpolate(f, [t0, t0 + C.hud.drawDur * C.fps], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
 };
 const Wipe: React.FC<{ i: number; style?: React.CSSProperties; children: React.ReactNode }> = ({ i, style, children }) => {
@@ -40,17 +41,19 @@ const Slashes: React.FC<{ n: number; color?: string; size?: number }> = ({ n, co
   <div style={{ display: "flex", gap: size * 0.18 }}>{Array.from({ length: n }).map((_, i) => <div key={i} style={{ width: size * 0.16, height: size, background: color, transform: "skewX(-30deg)" }} />)}</div>
 );
 
-export const PD01HUD: React.FC = () => {
+export const PD01HUD: React.FC<{ overlayOnly?: boolean }> = ({ overlayOnly = false }) => {
   const { copy: c } = C;
   return (
-    <AbsoluteFill style={{ background: col.page }}>
+    <AbsoluteFill style={{ background: overlayOnly ? "transparent" : col.page }}>
       <style>{fontFace}</style>
+      {!overlayOnly && (<>
       {/* atmosphere: soft glow behind the figure, deeper blue toward the edges, faint pink haze low right */}
       <AbsoluteFill style={{ background: `radial-gradient(ellipse 46% 60% at 56% 42%, ${col.glow} 0%, rgba(26,43,255,0) 70%)` }} />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse 40% 35% at 72% 88%, ${col.haze} 0%, rgba(0,0,0,0) 70%)` }} />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse 85% 85% at 55% 45%, rgba(0,0,0,0) 55%, ${col.vignette} 100%)` }} />
       {/* figure: big, lower right, cropped by the frame edge like the reference */}
       <Img src={staticFile(C.figure)} style={{ position: "absolute", height: C.figurePos.height, width: 1920, left: C.figurePos.left, top: C.figurePos.top }} />
+      </>)}
 
       {/* masthead */}
       <Wipe i={0} style={{ left: 70, top: 10 }}><T size={300} font="PDDisplay" ls={0.0} style={{ lineHeight: 1 }}>{c.masthead}</T></Wipe>

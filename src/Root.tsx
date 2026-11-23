@@ -33,6 +33,7 @@ import { MutantCover } from "./mutant/MutantCover";
 import { mutantConfig as mu } from "./mutant/config";
 import { PixelSneaker } from "./pixel/PixelSneaker";
 import { PD01HUD } from "./pd01/PD01";
+import { PD01Anim } from "./pd01/PD01Anim";
 import { pd01Config as pd } from "./pd01/config";
 import { pixelConfig as px } from "./pixel/config";
 
@@ -41,6 +42,7 @@ export const RemotionRoot: React.FC = () => {
     <>
       <MyComposition />
       <Composition id="Test" component={Test} durationInFrames={c.fps * c.durationInSeconds} fps={c.fps} width={c.width} height={c.height} />
+      <Composition id="PD01Anim" component={PD01Anim} durationInFrames={pd.fps * pd.durationInSeconds} fps={pd.fps} width={pd.width} height={pd.height} />
       <Composition id="PD01HUD" component={PD01HUD} durationInFrames={pd.fps * pd.durationInSeconds} fps={pd.fps} width={pd.width} height={pd.height} />
       <Composition id="Duppy" component={Duppy} durationInFrames={totalFrames} fps={d.output.fps} width={d.output.width} height={d.output.height} />
       <Composition id="EpicScale" component={EpicScale} durationInFrames={30 * epicConfig.durationInSeconds} fps={30} width={1920} height={1080} />

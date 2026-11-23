@@ -25,6 +25,7 @@ export const pd01Config = {
     protocol: ["// PINK PROTOCOL", "// FRAME BY FRAME", "// BUILT IN CODE"],
     ver: "2.6",
   },
+  anim: { dark: "#05060F", floodAt: 3.0, hudAt: 7.0, logoAt: 10.5, glitches: [3.0, 7.0, 8.6, 10.4], glitchFrames: 3 },
   // draw-on timing (seconds) for the HUD; used by the motion version later
   hud: { start: 0.0, stagger: 0.06, drawDur: 0.5 },
 };
