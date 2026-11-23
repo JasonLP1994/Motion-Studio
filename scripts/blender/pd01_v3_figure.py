@@ -176,17 +176,48 @@ pm = bpy.data.materials.new("MAT_PufferNylon"); pm.use_nodes = True; pn = pm.nod
 geo = pn.nodes.new("ShaderNodeNewGeometry")
 sep = pn.nodes.new("ShaderNodeSeparateXYZ"); pn.links.new(geo.outputs["Position"], sep.inputs[0])
 lining = mnode(pn, 'MULTIPLY', geo.outputs["Backfacing"], mnode(pn, 'GREATER_THAN', sep.outputs["Z"], 1.28))
-pn.links.new(mix(pn, lining, (E("NAVY_R", 0.0035), E("NAVY_G", 0.0055), E("NAVY_B", 0.020), 1), (*PINK, 1)), pb.inputs["Base Color"])
-pn.links.new(mixf(pn, lining, 0.62, 0.55), pb.inputs["Roughness"])
-zq = mnode(pn, 'MULTIPLY', sep.outputs["Z"], 2 * math.pi / 0.085)
-sn = pn.nodes.new("ShaderNodeMath"); sn.operation = 'SINE'; pn.links.new(zq, sn.inputs[0])
-ab = pn.nodes.new("ShaderNodeMath"); ab.operation = 'ABSOLUTE'; pn.links.new(sn.outputs[0], ab.inputs[0])
-pw = pn.nodes.new("ShaderNodeMath"); pw.operation = 'POWER'; pn.links.new(ab.outputs[0], pw.inputs[0]); pw.inputs[1].default_value = 0.35
-nz = pn.nodes.new("ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 14.0; nz.inputs["Detail"].default_value = 3.0
-hgt = mnode(pn, 'ADD', pw.outputs[0], mnode(pn, 'MULTIPLY', nz.outputs["Fac"], 0.25))
-bp = pn.nodes.new("ShaderNodeBump"); bp.inputs["Strength"].default_value = 0.2; bp.inputs["Distance"].default_value = 0.012
+# ---- puffer nylon: satin ripstop with seam crinkles (replaces the flat matte look)
+seamv = pn.nodes.new("ShaderNodeMath"); seamv.operation = 'MULTIPLY'; pn.links.new(sep.outputs["Z"], seamv.inputs[0]); seamv.inputs[1].default_value = math.pi / PITCH
+seams_ = pn.nodes.new("ShaderNodeMath"); seams_.operation = 'SINE'; pn.links.new(seamv.outputs[0], seams_.inputs[0])
+seamab = pn.nodes.new("ShaderNodeMath"); seamab.operation = 'ABSOLUTE'; pn.links.new(seams_.outputs[0], seamab.inputs[0])   # 0 at a seam, 1 mid-puff
+crz = pn.nodes.new("ShaderNodeMapRange"); crz.interpolation_type = 'SMOOTHSTEP'; pn.links.new(seamab.outputs[0], crz.inputs[0])
+crz.inputs[1].default_value, crz.inputs[2].default_value, crz.inputs[3].default_value, crz.inputs[4].default_value = 0.0, 0.45, 1.0, 0.0
+quilted = mnode(pn, 'LESS_THAN', sep.outputs["Z"], 1.40)
+crease = mnode(pn, 'MULTIPLY', crz.outputs[0], quilted)                       # 1 in the seam valleys
+# colour: navy, a touch darker down in the seams (soft occlusion), pink lining inside
+navy = (E("NAVY_R", 0.0065), E("NAVY_G", 0.0105), E("NAVY_B", 0.044), 1)   # satin field-jacket navy (user reference)
+navy_c = mix(pn, mnode(pn, 'MULTIPLY', crease, 0.55), navy, (navy[0] * 0.35, navy[1] * 0.35, navy[2] * 0.4, 1))
+# tonal stitching just either side of each seam (dashed, slightly lighter navy thread)
+stl = pn.nodes.new("ShaderNodeMapRange"); pn.links.new(seamab.outputs[0], stl.inputs[0])
+stl.inputs[1].default_value, stl.inputs[2].default_value, stl.inputs[3].default_value, stl.inputs[4].default_value = 0.075, 0.105, 0.0, 1.0
+stb = pn.nodes.new("ShaderNodeMapRange"); pn.links.new(seamab.outputs[0], stb.inputs[0])
+stb.inputs[1].default_value, stb.inputs[2].default_value, stb.inputs[3].default_value, stb.inputs[4].default_value = 0.105, 0.135, 1.0, 0.0
+dash_in = mnode(pn, 'MULTIPLY', mnode(pn, 'ADD', sep.outputs["X"], sep.outputs["Y"]), 2 * math.pi / 0.006); dash_in.node.use_clamp = False
+dash_in.node.inputs[0].links[0].from_node.use_clamp = False
+dsn = pn.nodes.new("ShaderNodeMath"); dsn.operation = 'SINE'; pn.links.new(dash_in, dsn.inputs[0])
+dash = mnode(pn, 'GREATER_THAN', dsn.outputs[0], -0.2)
+stitch = mnode(pn, 'MULTIPLY', mnode(pn, 'MULTIPLY', mnode(pn, 'MINIMUM', stl.outputs[0], stb.outputs[0]), dash), quilted)
+navy_s = mix(pn, stitch, navy_c, (0.05, 0.07, 0.20, 1))
+pn.links.new(mix(pn, lining, navy_s, (*PINK, 1)), pb.inputs["Base Color"])
+# crinkles: stretched noise, strongest near the seams where the fabric bunches
+cmap = pn.nodes.new("ShaderNodeMapping"); pn.links.new(geo.outputs["Position"], cmap.inputs["Vector"]); cmap.inputs["Scale"].default_value = (1.0, 1.0, 2.6)
+crk = pn.nodes.new("ShaderNodeTexNoise"); crk.inputs["Scale"].default_value = 70.0; crk.inputs["Detail"].default_value = 6.0; crk.inputs["Roughness"].default_value = 0.62
+crk.inputs["Distortion"].default_value = 0.6; pn.links.new(cmap.outputs[0], crk.inputs["Vector"])
+crk_amt = mnode(pn, 'ADD', mnode(pn, 'MULTIPLY', crease, 0.85), 0.18)
+# ripstop grid: thin raised lines every ~5 mm (very low amplitude so it reads as texture, not pattern)
+def grid(axis_out):
+    fr = pn.nodes.new("ShaderNodeMath"); fr.operation = 'PINGPONG'; pn.links.new(axis_out, fr.inputs[0]); fr.inputs[1].default_value = 0.0025
+    st = pn.nodes.new("ShaderNodeMath"); st.operation = 'LESS_THAN'; pn.links.new(fr.outputs[0], st.inputs[0]); st.inputs[1].default_value = 0.00035
+    return st.outputs[0]
+rip = mnode(pn, 'MAXIMUM', grid(sep.outputs["X"]), mnode(pn, 'MAXIMUM', grid(sep.outputs["Y"]), grid(sep.outputs["Z"])))
+puff = pn.nodes.new("ShaderNodeMath"); puff.operation = 'POWER'; pn.links.new(seamab.outputs[0], puff.inputs[0]); puff.inputs[1].default_value = 0.35
+hgt = mnode(pn, 'ADD', mnode(pn, 'MULTIPLY', puff.outputs[0], 0.6), mnode(pn, 'ADD', mnode(pn, 'MULTIPLY', crk.outputs["Fac"], crk_amt), mnode(pn, 'MULTIPLY', rip, 0.0)))
+bp = pn.nodes.new("ShaderNodeBump"); bp.inputs["Strength"].default_value = E("NYLON_BUMP", 0.45); bp.inputs["Distance"].default_value = 0.004
 pn.links.new(hgt, bp.inputs["Height"]); pn.links.new(bp.outputs["Normal"], pb.inputs["Normal"])
-pb.inputs["Specular IOR Level"].default_value = 0.12
+# satin nylon response: soft sheen + a moderate glossy lobe (puffers catch long highlights along each baffle)
+pn.links.new(mixf(pn, lining, mixf(pn, crease, E("NYLON_ROUGH", 0.36), 0.55), 0.6), pb.inputs["Roughness"])
+pb.inputs["Specular IOR Level"].default_value = E("NYLON_SPEC", 0.42)
+pb.inputs["Sheen Weight"].default_value = 0.25; pb.inputs["Sheen Roughness"].default_value = 0.3; pb.inputs["Sheen Tint"].default_value = (0.3, 0.4, 0.9, 1)
 pb.inputs["Emission Color"].default_value = (*PINK, 1); pn.links.new(mixf(pn, lining, 0.0, 0.12), pb.inputs["Emission Strength"])
 # printed decals (in the fabric, follow the quilting): PD-01 on the near sleeve, the Phillips Digital "p." patch on the chest
 def decal(nt, img_path, axis, centre, size, face_mask, flip_u=False):
@@ -314,15 +345,24 @@ def light(name, loc, energy, sx, sy, col_=(1, 1, 1), look=None, glossy=True, dif
     except AttributeError: pass
     return o
 FZ = HC.z
-light("LGT_Key_Softbox", (-2.2, -1.8, FZ + 1.1), 200, 2.4, 1.2)
-light("LGT_Key_TopStrip", (-2.0, -1.4, FZ + 1.8), 220, 2.4, 0.14)
-light("LGT_Strip_Back", (1.0, 2.2, FZ), 450, 0.15, 3.0, (0.8, 0.88, 1.0))
-light("LGT_Strip_Pink", (2.2, 0.4, FZ - 0.2), E("PINK_STRIP", 220), 0.12, 3.0, PINK)
-light("LGT_Rim_Top", (0.5, 1.2, FZ + 1.8), 260, 1.4, 0.2, (0.9, 0.92, 1.0))
-light("LGT_Front_Fill", (-0.6, -2.6, FZ - 0.5), 200, 1.8, 1.4, glossy=False)
-light("LGT_Visor_Streak", (-1.2, -2.4, FZ + 0.7), 120, 2.2, 0.06, diffuse=False)
+if E("MOODY", 1):   # atmospheric: low-key side light, deep shadows, strong coloured rims, blue environment spill
+    light("LGT_Key_Softbox", (-2.4, -0.9, FZ + 1.5), E("KEY_E", 150), 1.4, 0.8)
+    light("LGT_Key_TopStrip", (-1.6, -0.6, FZ + 2.0), 120, 1.8, 0.12)
+    light("LGT_Rim_Blue", (-1.5, 2.0, FZ + 0.3), E("RIM_BLUE", 900), 0.25, 2.6, (0.35, 0.55, 1.0))
+    light("LGT_Rim_Pink", (1.7, 1.5, FZ + 0.1), E("RIM_PINK", 650), 0.2, 2.6, PINK)
+    light("LGT_Rim_Top", (0.4, 1.3, FZ + 1.9), 220, 1.2, 0.2, (0.85, 0.9, 1.0))
+    light("LGT_Front_Fill", (-0.6, -2.6, FZ - 0.5), E("FILL_E", 45), 1.8, 1.4, glossy=False)
+    light("LGT_Visor_Streak", (-1.2, -2.4, FZ + 0.7), 110, 2.2, 0.06, diffuse=False)
+else:
+    light("LGT_Key_Softbox", (-2.2, -1.8, FZ + 1.1), 200, 2.4, 1.2)
+    light("LGT_Key_TopStrip", (-2.0, -1.4, FZ + 1.8), 220, 2.4, 0.14)
+    light("LGT_Strip_Back", (1.0, 2.2, FZ), 450, 0.15, 3.0, (0.8, 0.88, 1.0))
+    light("LGT_Strip_Pink", (2.2, 0.4, FZ - 0.2), E("PINK_STRIP", 220), 0.12, 3.0, PINK)
+    light("LGT_Rim_Top", (0.5, 1.2, FZ + 1.8), 260, 1.4, 0.2, (0.9, 0.92, 1.0))
+    light("LGT_Front_Fill", (-0.6, -2.6, FZ - 0.5), 200, 1.8, 1.4, glossy=False)
+    light("LGT_Visor_Streak", (-1.2, -2.4, FZ + 0.7), 120, 2.2, 0.06, diffuse=False)
 W = bpy.data.worlds.new("W"); S.world = W; W.use_nodes = True
-W.node_tree.nodes["Background"].inputs["Color"].default_value = (0.01, 0.025, 0.16, 1); W.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.5
+W.node_tree.nodes["Background"].inputs["Color"].default_value = (0.012, 0.03, 0.30, 1); W.node_tree.nodes["Background"].inputs["Strength"].default_value = E("WORLD_E", 0.55)
 
 # ---------------------------------------------------------------- hero camera (reference framing: low 28 mm, helmet big, centre-right)
 cam = bpy.data.objects.new("CAM_Hero", bpy.data.cameras.new("CAM_Hero")); S.collection.objects.link(cam); S.camera = cam

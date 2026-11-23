@@ -45,6 +45,10 @@ export const PD01HUD: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: col.page }}>
       <style>{fontFace}</style>
+      {/* atmosphere: soft glow behind the figure, deeper blue toward the edges, faint pink haze low right */}
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse 46% 60% at 56% 42%, ${col.glow} 0%, rgba(26,43,255,0) 70%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse 40% 35% at 72% 88%, ${col.haze} 0%, rgba(0,0,0,0) 70%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse 85% 85% at 55% 45%, rgba(0,0,0,0) 55%, ${col.vignette} 100%)` }} />
       {/* figure: big, lower right, cropped by the frame edge like the reference */}
       <Img src={staticFile(C.figure)} style={{ position: "absolute", height: C.figurePos.height, width: 1920, left: C.figurePos.left, top: C.figurePos.top }} />
 

@@ -1,7 +1,7 @@
 // PD-01 HUD: every word, colour and timing in one place (copy is DRAFT, waiting for the user's approval).
 export const pd01Config = {
   fps: 24, width: 1920, height: 1080, durationInSeconds: 13,
-  colors: { page: "#1A2BFF", ink: "#F4F6FF", pink: "#FF1A8C", dark: "#0A0A14", line: "rgba(244,246,255,0.55)" },
+  colors: { page: "#1A2BFF", ink: "#F4F6FF", pink: "#FF1A8C", dark: "#0A0A14", line: "rgba(244,246,255,0.55)", glow: "rgba(110,130,255,0.55)", haze: "rgba(255,26,140,0.16)", vignette: "rgba(4,8,70,0.55)" },
   fonts: { display: "BarlowCondensed-BlackItalic.ttf", ui: "chakra-petch-latin-700-normal.woff2", uiMed: "chakra-petch-latin-500-normal.woff2", jp: "noto-sans-jp-japanese-700-normal.woff2" },
   figure: "pd01/figure_v3.png",
   figurePos: { left: 0, top: 0, height: 1080 },   // the 3D camera does the framing; the plate fills the frame
