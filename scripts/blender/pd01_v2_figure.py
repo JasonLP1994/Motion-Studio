@@ -163,7 +163,7 @@ def flat(name, col, rough, emit=0.0):
     b.inputs["Base Color"].default_value = (*col, 1); b.inputs["Roughness"].default_value = rough
     if emit: b.inputs["Emission Color"].default_value = (*col, 1); b.inputs["Emission Strength"].default_value = emit
     return m
-fab = flat("MAT_Techwear", (0.0012, 0.0012, 0.002), 0.8); fab.node_tree.nodes["Principled BSDF"].inputs["Specular IOR Level"].default_value = 0.15; lin = flat("MAT_PinkLining", PINK, 0.5, 0.15)
+fab = flat("MAT_Techwear", (0.006, 0.007, 0.013), 0.9); fab.node_tree.nodes["Principled BSDF"].inputs["Specular IOR Level"].default_value = 0.08; lin = flat("MAT_PinkLining", PINK, 0.5, 0.15)
 hood.data.materials.clear(); hood.data.materials.append(fab); hood.data.materials.append(lin)
 hood.data.polygons.foreach_set("material_index", [0] * len(hood.data.polygons))
 col_.data.materials.append(fab); col_.data.materials.append(lin)
@@ -195,7 +195,7 @@ light("LGT_Key_TopStrip", (-2.2, -1.4, FZ + 1.9), 200, 2.4, 0.14, look=(0, 0, FZ
 light("LGT_Strip_Back", (1.2, 2.2, FZ), 420, 0.15, 3.0, (0.8, 0.88, 1.0), look=(0, 0, FZ))
 light("LGT_Strip_Pink", (2.2, 0.6, FZ - 0.2), 160, 0.12, 3.0, PINK, look=(0, 0, FZ))
 light("LGT_Rim_Top", (0.6, 1.2, FZ + 1.8), 260, 1.4, 0.2, (0.9, 0.92, 1.0), look=(0, 0, FZ))
-ch_ = light("LGT_Front_Chest", (-1.6, -2.4, FZ - 0.5), 450, 1.6, 1.0, look=(0, -0.2, FZ - 0.7)); ch_.visible_glossy = False
+ch_ = light("LGT_Front_Chest", (-0.5, -2.6, FZ - 0.5), 700, 1.6, 1.4, look=(0, -0.2, FZ - 0.7)); ch_.visible_glossy = False
 f = light("LGT_Fill", (-1.8, -2.4, FZ - 0.6), 40, 2.4, 2.4, look=(0, 0, FZ)); f.visible_glossy = False
 W = bpy.data.worlds.new("W"); S.world = W; W.use_nodes = True; W.node_tree.nodes["Background"].inputs["Color"].default_value = (0.01, 0.025, 0.16, 1)
 W.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.6
@@ -228,16 +228,19 @@ for side in (1, -1):
         t.location = loc + nor * 0.004; t.rotation_euler = nor.to_track_quat('X', 'Z').to_euler() if side > 0 else (-nor).to_track_quat('X', 'Z').to_euler()
         sd2 = t.modifiers.new("S", 'SOLIDIFY'); sd2.thickness = 0.003
 # closed front: the jacket is open with nobody inside, so loft a front panel between the two front edges
+pc = np.array([p_.center[:] for p_ in hood.data.polygons]); fr = pc[pc[:, 1] < -0.08]
 rows = []
-for z in np.linspace(0.02, NECK + 0.03, 36):
+for z in np.linspace(0.02, NECK - 0.01, 40):
+    sl = fr[np.abs(fr[:, 2] - z) < 0.03]
+    L_ = sl[sl[:, 0] < 0]; R_ = sl[sl[:, 0] > 0]
+    if len(L_) == 0 or len(R_) == 0: continue
+    l = L_[L_[:, 0].argmax()]; r = R_[R_[:, 0].argmin()]
+    xl, xr = l[0] - 0.03, r[0] + 0.03; yl, yr = l[1], r[1]          # overlap the edges a little
     row = []
-    for x in np.linspace(-0.16, 0.16, 9):
-        hit, loc, nor, _ = hood.ray_cast(Vector((x, -2.0, z)), Vector((0, 1, 0)))
-        row.append(loc.y if hit else None)
-    ys = [v for v in (row[0], row[-1]) if v is not None]
-    if not ys: continue
-    yf = min(ys) - 0.004
-    rows.append([(x, yf - 0.025 * math.cos(x / 0.16 * math.pi / 2), z) for x in np.linspace(-0.16, 0.16, 9)])
+    for t in np.linspace(0, 1, 13):
+        x = xl + (xr - xl) * t; y = yl + (yr - yl) * t - 0.045 * math.sin(math.pi * t) - 0.004
+        row.append((x, y, z))
+    rows.append(row)
 if len(rows) > 2:
     vs = [v for r in rows for v in r]; nc = len(rows[0])
     fs = [(i * nc + j, i * nc + j + 1, (i + 1) * nc + j + 1, (i + 1) * nc + j) for i in range(len(rows) - 1) for j in range(nc - 1)]
@@ -246,7 +249,7 @@ if len(rows) > 2:
     fp.modifiers.new("Sub", 'SUBSURF').levels = 1
     bpy.context.view_layer.update()
 # zip trim on the jacket: a pink tape following the front surface, slightly off-centre (asymmetric techwear zip)
-pts = [Vector(((r[3][0] + r[4][0]) / 2, (r[3][1] + r[4][1]) / 2 - 0.006, r[3][2])) for r in rows]
+pts = [Vector((r[5][0], r[5][1] - 0.007, r[5][2])) for r in rows]
 if len(pts) > 4:
     cu = bpy.data.curves.new("zip", 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = 0.008; cu.bevel_resolution = 2
     sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)

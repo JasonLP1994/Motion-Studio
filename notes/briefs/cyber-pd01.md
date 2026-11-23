@@ -42,4 +42,6 @@ kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-e
 - Fit: hood deleted above the neckline; a collar is lofted from the neck opening up to the helmet's own bottom outline (helmet sits
   inside it), plus a pink-lined hood roll behind the neck. Sleeves rotated 28 deg down from the A-pose.
 - Colour: Standard view, exposure -0.8, PINK linear (0.9, 0, 0.12): AgX turned hot pink pastel/salmon.
-- Look: notes/frames/pd01-v2-look18.jpg. Open: dark band on the jacket front, collar lining barely visible.
+- Look: notes/frames/pd01-v2-look18.jpg. Dark front stripe fixed (look21): the hoodie model is an OPEN jacket with no body, so the
+  inside of the back panel showed; a front panel is now lofted between the real front edges (+-0.2) with the pink zip on it.
+  Fabric: dark navy albedo, low specular (black albedo read grey on the lit side and black on the front). Open: collar lining.
