@@ -73,3 +73,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DON'T: classify visor glass by hue alone; faintly blue-grey paint turned into mirror glass (silver patches). Gate by saturation AND value.
 - DON'T: run lensfx over a HUD composite with big white type (streaks cross the hero); apply it to the 3D plate before the type.
 - DON'T: hard-clip (tanh) a mix to raise loudness: AAC overshoots to +8 dBTP. Use the oversampled true-peak limiter in scripts/pd01_audio.py.
+- DO: when retargeting onto an Auto-Rig Pro rig, re-parent face aim targets (eye.L/.R) to head.x or the eyes stay behind.

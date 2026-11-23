@@ -34,3 +34,7 @@ Status: brief done; next = find a free rigged stylised character + free breaking
   glow; blue key/fill + hot-pink rims. Frames: work/dance/uvlook_v4.jpg. Retarget fixes: ARP root bone points down (align hips on
   world up); twist bones posed after their parent bone. oidn_render.py now adds a compositor when a scene has none.
 - Face paint v2: UV vein pattern from the user's reference, stencil scripts/blender/dance_paint/make_face_paint_stencil.py (cm from the nose tip, symmetric), projected in Generated space, front-facing vertex mask. Check: work/dance/facepaint_v2.jpg.
+- Eyes: hollow/twisted eyes in motion = ARP face aim targets (eye.L/.R) stayed in world space; retarget now re-parents face
+  constraint targets onto head.x. UV contact lenses: Std_Eye_L/R replaced with a radial UV ramp (eyeball UV centred 0.5, iris
+  radius ~0.25), glowing lime iris + dark pupil; cornea = clear glass. (Colour-ramp gotcha: elements re-sort when positions
+  change; set them in two passes.) Check: work/dance/eyes_fix5.jpg.

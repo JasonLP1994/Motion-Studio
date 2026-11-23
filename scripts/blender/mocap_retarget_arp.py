@@ -8,6 +8,22 @@ a = sys.argv[sys.argv.index("--") + 1:]
 SRC_FILE, F0, F1, OUT = a[0], int(a[1]), int(a[2]), a[3]
 S = bpy.context.scene; S.render.fps = 24
 tgt = bpy.data.objects["rig"]
+# face rig fix: eye/lid aim targets live in world space and get left behind when the head moves (hollow, twisted eyes);
+# re-parent every face constraint target that is not already under head.x onto head.x (keeping its offset)
+def under(b, name):
+    while b:
+        if b.name == name: return True
+        b = b.parent
+    return False
+face = [pb for pb in tgt.pose.bones if under(pb, "ORG-face")]
+targets = set()
+for pb in face:
+    for c in pb.constraints:
+        st = getattr(c, "subtarget", "")
+        if st and getattr(c, "target", None) == tgt and st in tgt.data.bones and not under(tgt.data.bones[st], "head.x"): targets.add(st)
+bpy.context.view_layer.objects.active = tgt; tgt.select_set(True); bpy.ops.object.mode_set(mode='EDIT')
+for st in targets: tgt.data.edit_bones[st].parent = tgt.data.edit_bones["head.x"]
+bpy.ops.object.mode_set(mode='OBJECT'); print("FACE TARGETS REPARENTED", sorted(targets))
 before = set(S.objects); bpy.ops.import_scene.gltf(filepath=SRC_FILE)
 new = [o for o in S.objects if o not in before]
 src = [o for o in new if o.type == 'ARMATURE'][0]

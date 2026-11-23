@@ -120,3 +120,48 @@ light("LGT_Top_Violet", (0, 0.5, 4.5), 300, (0.5, 0.3, 1.0), 2.0)
 S.render.engine = 'CYCLES'; S.cycles.samples = 32; S.cycles.use_denoising = False
 S.view_settings.view_transform = 'Standard'; S.view_settings.exposure = E('EXPO', -0.4)
 bpy.ops.wm.save_as_mainfile(filepath=a[0]); print("UV LOOK SAVED")
+
+# ---------------------------------------------------------------- UV contact lenses: glowing neon-lime iris, dark pupil, bright ring
+def contacts(m):
+    nt = m.node_tree; N = nt.nodes
+    for n in list(N):
+        if n.type != 'OUTPUT_MATERIAL': N.remove(n)
+    out = next(n for n in N if n.type == 'OUTPUT_MATERIAL'); b = N.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(b.outputs[0], out.inputs["Surface"])
+    uv = N.new("ShaderNodeTexCoord"); sub = N.new("ShaderNodeVectorMath"); sub.operation = 'SUBTRACT'
+    nt.links.new(uv.outputs["UV"], sub.inputs[0]); sub.inputs[1].default_value = (0.5, 0.5, 0)
+    ln = N.new("ShaderNodeVectorMath"); ln.operation = 'LENGTH'; nt.links.new(sub.outputs[0], ln.inputs[0]); r = ln.outputs["Value"]
+    ang = N.new("ShaderNodeSeparateXYZ"); nt.links.new(sub.outputs[0], ang.inputs[0])
+    at = N.new("ShaderNodeMath"); at.operation = 'ARCTAN2'; nt.links.new(ang.outputs["Y"], at.inputs[0]); nt.links.new(ang.outputs["X"], at.inputs[1])
+    st = N.new("ShaderNodeMath"); st.operation = 'SINE'; mul = N.new("ShaderNodeMath"); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 48
+    nt.links.new(at.outputs[0], mul.inputs[0]); nt.links.new(mul.outputs[0], st.inputs[0])       # radial iris fibres
+    ramp = N.new("ShaderNodeValToRGB"); nt.links.new(r, ramp.inputs["Fac"]); e = ramp.color_ramp.elements; ramp.color_ramp.interpolation = 'LINEAR'
+    RP, RI = E("PUPIL_R", 0.05), E("IRIS_R", 0.25)
+    stops = [(0.0, (0, 0, 0)), (RP, (0, 0, 0)), (RP + 0.008, (0.35, 1.0, 0.05)), (RI - 0.03, (0.04, 0.85, 0.0)),
+             (RI - 0.008, (0.3, 1.0, 0.02)), (RI + 0.004, (0.02, 0.03, 0.08)), (RI + 0.025, (0.55, 0.6, 0.85)), (1.0, (0.55, 0.6, 0.85))]
+    while len(e) < len(stops): e.new(0.5)
+    for el, (pos, c) in zip(e, stops): el.position = pos; el.color = (*c, 1)
+    for el, (pos, c) in zip(e, stops): el.position = pos; el.color = (*c, 1)   # second pass: elements re-sort as positions change
+    fib = N.new("ShaderNodeMix"); fib.data_type = 'RGBA'; fib.blend_type = 'MULTIPLY'
+    fac = N.new("ShaderNodeMath"); fac.operation = 'MULTIPLY_ADD'; nt.links.new(st.outputs[0], fac.inputs[0]); fac.inputs[1].default_value = 0.15; fac.inputs[2].default_value = 0.85
+    cfa = N.new("ShaderNodeCombineColor"); [nt.links.new(fac.outputs[0], cfa.inputs[i]) for i in range(3)]
+    fib.inputs["Factor"].default_value = 1.0; nt.links.new(ramp.outputs["Color"], fib.inputs[6]); nt.links.new(cfa.outputs[0], fib.inputs[7])
+    nt.links.new(fib.outputs[2], b.inputs["Base Color"]); nt.links.new(fib.outputs[2], b.inputs["Emission Color"])
+    iris = N.new("ShaderNodeMath"); iris.operation = 'LESS_THAN'; nt.links.new(r, iris.inputs[0]); iris.inputs[1].default_value = RI
+    pup = N.new("ShaderNodeMath"); pup.operation = 'GREATER_THAN'; nt.links.new(r, pup.inputs[0]); pup.inputs[1].default_value = RP
+    glow = N.new("ShaderNodeMath"); glow.operation = 'MULTIPLY'; nt.links.new(iris.outputs[0], glow.inputs[0]); nt.links.new(pup.outputs[0], glow.inputs[1])
+    gs = N.new("ShaderNodeMath"); gs.operation = 'MULTIPLY'; nt.links.new(glow.outputs[0], gs.inputs[0]); gs.inputs[1].default_value = E("EYE_GLOW", 2.6)
+    nt.links.new(gs.outputs[0], b.inputs["Emission Strength"])
+    b.inputs["Roughness"].default_value = 0.05; b.inputs["Coat Weight"].default_value = 1.0; b.inputs["Coat Roughness"].default_value = 0.0
+for n in ("Std_Eye_L", "Std_Eye_R"):
+    if n in bpy.data.materials: contacts(bpy.data.materials[n])
+for n in ("Std_Cornea_L", "Std_Cornea_R"):      # clear glossy cornea over the lens (wet highlight only)
+    m = bpy.data.materials.get(n)
+    if not m: continue
+    nt = m.node_tree
+    for k in list(nt.nodes):
+        if k.type != 'OUTPUT_MATERIAL': nt.nodes.remove(k)
+    out = next(k for k in nt.nodes if k.type == 'OUTPUT_MATERIAL'); g = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    g.inputs["Transmission Weight"].default_value = 1.0; g.inputs["Roughness"].default_value = 0.0; g.inputs["IOR"].default_value = 1.38
+    g.inputs["Base Color"].default_value = (1, 1, 1, 1); nt.links.new(g.outputs[0], out.inputs["Surface"])
+bpy.ops.wm.save_as_mainfile(filepath=a[0]); print("CONTACTS SAVED")
