@@ -50,6 +50,7 @@ vl = sc.view_layers[0]
 vl.cycles.denoising_store_passes = True  # gives "Denoising Albedo" / "Denoising Normal"
 
 # ---- compositor: keep the scene's glare settings, then write raw passes instead ----
+if sc.node_tree is None: sc.use_nodes = True   # scenes without a compositor
 tree = sc.node_tree
 glare_src = next((n for n in tree.nodes if n.bl_idname == "CompositorNodeGlare"), None)
 GLARE = None

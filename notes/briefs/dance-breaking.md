@@ -28,3 +28,8 @@ Status: brief done; next = find a free rigged stylised character + free breaking
 - NEW look (user's UV/blacklight reference, replaces the orange set): saturated electric-blue seamless world; skin reads deep
   blue/indigo under blue light; translucent glossy hot-pink/magenta vinyl outerwear with glowing pink edges; glowing pink
   drawstrings; neon-lime UV paint accents (face splash, small marks); soft, wet highlights; no other hues.
+- Look dev v4 (scripts/blender/dance_uv_look.py): Standard view -0.4 EV (AgX turned neon pink lavender); skin desaturated x indigo
+  multiply; jacket + hoodie translucent pink vinyl (transmission, coat, fresnel pink edge glow); indigo glossy pants; lime UV paint
+  as a vertex attribute on the face (the CC body mesh is in centimetres: scale offsets by 1/matrix scale); electric-blue cyc with
+  glow; blue key/fill + hot-pink rims. Frames: work/dance/uvlook_v4.jpg. Retarget fixes: ARP root bone points down (align hips on
+  world up); twist bones posed after their parent bone. oidn_render.py now adds a compositor when a scene has none.
