@@ -18,14 +18,14 @@ CFG = {
     # the drop (rigid-body dynamics, C4D-style): pendant + chain fall onto the floor on the last bar and settle
     "drop": 289, "gravity": -14.0, "nudge": (281, 289),
     # cameras: name, first frame, (pos start, pos end), (target start, target end), lens, f-stop, interpolation
-    "cams": [
-        ("MAC", 1, ((0.05, -0.3, 1.7), (0.12, -0.6, 3.5)), ((0, 0, 0.42), (0, 0, 0.4)), 100, 2.8, "LINEAR"),
-        ("TOP", 37, ((0.0, -0.05, 5.5), (0.0, -0.5, 14.0)), ((0, 0.45, 0), (0, 0.5, 0)), 50, 8, "EXPO"),
-        ("TQ", 109, ((-7.0, -10.5, 9.6), (-5.9, -9.2, 8.4)), ((0.25, 0.5, 0.3), (0.3, 0.55, 0.35)), 60, 11, "LINEAR"),
-        ("MA", 199, ((2.7, -4.7, 5.9), (2.4, -4.3, 5.3)), ((0, 0, 0.36), (0, 0, 0.34)), 85, 5.6, "LINEAR"),
-        ("MB", 217, ((-3.5, 0.3, 4.3), (-3.2, 0.5, 3.9)), ((0, 1.3, -0.7), (0, 1.32, -0.7)), 85, 5.6, "LINEAR"),
-        ("MC", 235, ((4.0, 4.16, 2.68), (3.6, 3.9, 2.3)), ((0, 1.76, -0.92), (0, 1.76, -0.92)), 85, 5.6, "LINEAR"),
-        ("HERO", 253, ((-3.0, -6.6, 5.4), (-1.5, -8.2, 6.0)), ((0, 0.6, -0.35), (0, 0.6, -1.1)), 45, 11, "EXPO"),
+    "cams": [   # v4 "premium" pass: piece fills the frame, low grazing angles, parts crop the edges, slow arcs (notes/ruby/plan.md)
+        ("MAC", 1, ((0.9, -1.1, 2.3), (-0.4, -1.3, 2.1)), ((0, -0.1, 0.18), (0, -0.1, 0.18)), 100, 2.8, "LINEAR"),
+        ("TOP", 37, ((0.3, -0.15, 5.2), (0.0, 0.15, 15.0)), ((0.3, -0.1, 0.0), (0.0, 0.25, -0.4)), 85, 8, "EXPO"),
+        ("TQ", 109, ((-5.32, -7.39, 4.63), (-4.28, -15.45, 8.87)), ((0, 0.2, -0.3), (0, 0.5, 0.1)), 85, 11, "LINEAR"),
+        ("MA", 199, ((5.44, -9.61, 5.07), (4.53, -7.95, 3.93)), ((0, -0.2, 0.0), (0, -0.1, -0.3)), 100, 5.6, "LINEAR"),
+        ("MB", 217, ((8.08, 4.44, 2.0), (6.86, 5.36, 1.62)), ((0, 1.5, -0.3), (0, 1.4, -0.5)), 100, 5.6, "LINEAR"),
+        ("MC", 235, ((3.8, 4.42, 0.95), (2.88, 4.64, 0.73)), ((0, 1.76, -0.92), (0, 1.76, -0.92)), 100, 5.6, "LINEAR"),
+        ("HERO", 253, ((-4.12, -8.82, 2.99), (-1.22, -8.72, 2.11)), ((0, 0, -0.95), (0, 0, -1.45)), 70, 11, "LINEAR"),
     ],
 }
 OUT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "/tmp/ruby.blend"
@@ -249,7 +249,7 @@ for name, f0, (p0, p1), (t0, t1), lens, fstop, interp in CFG["cams"]:
     keyv(tgt, "location", [(f0, Vector(t0)), (f1, Vector(t1))], interp, "EASE_OUT")
     m = S.timeline_markers.new(f"cut_{name}", frame=f0); m.camera = cam
     if name == "MAC":   # rack focus: from soft to sharp on the table
-        keyv(tgt, "location", [(f0, Vector((0, 0, 1.05))), (f0 + 22, Vector(t0)), (f1, Vector(t1))], "BEZIER")
+        keyv(tgt, "location", [(f0, Vector((0, -0.1, 0.7))), (f0 + 22, Vector(t0)), (f1, Vector(t1))], "BEZIER")
 S.camera = bpy.data.objects["MAC"]
 
 # ---------------- the drop: rigid-body dynamics ----------------

@@ -78,3 +78,16 @@ Waiting on the user's pick. Downloads go to an ignored folder (never GitHub); cr
 - Rigid-body cache baked into renders/farm/ruby-pendant-v1/ruby-v3.blend (frames render in any order).
 - Hero camera lowered to ~35 deg and barely follows, so the fall reads; final glint moved onto the landing (302).
 - Glare threshold 5 (only the brightest gem highlights glint); hidden reflection dome brighter for the diamond.
+
+## v4 (user): premium camera angles like the reference
+"I think it's good but we just need to work on our camera angles make sure they are premium like the reference"
+What made the reference premium: the piece FILLS the frame (60-80%), low grazing angles (20-30 deg), parts crop past the frame edges,
+very shallow focus on macros, the pool only partly in frame, diagonal compositions, slow constant arcs. Ours had the pendant at ~25%
+of the frame, centred, with the chain dominating.
+- MAC: 100 mm macro on the centre stone's facets with the halo edge, slow arc right-to-left, rack focus from just above the stone.
+- TOP: 85 mm top-down, starts with the halo filling the frame, pulls back until the whole piece fills ~80% of the height.
+- TQ (+ explode): low 3/4 (28 deg), 85 mm, pulls back as the parts spread so they stay big; diagonal with parts cropping edges.
+- MA: 100 mm low macro over the open ruby halo: the diamond drops in from the top of frame into the prongs.
+- MB / MC: 100 mm side macros on the bail swinging in and the chain threading through.
+- HERO + drop: 70 mm low (22 deg) front 3/4, closer, slow arc; follows the fall slightly; pendant + long shadow diagonal.
+- scripts/blender/ruby_recam.py rebuilds only the cameras from CFG["cams"] into the baked v3 scene -> ruby-v4.blend (no re-bake).
