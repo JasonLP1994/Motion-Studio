@@ -317,7 +317,7 @@ FZ = HC.z
 light("LGT_Key_Softbox", (-2.2, -1.8, FZ + 1.1), 200, 2.4, 1.2)
 light("LGT_Key_TopStrip", (-2.0, -1.4, FZ + 1.8), 220, 2.4, 0.14)
 light("LGT_Strip_Back", (1.0, 2.2, FZ), 450, 0.15, 3.0, (0.8, 0.88, 1.0))
-light("LGT_Strip_Pink", (2.2, 0.4, FZ - 0.2), 220, 0.12, 3.0, PINK)
+light("LGT_Strip_Pink", (2.2, 0.4, FZ - 0.2), E("PINK_STRIP", 220), 0.12, 3.0, PINK)
 light("LGT_Rim_Top", (0.5, 1.2, FZ + 1.8), 260, 1.4, 0.2, (0.9, 0.92, 1.0))
 light("LGT_Front_Fill", (-0.6, -2.6, FZ - 0.5), 200, 1.8, 1.4, glossy=False)
 light("LGT_Visor_Streak", (-1.2, -2.4, FZ + 0.7), 120, 2.2, 0.06, diffuse=False)
