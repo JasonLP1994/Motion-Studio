@@ -218,17 +218,45 @@ DECALS = [
     (DC + "decal_C.png", 'X', (-0.10, PUFF(15)), 0.15, side_m, True),                        # micro spec text, next panel up
     (DC + "decal_D.png", 'X', (-0.06, PUFF(13)), 0.10, side_m, True),                        # spec block, panel below
     # (DC + "decal_B.png", ...) pink zip tab: smeared on the curved collar, off for now
-    (R + "decal_logo_pink.png", 'Y', (E("LOGO_X", -0.085), PUFF(15)), 0.04, front_m, False),     # hot-pink p. patch
+    (R + "decal_logo_pink.png", 'Y', (E("LOGO_X", -0.085), PUFF(15)), 0.04, front_m, True),     # hot-pink p. patch
 ]
-XMAX = {"decal_A.png": -0.26, "decal_D.png": -0.26, "decal_C.png": -0.12}    # print only on the outermost layer (no ghost on the torso behind the arm)
-posx = pn.nodes.new("ShaderNodeSeparateXYZ"); pn.links.new(pn.nodes.new("ShaderNodeNewGeometry").outputs["Position"], posx.inputs[0])
+# lay each print flat on the surface like a sticker: project along the local surface normal (averaged around the spot), not a
+# world axis, so the art isn't stretched where the sleeve curves; a thin slab test keeps it off layers behind
+from mathutils.bvhtree import BVHTree
+_bvh = BVHTree.FromPolygons([v.co.copy() for v in coat.data.vertices], [tuple(p_.vertices) for p_ in coat.data.polygons])
+def surf_frame(axis, cu_, cz_):
+    d = Vector((1, 0, 0)) if axis == 'X' else Vector((0, 1, 0)); nsum = Vector((0, 0, 0)); hitc = None
+    for du in (-0.02, 0.0, 0.02):
+        for dz in (-0.015, 0.0, 0.015):
+            o = Vector((-1.0, cu_ + du, cz_ + dz)) if axis == 'X' else Vector((cu_ + du, -1.0, cz_ + dz))
+            h = _bvh.ray_cast(o, d)
+            if h[0] is None: continue
+            n_ = h[1] if h[1].dot(d) < 0 else -h[1]; nsum += n_
+            if du == 0 and dz == 0: hitc = h[0]
+    N = nsum.normalized(); Vv = (Vector((0, 0, 1)) - N * N.z).normalized(); U = N.cross(Vv).normalized()
+    return hitc, N, U, Vv
+def vdot(nt, a_, vec):
+    n_ = nt.nodes.new("ShaderNodeVectorMath"); n_.operation = 'DOT_PRODUCT'; nt.links.new(a_, n_.inputs[0]); n_.inputs[1].default_value = vec
+    return n_.outputs["Value"]
+gp = pn.nodes.new("ShaderNodeNewGeometry").outputs["Position"]
 cur = pb.inputs["Base Color"].links[0].from_socket; amax = None
+SCALE = E("PRINT_SCALE", 0.85)
 for img, axis, cen, wdt, msk, flp in DECALS:
-    xm = XMAX.get(os.path.basename(img))
-    if xm is not None: msk = mnode(pn, 'MULTIPLY', msk, mnode(pn, 'LESS_THAN', posx.outputs["X"], xm))
-    im_ = bpy.data.images.load(img, check_existing=True); asp = im_.size[1] / im_.size[0]
-    dc_, da_ = decal(pn, img, axis, cen, (wdt, wdt * asp), msk, flip_u=flp)
-    cur = mix(pn, da_, cur, dc_); amax = da_ if amax is None else mnode(pn, 'MAXIMUM', amax, da_)
+    C_, N_, U_, V_ = surf_frame(axis, *cen)
+    if C_ is None: print("DECAL MISS", img); continue
+    if flp: U_ = -U_
+    im_ = bpy.data.images.load(img, check_existing=True); asp = im_.size[1] / im_.size[0]; w_ = wdt * SCALE; h_ = w_ * asp
+    rel = pn.nodes.new("ShaderNodeVectorMath"); rel.operation = 'SUBTRACT'; pn.links.new(gp, rel.inputs[0]); rel.inputs[1].default_value = C_
+    u = vdot(pn, rel.outputs[0], U_); v = vdot(pn, rel.outputs[0], V_); dpt = vdot(pn, rel.outputs[0], N_)
+    def lin(x, sc_):
+        n_ = pn.nodes.new("ShaderNodeMath"); n_.operation = 'MULTIPLY_ADD'; pn.links.new(x, n_.inputs[0]); n_.inputs[1].default_value = sc_; n_.inputs[2].default_value = 0.5
+        return n_.outputs[0]
+    cmb = pn.nodes.new("ShaderNodeCombineXYZ"); pn.links.new(lin(u, 1 / w_), cmb.inputs[0]); pn.links.new(lin(v, 1 / h_), cmb.inputs[1])
+    tx = pn.nodes.new("ShaderNodeTexImage"); tx.image = im_; tx.extension = 'CLIP'; pn.links.new(cmb.outputs[0], tx.inputs["Vector"])
+    ab_ = pn.nodes.new("ShaderNodeMath"); ab_.operation = 'ABSOLUTE'; pn.links.new(dpt, ab_.inputs[0])
+    slab = mnode(pn, 'LESS_THAN', ab_.outputs[0], 0.035)
+    da_ = mnode(pn, 'MULTIPLY', mnode(pn, 'MULTIPLY', tx.outputs["Alpha"], msk), slab)
+    cur = mix(pn, da_, cur, tx.outputs["Color"]); amax = da_ if amax is None else mnode(pn, 'MAXIMUM', amax, da_)
 pn.links.new(cur, pb.inputs["Base Color"]); sa = amax; la = amax
 rough_in = pb.inputs["Roughness"].links[0].from_socket
 pn.links.new(mixf(pn, mnode(pn, 'MAXIMUM', sa, la), rough_in, 0.42), pb.inputs["Roughness"])     # plastisol ink is a touch shinier
