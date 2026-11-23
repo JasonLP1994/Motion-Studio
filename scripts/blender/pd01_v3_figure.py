@@ -209,10 +209,22 @@ def soft_lt(x, a, b):     # 1 when x < a, fading to 0 at b (a < b)
     return n_.outputs[0]
 near_side = soft_lt(sN.outputs["X"], -0.12, 0.25); front_side = soft_lt(sN.outputs["Y"], -0.3, 0.1)
 not_lining = mnode(pn, 'SUBTRACT', 1.0, lining)
-sc, sa = decal(pn, R + "decal_sleeve.png", 'X', (E("PRINT_Y", -0.045), E("PRINT_Z", 1.26)), (E("PRINT_W", 0.26), E("PRINT_W", 0.26) / 2), mnode(pn, 'MULTIPLY', near_side, not_lining), flip_u=True)
-lc, la = decal(pn, R + "decal_logo.png", 'Y', (E("LOGO_X", -0.085), E("LOGO_Z", 1.27)), (0.055, 0.055), mnode(pn, 'MULTIPLY', front_side, not_lining))
-base_in = pb.inputs["Base Color"].links[0].from_socket
-c1 = mix(pn, sa, base_in, sc); c2 = mix(pn, la, c1, lc); pn.links.new(c2, pb.inputs["Base Color"])
+DC = R + "decals/"
+side_m = mnode(pn, 'MULTIPLY', near_side, not_lining); front_m = mnode(pn, 'MULTIPLY', front_side, not_lining)
+# (image, projection axis, centre (u-axis, z), width m, mask, flip)  - small, technical print system like the reference
+DECALS = [
+    (DC + "decal_A.png", 'X', (E("PRINT_Y", -0.05), E("PRINT_Z", 1.27)), E("PRINT_W", 0.16), side_m, True),     # sleeve: PD-01 block
+    (DC + "decal_C.png", 'X', (-0.11, 1.385), 0.10, side_m, True),                                            # collar micro text
+    (DC + "decal_D.png", 'X', (-0.06, 1.165), 0.085, side_m, True),                                             # lower spec block
+    # (DC + "decal_B.png", ...) pink zip tab: smeared on the curved collar, off for now
+    (R + "decal_logo.png", 'Y', (E("LOGO_X", -0.085), E("LOGO_Z", 1.29)), 0.036, front_m, False),              # p. patch
+]
+cur = pb.inputs["Base Color"].links[0].from_socket; amax = None
+for img, axis, cen, wdt, msk, flp in DECALS:
+    im_ = bpy.data.images.load(img, check_existing=True); asp = im_.size[1] / im_.size[0]
+    dc_, da_ = decal(pn, img, axis, cen, (wdt, wdt * asp), msk, flip_u=flp)
+    cur = mix(pn, da_, cur, dc_); amax = da_ if amax is None else mnode(pn, 'MAXIMUM', amax, da_)
+pn.links.new(cur, pb.inputs["Base Color"]); sa = amax; la = amax
 rough_in = pb.inputs["Roughness"].links[0].from_socket
 pn.links.new(mixf(pn, mnode(pn, 'MAXIMUM', sa, la), rough_in, 0.42), pb.inputs["Roughness"])     # plastisol ink is a touch shinier
 coat.data.materials.clear(); coat.data.materials.append(pm)
