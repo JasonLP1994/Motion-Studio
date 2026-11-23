@@ -116,3 +116,8 @@ of the frame, centred, with the chain dominating.
 - v14 (user: "more saturation"): AgX Punchy was tested and rejected (greyed the white studio, darkened stones). Instead: vivid ruby
   glass (1, 0.16, 0.2) + absorption density 18 (was 30) so rubies glow red not maroon, richer rose gold, compositor saturation 1.3.
   Full render: ruby-v14.blend, frames renders/frames/ruby-real-frames-v14.txt -> renders/frames/ruby-full-v14, then scripts/ruby_finish.sh.
+
+## Film v1 review (renders/rubyred-film-v1.mp4, 15 s, 1080p30, -14.0 LUFS, peak -2.6 dBFS)
+Score 8.5/10: layout 9, timing 9, readability 9, polish 8.
+- P1: dark blobs for a few frames in the explosion (~6.0 s under the bail, ~7.0 s top edge): flying pieces with no light. Fix in v2 by brightening/linking those parts and re-rendering only those frames.
+- P2: on the black flicker frame (~12.8 s) the chain silhouette crosses the RUBYRED title (fits the mutant-cover look, but could be masked).
