@@ -246,15 +246,25 @@ for img, axis, cen, wdt, msk, flp in DECALS:
     if C_ is None: print("DECAL MISS", img); continue
     if flp: U_ = -U_
     im_ = bpy.data.images.load(img, check_existing=True); asp = im_.size[1] / im_.size[0]; w_ = wdt * SCALE; h_ = w_ * asp
-    rel = pn.nodes.new("ShaderNodeVectorMath"); rel.operation = 'SUBTRACT'; pn.links.new(gp, rel.inputs[0]); rel.inputs[1].default_value = C_
-    u = vdot(pn, rel.outputs[0], U_); v = vdot(pn, rel.outputs[0], V_); dpt = vdot(pn, rel.outputs[0], N_)
-    def lin(x, sc_):
-        n_ = pn.nodes.new("ShaderNodeMath"); n_.operation = 'MULTIPLY_ADD'; pn.links.new(x, n_.inputs[0]); n_.inputs[1].default_value = sc_; n_.inputs[2].default_value = 0.5
-        return n_.outputs[0]
-    cmb = pn.nodes.new("ShaderNodeCombineXYZ"); pn.links.new(lin(u, 1 / w_), cmb.inputs[0]); pn.links.new(lin(v, 1 / h_), cmb.inputs[1])
+    # wrap around the body along the seam: u = arc length around a vertical axis behind the spot (radius ~ local curvature),
+    # v = height (the seams are constant height), so text lines run parallel to the quilting and nothing stretches
+    Rr = E("WRAP_R", 0.24); nxy = Vector((N_.x, N_.y, 0)).normalized(); ctr = C_ - nxy * Rr
+    th0 = math.atan2(C_.y - ctr.y, C_.x - ctr.x); tang = Vector((-math.sin(th0), math.cos(th0), 0))
+    sgn = 1.0 if Vector((U_.x, U_.y, 0)).dot(tang) > 0 else -1.0
+    sp_ = pn.nodes.new("ShaderNodeSeparateXYZ"); pn.links.new(gp, sp_.inputs[0])
+    dx = mnode(pn, 'SUBTRACT', sp_.outputs["X"], ctr.x); dy = mnode(pn, 'SUBTRACT', sp_.outputs["Y"], ctr.y)
+    for n_ in (dx.node, dy.node): n_.use_clamp = False
+    at = pn.nodes.new("ShaderNodeMath"); at.operation = 'ARCTAN2'; pn.links.new(dy, at.inputs[0]); pn.links.new(dx, at.inputs[1])
+    dth = pn.nodes.new("ShaderNodeMath"); dth.operation = 'SUBTRACT'; pn.links.new(at.outputs[0], dth.inputs[0]); dth.inputs[1].default_value = th0
+    u = pn.nodes.new("ShaderNodeMath"); u.operation = 'MULTIPLY_ADD'; pn.links.new(dth.outputs[0], u.inputs[0]); u.inputs[1].default_value = sgn * Rr / w_; u.inputs[2].default_value = 0.5
+    v = pn.nodes.new("ShaderNodeMath"); v.operation = 'MULTIPLY_ADD'; pn.links.new(sp_.outputs["Z"], v.inputs[0]); v.inputs[1].default_value = 1 / h_; v.inputs[2].default_value = 0.5 - C_.z / h_
+    cmb = pn.nodes.new("ShaderNodeCombineXYZ"); pn.links.new(u.outputs[0], cmb.inputs[0]); pn.links.new(v.outputs[0], cmb.inputs[1])
     tx = pn.nodes.new("ShaderNodeTexImage"); tx.image = im_; tx.extension = 'CLIP'; pn.links.new(cmb.outputs[0], tx.inputs["Vector"])
-    ab_ = pn.nodes.new("ShaderNodeMath"); ab_.operation = 'ABSOLUTE'; pn.links.new(dpt, ab_.inputs[0])
-    slab = mnode(pn, 'LESS_THAN', ab_.outputs[0], 0.035)
+    rr = pn.nodes.new("ShaderNodeVectorMath"); rr.operation = 'LENGTH'
+    cxy = pn.nodes.new("ShaderNodeCombineXYZ"); pn.links.new(dx, cxy.inputs[0]); pn.links.new(dy, cxy.inputs[1]); pn.links.new(cxy.outputs[0], rr.inputs[0])
+    dev = pn.nodes.new("ShaderNodeMath"); dev.operation = 'SUBTRACT'; pn.links.new(rr.outputs["Value"], dev.inputs[0]); dev.inputs[1].default_value = Rr
+    ab_ = pn.nodes.new("ShaderNodeMath"); ab_.operation = 'ABSOLUTE'; pn.links.new(dev.outputs[0], ab_.inputs[0])
+    slab = mnode(pn, 'LESS_THAN', ab_.outputs[0], 0.05)
     da_ = mnode(pn, 'MULTIPLY', mnode(pn, 'MULTIPLY', tx.outputs["Alpha"], msk), slab)
     cur = mix(pn, da_, cur, tx.outputs["Color"]); amax = da_ if amax is None else mnode(pn, 'MAXIMUM', amax, da_)
 pn.links.new(cur, pb.inputs["Base Color"]); sa = amax; la = amax
