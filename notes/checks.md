@@ -68,3 +68,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: when a long queue dies mid-way, resume from the first unfinished step (scripts/case_finish_queue.sh pattern); RIFE fill and retime are not skip-aware.
 - DO: build contact sheets with PIL from the frame folder; Remotion's bundled ffmpeg has no fps/tile filters.
 - DO (user): PD-01 jacket = dark navy nylon (linear base ~0.0035/0.0055/0.020 under Standard -0.8 exposure), not black.
+- DO (user): logos/text on clothing = printed decals in the fabric material (follow the surface), never 3D text floating near it.

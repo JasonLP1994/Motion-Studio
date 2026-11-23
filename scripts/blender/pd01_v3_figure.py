@@ -188,6 +188,33 @@ bp = pn.nodes.new("ShaderNodeBump"); bp.inputs["Strength"].default_value = 0.2; 
 pn.links.new(hgt, bp.inputs["Height"]); pn.links.new(bp.outputs["Normal"], pb.inputs["Normal"])
 pb.inputs["Specular IOR Level"].default_value = 0.12
 pb.inputs["Emission Color"].default_value = (*PINK, 1); pn.links.new(mixf(pn, lining, 0.0, 0.12), pb.inputs["Emission Strength"])
+# printed decals (in the fabric, follow the quilting): PD-01 on the near sleeve, the Phillips Digital "p." patch on the chest
+def decal(nt, img_path, axis, centre, size, face_mask, flip_u=False):
+    pos = nt.nodes.new("ShaderNodeNewGeometry").outputs["Position"]; sx = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(pos, sx.inputs[0])
+    ax_u, ax_v = (sx.outputs["Y"], sx.outputs["Z"]) if axis == 'X' else (sx.outputs["X"], sx.outputs["Z"])
+    cu_, cv_ = centre; su, sv = size
+    u = mnode(nt, 'ADD', mnode(nt, 'MULTIPLY', mnode(nt, 'SUBTRACT', ax_u, cu_), (-1.0 if flip_u else 1.0) / su), 0.5)
+    v = mnode(nt, 'ADD', mnode(nt, 'MULTIPLY', mnode(nt, 'SUBTRACT', ax_v, cv_), 1.0 / sv), 0.5)
+    u.node.use_clamp = False; v.node.use_clamp = False
+    for n_ in (u.node.inputs[0].links[0].from_node, v.node.inputs[0].links[0].from_node): n_.use_clamp = False
+    for n_ in (u.node.inputs[0].links[0].from_node.inputs[0].links[0].from_node, v.node.inputs[0].links[0].from_node.inputs[0].links[0].from_node): n_.use_clamp = False
+    cmb = nt.nodes.new("ShaderNodeCombineXYZ"); nt.links.new(u, cmb.inputs[0]); nt.links.new(v, cmb.inputs[1])
+    tx = nt.nodes.new("ShaderNodeTexImage"); tx.image = bpy.data.images.load(img_path, check_existing=True); tx.extension = 'CLIP'
+    nt.links.new(cmb.outputs[0], tx.inputs["Vector"])
+    return tx.outputs["Color"], mnode(nt, 'MULTIPLY', tx.outputs["Alpha"], face_mask)
+gN = pn.nodes.new("ShaderNodeNewGeometry"); sN = pn.nodes.new("ShaderNodeSeparateXYZ"); pn.links.new(gN.outputs["Normal"], sN.inputs[0])
+def soft_lt(x, a, b):     # 1 when x < a, fading to 0 at b (a < b)
+    n_ = pn.nodes.new("ShaderNodeMapRange"); n_.interpolation_type = 'SMOOTHSTEP'; pn.links.new(x, n_.inputs[0])
+    n_.inputs[1].default_value, n_.inputs[2].default_value, n_.inputs[3].default_value, n_.inputs[4].default_value = a, b, 1.0, 0.0
+    return n_.outputs[0]
+near_side = soft_lt(sN.outputs["X"], -0.12, 0.25); front_side = soft_lt(sN.outputs["Y"], -0.3, 0.1)
+not_lining = mnode(pn, 'SUBTRACT', 1.0, lining)
+sc, sa = decal(pn, R + "decal_sleeve.png", 'X', (E("PRINT_Y", -0.045), E("PRINT_Z", 1.26)), (E("PRINT_W", 0.26), E("PRINT_W", 0.26) / 2), mnode(pn, 'MULTIPLY', near_side, not_lining), flip_u=True)
+lc, la = decal(pn, R + "decal_logo.png", 'Y', (E("LOGO_X", -0.085), E("LOGO_Z", 1.27)), (0.055, 0.055), mnode(pn, 'MULTIPLY', front_side, not_lining))
+base_in = pb.inputs["Base Color"].links[0].from_socket
+c1 = mix(pn, sa, base_in, sc); c2 = mix(pn, la, c1, lc); pn.links.new(c2, pb.inputs["Base Color"])
+rough_in = pb.inputs["Roughness"].links[0].from_socket
+pn.links.new(mixf(pn, mnode(pn, 'MAXIMUM', sa, la), rough_in, 0.42), pb.inputs["Roughness"])     # plastisol ink is a touch shinier
 coat.data.materials.clear(); coat.data.materials.append(pm)
 hmat = pm.copy(); hmat.name = "MAT_HoodNylon"
 for n in hmat.node_tree.nodes:
@@ -221,9 +248,6 @@ def sleeve_text(body, size, z, y0, mat, font=FONT):
     bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
     me = bpy.data.meshes.new_from_object(t.evaluated_get(dg)); t.modifiers.clear(); t.data = me
     return t
-PZ, PY = E("PRINT_Z", 1.25), E("PRINT_Y", -0.06)
-sleeve_text("PD-01", E("PRINT_SIZE", 0.11), PZ, PY, flatm("MAT_PrintWhite", (0.85, 0.86, 0.92), 0.55))
-sleeve_text("PHILLIPS DIGITAL", 0.033, PZ - 0.072, PY + 0.012, flatm("MAT_PrintPink", PINK, 0.5, 0.2))
 
 # ---------------------------------------------------------------- lights: product rig, linked to the figure only
 def light(name, loc, energy, sx, sy, col_=(1, 1, 1), look=None, glossy=True, diffuse=True):
