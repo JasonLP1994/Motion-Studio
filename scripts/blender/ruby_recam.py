@@ -1,4 +1,4 @@
-# Rebuild only the cameras of an already-built (and rigid-body-baked) ruby scene from CFG["cams"] in ruby_pendant.py,
+# Rebuild only the cameras (and the moving glisten lights) of an already-built (and rigid-body-baked) ruby scene from CFG["cams"] in ruby_pendant.py,
 # so camera changes don't need a full rebuild + re-bake. Optional: render low-res check frames.
 # Usage: blender -b <in.blend> -P scripts/blender/ruby_recam.py -- <out.blend> [frames,comma,list out_dir pct spp]
 import bpy, ast, os, sys
@@ -35,6 +35,7 @@ for name, f0, (p0, p1), (t0, t1), lens, fstop, interp in CFG["cams"]:
     if name == "MAC":
         keyv(tgt, "location", [(f0, Vector((0, -0.1, 0.7))), (f0 + 22, Vector(t0)), (f1, Vector(t1))], "BEZIER")
 S.camera = bpy.data.objects["MAC"]
+sys.path.insert(0, os.path.dirname(SRC)); import ruby_sweep; ruby_sweep.build(S, CFG)   # moving glisten lights
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(args[0]))
 print("saved", args[0])
 if len(args) >= 5:

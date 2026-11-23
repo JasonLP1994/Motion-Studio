@@ -15,6 +15,10 @@ CFG = {
     "land": {"dia": (199, 208), "halo": (199, 208), "bail": (217, 226), "chain": (235, 244)},
     "apart": {"dia": (0, -0.1, 1.5), "halo": (0, -0.35, -0.65), "bail": (0, 0.7, 0.6), "chain": (0, 1.3, 1.1)},
     "glints": [109, 302],          # sparkle-light spikes (star glare) on the beats
+    # glisten: small bright lights orbiting the piece all film long -> highlights crawl across the facets (scripts/blender/ruby_sweep.py)
+    # each light: (orbit radius, height, revolutions over the film, start angle deg, watts)
+    "sweep": {"lights": [(9.0, 8.0, 1.0, 0, 320), (8.0, 10.0, -0.75, 120, 260), (10.0, 6.0, 0.5, 240, 220)],
+              "color": (1.0, 0.98, 0.95), "size": 0.05, "glare_threshold": 3.5},
     # the drop (rigid-body dynamics, C4D-style): pendant + chain fall onto the floor on the last bar and settle
     "drop": 289, "gravity": -14.0, "nudge": (281, 289),
     # cameras: name, first frame, (pos start, pos end), (target start, target end), lens, f-stop, interpolation
@@ -343,5 +347,6 @@ for n in list(ct.nodes): ct.nodes.remove(n)
 rl = ct.nodes.new("CompositorNodeRLayers"); gl = ct.nodes.new("CompositorNodeGlare"); co = ct.nodes.new("CompositorNodeComposite")
 gl.glare_type = "STREAKS"; gl.streaks = 4; gl.angle_offset = math.radians(22); gl.fade = 0.88; gl.threshold = 5.0; gl.mix = -0.7; gl.quality = "HIGH"
 ct.links.new(rl.outputs["Image"], gl.inputs["Image"]); ct.links.new(gl.outputs["Image"], co.inputs["Image"])
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ruby_sweep; ruby_sweep.build(S, CFG)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(OUT))
 print("saved", OUT)
