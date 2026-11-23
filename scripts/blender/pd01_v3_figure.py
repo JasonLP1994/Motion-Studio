@@ -152,9 +152,9 @@ hm = helm.data.materials[0]; nt = hm.node_tree; bs = nt.nodes["Principled BSDF"]
 alb = bs.inputs["Base Color"].links[0].from_socket; emi = bs.inputs["Emission Color"].links[0].from_socket
 hsv = nt.nodes.new("ShaderNodeSeparateHSV"); nt.links.new(alb, hsv.inputs[0]); H_, S_, V_ = hsv.outputs["H"], hsv.outputs["S"], hsv.outputs["V"]
 yellow = mnode(nt, 'MULTIPLY', mnode(nt, 'MULTIPLY', band(nt, H_, 0.09, 0.19), mnode(nt, 'GREATER_THAN', S_, 0.35)), mnode(nt, 'GREATER_THAN', V_, 0.38))
-teal = mnode(nt, 'MULTIPLY', mnode(nt, 'MULTIPLY', band(nt, H_, 0.42, 0.62), mnode(nt, 'GREATER_THAN', S_, 0.12)), mnode(nt, 'SUBTRACT', 1.0, yellow))
+teal = mnode(nt, 'MULTIPLY', mnode(nt, 'MULTIPLY', mnode(nt, 'MULTIPLY', band(nt, H_, 0.42, 0.62), mnode(nt, 'GREATER_THAN', S_, 0.22)), mnode(nt, 'LESS_THAN', V_, 0.62)), mnode(nt, 'SUBTRACT', 1.0, yellow))   # visor only (bluish grey paint was turning into mirror glass)
 grey = mnode(nt, 'MULTIPLY', band(nt, V_, 0.16, 0.36), mnode(nt, 'LESS_THAN', S_, 0.18))
-shell_black = (0.006, 0.006, 0.008, 1); gun = (0.035, 0.036, 0.042, 1); glass = (0.002, 0.002, 0.003, 1)
+shell_black = (0.006, 0.006, 0.008, 1); gun = (0.010, 0.010, 0.013, 1); glass = (0.002, 0.002, 0.003, 1)
 col = shell_black
 col = mix(nt, grey, col, gun)
 col = mix(nt, teal, col, glass)
@@ -167,9 +167,9 @@ nt.links.new(mnode(nt, 'ADD', mnode(nt, 'MULTIPLY', ebw.outputs[0], 6.0), mnode(
 for k in ("Metallic", "Roughness"):
     for l in list(bs.inputs[k].links): nt.links.remove(l)
 bs.inputs["Metallic"].default_value = 0.0
-nt.links.new(mixf(nt, teal, mixf(nt, grey, 0.24, 0.38), 0.03), bs.inputs["Roughness"])
-bs.inputs["Coat Weight"].default_value = 0.6; bs.inputs["Coat Roughness"].default_value = 0.12
-nm_ = bs.inputs["Normal"].links[0].from_node; nm_.inputs["Strength"].default_value = 0.4
+nt.links.new(mixf(nt, teal, 0.26, 0.03), bs.inputs["Roughness"])   # one even satin-gloss finish (worn spots made blotchy reflections)
+bs.inputs["Coat Weight"].default_value = 0.5; bs.inputs["Coat Roughness"].default_value = 0.18
+nm_ = bs.inputs["Normal"].links[0].from_node; nm_.inputs["Strength"].default_value = E("HELM_NORMAL", 0.25)
 
 # puffer: black nylon outside, hot-pink lining where we see the inside (collar)
 pm = bpy.data.materials.new("MAT_PufferNylon"); pm.use_nodes = True; pn = pm.node_tree; pb = pn.nodes["Principled BSDF"]
@@ -314,7 +314,7 @@ def light(name, loc, energy, sx, sy, col_=(1, 1, 1), look=None, glossy=True, dif
     except AttributeError: pass
     return o
 FZ = HC.z
-light("LGT_Key_Softbox", (-2.2, -1.8, FZ + 1.1), 260, 2.4, 1.2)
+light("LGT_Key_Softbox", (-2.2, -1.8, FZ + 1.1), 200, 2.4, 1.2)
 light("LGT_Key_TopStrip", (-2.0, -1.4, FZ + 1.8), 220, 2.4, 0.14)
 light("LGT_Strip_Back", (1.0, 2.2, FZ), 450, 0.15, 3.0, (0.8, 0.88, 1.0))
 light("LGT_Strip_Pink", (2.2, 0.4, FZ - 0.2), 220, 0.12, 3.0, PINK)

@@ -70,3 +70,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (user): PD-01 jacket = dark navy nylon (linear base ~0.0035/0.0055/0.020 under Standard -0.8 exposure), not black.
 - DO (user): logos/text on clothing = printed decals in the fabric material (follow the surface), never 3D text floating near it.
 - DO: project clothing prints along the local surface normal (sticker), not a world axis: world-axis projection stretches on curves; add a thin depth slab so prints don't ghost onto layers behind.
+- DON'T: classify visor glass by hue alone; faintly blue-grey paint turned into mirror glass (silver patches). Gate by saturation AND value.
