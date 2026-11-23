@@ -100,3 +100,16 @@ of the frame, centred, with the chain dominating.
 - v8 "rotate very slightly ... slow motion ... at certain points": delta-rotation turns on PENDANT (max ~5 deg/s, back to 0 by 274,
   so the drop bake stays valid) and an extra slow spin of the floating diamond 150-199 (CFG["turns"]).
 - Current scene: renders/farm/ruby-pendant-v1/ruby-v8.blend (built from the baked v3 with ruby_recam.py).
+
+## v9-v11 (user): stronger end frame, Rubyred logo ending, white studio
+- "end on a stronger camera frame ... the ruby necklace could turn in to a logo and then Rubyred text could come in similar to the
+  female face [references/jewelry/mutant-cover-ref-v1.mp4]. flicker white black and red then end on the red and white logo" and
+  "change the background of the main scene to white or off white".
+- Film is now 15 s (450 frames): 3D 1-378 (CFG frames 378, rigid cache re-baked, drop identical), Remotion ending 379-450.
+- END camera 325-378: low (18 deg) 85 mm f/4 close hero of the settled pendant, slow push + arc; glint at 343.
+- Off-white infinity studio (CFG["studio"], ruby_sweep.white_studio): off-white world for camera/diffuse, off-white floor, warm-white soft spot.
+- Logo = our own pendant: scripts/blender/ruby_logo_source.py (straight-down, no chain, transparent) -> scripts/logo/two_tone.py
+  (chunky two-tone stencil + outline ring) -> public/ruby/logo-{dark,light}.png. End pose cut-out -> public/ruby/endpose-*.png.
+- src/ruby/config.ts + RubyFilm.tsx (composition RubyFilm): RUBYRED (Anton, red) slams in at 343 with an RGB-split glitch;
+  379-396 hard 2-frame flicker black/white/red (end pose stencil -> logo); 397-450 white bg, red-and-white emblem shrinks up,
+  RUBYRED wordmark rises under it. No extra captions (the user gave no other words).

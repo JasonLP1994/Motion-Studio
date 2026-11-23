@@ -75,3 +75,16 @@ def add_slow_turns(S, CFG):
     t = CFG["turns"]
     keys(bpy.data.objects["PENDANT"], t["pendant"])
     keys(bpy.data.objects["G_DIAMOND"], t["diamond"])
+
+def white_studio(S, CFG):
+    """User: "change the background of the main scene to white or off white". Off-white infinity studio: the camera sees an
+    off-white world, the floor turns off-white, the overhead spot turns warm white (soft pool + the piece's shadow stay)."""
+    st = CFG.get("studio")
+    if not st or not st.get("on"): return
+    wn = S.world.node_tree
+    bg = wn.nodes["Background"]                      # what the camera (and diffuse light) sees: was black
+    bg.inputs[0].default_value = (*st["bg"], 1); bg.inputs[1].default_value = st["bg_strength"]
+    fl = bpy.data.objects["Floor"]; b = fl.active_material.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (*st["floor"], 1)
+    sp = bpy.data.objects.get("LGT_Spot_Pool")
+    if sp: sp.data.color = st["pool"]; sp.data.energy = st["pool_energy"]; sp.data.spot_size = math.radians(st["pool_deg"])

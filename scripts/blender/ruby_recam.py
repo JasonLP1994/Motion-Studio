@@ -35,7 +35,7 @@ for name, f0, (p0, p1), (t0, t1), lens, fstop, interp in CFG["cams"]:
     if name == "MAC":
         keyv(tgt, "location", [(f0, Vector((0, -0.1, 0.7))), (f0 + 22, Vector(t0)), (f1, Vector(t1))], "BEZIER")
 S.camera = bpy.data.objects["MAC"]
-sys.path.insert(0, os.path.dirname(SRC)); import ruby_sweep; ruby_sweep.build(S, CFG); ruby_sweep.fix_gem_reflections(S, CFG); ruby_sweep.add_diamond_cards(S, CFG); ruby_sweep.add_slow_turns(S, CFG)   # moving glisten lights
+sys.path.insert(0, os.path.dirname(SRC)); import ruby_sweep; ruby_sweep.build(S, CFG); ruby_sweep.fix_gem_reflections(S, CFG); ruby_sweep.add_diamond_cards(S, CFG); ruby_sweep.add_slow_turns(S, CFG); ruby_sweep.white_studio(S, CFG)   # moving glisten lights
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(args[0]))
 print("saved", args[0])
 if len(args) >= 5:

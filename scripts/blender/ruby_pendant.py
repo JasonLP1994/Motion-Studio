@@ -6,15 +6,19 @@ import bpy, bmesh, math, sys, os
 from mathutils import Vector, Euler
 
 CFG = {
-    "fps": 30, "frames": 360, "res": (1280, 720),               # 720p, AI-upscaled 2x to 1080p
+    "fps": 30, "frames": 378,   # 3D part 0-12.6 s; the logo ending (to 15 s) is composited in Remotion
+    "res": (1280, 720),               # 720p, AI-upscaled 2x to 1080p
     "col": {"rose": (0.88, 0.52, 0.40), "ruby": (0.80, 0.0, 0.025), "pool": (0.40, 0.62, 0.82),
             "floor": (0.11, 0.12, 0.13), "key": (1.0, 0.96, 0.92)},
     "floor_z": -2.2,
+    # v10 (user): off-white studio instead of the black void; the logo ending is red and white on white
+    "studio": {"on": True, "bg": (0.95, 0.94, 0.92), "bg_strength": 1.25, "floor": (0.88, 0.87, 0.85),
+               "pool": (1.0, 0.97, 0.92), "pool_energy": 2.2e4, "pool_deg": 30},
     # explode / assemble (Blender frames = plan frame + 1). 100 BPM: beat = 18 frames
     "explode": (145, 181), "hold_end": 199,
     "land": {"dia": (199, 208), "halo": (199, 208), "bail": (217, 226), "chain": (235, 244)},
     "apart": {"dia": (0, -0.1, 1.5), "halo": (0, -0.35, -0.65), "bail": (0, 0.7, 0.6), "chain": (0, 1.3, 1.1)},
-    "glints": [109, 302],          # sparkle-light spikes (star glare) on the beats
+    "glints": [109, 302, 343],          # sparkle-light spikes (star glare) on the beats
     # glisten: small bright lights orbiting the piece all film long -> highlights crawl across the facets (scripts/blender/ruby_sweep.py)
     # each light: (orbit radius, height, revolutions over the film, start angle deg, watts)
     "sweep": {"lights": [(9.0, 8.0, 1.0, 0, 320), (8.0, 10.0, -0.75, 120, 260), (10.0, 6.0, 0.5, 240, 220)],
@@ -38,6 +42,7 @@ CFG = {
         ("MB", 217, ((8.08, 4.44, 2.0), (6.86, 5.36, 1.62)), ((0, 1.5, -0.3), (0, 1.4, -0.5)), 100, 5.6, "LINEAR"),
         ("MC", 235, ((3.8, 4.42, 0.95), (2.88, 4.64, 0.73)), ((0, 1.76, -0.92), (0, 1.76, -0.92)), 100, 5.6, "LINEAR"),
         ("HERO", 253, ((-4.12, -8.82, 2.99), (-1.22, -8.72, 2.11)), ((0, 0, -0.95), (0, 0, -1.45)), 70, 11, "LINEAR"),
+        ("END", 325, ((-4.47, -7.77, 1.34), (-1.92, -7.3, 0.87)), ((0.05, 0.05, -1.6), (0.05, 0.05, -1.6)), 85, 4, "LINEAR"),
     ],
 }
 OUT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "/tmp/ruby.blend"
@@ -355,6 +360,6 @@ for n in list(ct.nodes): ct.nodes.remove(n)
 rl = ct.nodes.new("CompositorNodeRLayers"); gl = ct.nodes.new("CompositorNodeGlare"); co = ct.nodes.new("CompositorNodeComposite")
 gl.glare_type = "STREAKS"; gl.streaks = 4; gl.angle_offset = math.radians(22); gl.fade = 0.88; gl.threshold = 5.0; gl.mix = -0.7; gl.quality = "HIGH"
 ct.links.new(rl.outputs["Image"], gl.inputs["Image"]); ct.links.new(gl.outputs["Image"], co.inputs["Image"])
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ruby_sweep; ruby_sweep.build(S, CFG); ruby_sweep.fix_gem_reflections(S, CFG); ruby_sweep.add_diamond_cards(S, CFG); ruby_sweep.add_slow_turns(S, CFG)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ruby_sweep; ruby_sweep.build(S, CFG); ruby_sweep.fix_gem_reflections(S, CFG); ruby_sweep.add_diamond_cards(S, CFG); ruby_sweep.add_slow_turns(S, CFG); ruby_sweep.white_studio(S, CFG)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(OUT))
 print("saved", OUT)

@@ -64,3 +64,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (jewellery/product): frame premium: the piece fills 60-80% of the frame, low grazing angles, let parts crop past the edges, shallow focus on macros, slow constant arcs. DON'T leave the product small and centred with empty space around it.
 - DO (gems): give step-cut / large stones something white to mirror (diamond-only light-linked cards, floor hidden from transmission rays). DON'T let a low camera show a diamond reflecting the black set (it reads dark grey).
 - DO (jewellery): add very slight, slow turns (a few degrees over seconds) so facets roll through the light. DON'T spin fast.
+- DON'T use grayscale PNGs as CSS mask images: masks read ALPHA (save RGBA with alpha = mask), and preload them with <Img> or Remotion renders before they load.

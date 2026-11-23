@@ -69,3 +69,6 @@ public/ionade/
 
 # Local tool binaries (e.g. OIDN denoiser, installed by scripts/denoise/setup_oidn.sh)
 tools/
+
+# Ruby film: rendered 3D frames + logo masks (rebuilt by scripts/logo/two_tone.py), local only
+public/ruby/
