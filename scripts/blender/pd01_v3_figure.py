@@ -211,13 +211,14 @@ near_side = soft_lt(sN.outputs["X"], -0.12, 0.25); front_side = soft_lt(sN.outpu
 not_lining = mnode(pn, 'SUBTRACT', 1.0, lining)
 DC = R + "decals/"
 side_m = mnode(pn, 'MULTIPLY', near_side, not_lining); front_m = mnode(pn, 'MULTIPLY', front_side, not_lining)
+PUFF = lambda k: (k + 0.5) * PITCH          # centre height of puff panel k (seams sit at k * PITCH)
 # (image, projection axis, centre (u-axis, z), width m, mask, flip)  - small, technical print system like the reference
 DECALS = [
-    (DC + "decal_A.png", 'X', (E("PRINT_Y", -0.05), E("PRINT_Z", 1.27)), E("PRINT_W", 0.16), side_m, True),     # sleeve: PD-01 block
-    (DC + "decal_C.png", 'X', (-0.11, 1.385), 0.10, side_m, True),                                            # collar micro text
-    (DC + "decal_D.png", 'X', (-0.06, 1.165), 0.085, side_m, True),                                             # lower spec block
+    (DC + "decal_A.png", 'X', (E("PRINT_Y", -0.05), PUFF(14)), 0.128, side_m, True),      # sleeve PD-01 block, inside one puff panel
+    (DC + "decal_C.png", 'X', (-0.10, PUFF(15)), 0.15, side_m, True),                        # micro spec text, next panel up
+    (DC + "decal_D.png", 'X', (-0.06, PUFF(13)), 0.12, side_m, True),                        # spec block, panel below
     # (DC + "decal_B.png", ...) pink zip tab: smeared on the curved collar, off for now
-    (R + "decal_logo.png", 'Y', (E("LOGO_X", -0.085), E("LOGO_Z", 1.29)), 0.036, front_m, False),              # p. patch
+    (R + "decal_logo_pink.png", 'Y', (E("LOGO_X", -0.085), PUFF(15)), 0.04, front_m, False),     # hot-pink p. patch
 ]
 cur = pb.inputs["Base Color"].links[0].from_socket; amax = None
 for img, axis, cen, wdt, msk, flp in DECALS:
