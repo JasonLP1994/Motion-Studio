@@ -45,3 +45,6 @@ kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-e
 - Look: notes/frames/pd01-v2-look18.jpg. Dark front stripe fixed (look21): the hoodie model is an OPEN jacket with no body, so the
   inside of the back panel showed; a front panel is now lofted between the real front edges (+-0.2) with the pink zip on it.
   Fabric: dark navy albedo, low specular (black albedo read grey on the lit side and black on the front). Collar lining: the collar top now rolls outward into a thin hot-pink lip around the helmet base (look23).
+- HUD layout draft: Remotion comp `PD01HUD` (src/pd01/, all copy in src/pd01/config.ts, DRAFT until the user approves).
+  Still: work/cyber2/hud/hud_v2.png. Figure is the 720p look render scaled up (soft); the final needs a 1920x1080 render framed
+  for this layout. The helmet still shows the model's own "H254" label (could swap for a PD-01 decal).

@@ -18,3 +18,4 @@
 - Pixel sneaker (not stored in Git; ignored `work/shoes/`): "Sci-fi Sneaker" by erdemdagdelen (Sketchfab 31032bcf56a44166afbb4e73ee3d7051),
   CC-BY 4.0, via Objaverse. Rendered as pixel sprites, original logo replaced with the Phillips Digital "p." badge.
   Credit line for posts: "Sneaker model: Sci-fi Sneaker by erdemdagdelen (CC-BY 4.0)". Pixel fonts: Silkscreen, Pixelify Sans (OFL).
+- Fonts: Chakra Petch (OFL) and Noto Sans JP (OFL) via @fontsource, copied to public/fonts (licences alongside).
