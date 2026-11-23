@@ -38,3 +38,9 @@ Status: brief done; next = find a free rigged stylised character + free breaking
   constraint targets onto head.x. UV contact lenses: Std_Eye_L/R replaced with a radial UV ramp (eyeball UV centred 0.5, iris
   radius ~0.25), glowing lime iris + dark pupil; cornea = clear glass. (Colour-ramp gotcha: elements re-sort when positions
   change; set them in two passes.) Check: work/dance/eyes_fix5.jpg.
+
+## Edit + cameras v1
+Segments (CMU 85, 24 fps): s1 fancy footwork f100-195, s2 handstand kicks f110-189, s3 break + flips f240-335, s4 helicopter
+f105-200 -> 368 frames (15.3 s), joined by scripts/blender/dance_merge_segments.py (cuts hide the jumps). Cameras
+scripts/blender/dance_cams.py, all following the smoothed hips: A floor-level 20 mm dolly-in, B feet 50 mm, C overhead rotating,
+D worm's eye 16 mm, E 3/4 orbit, F 70 mm push to the face/eyes. Board: work/dance/camera_board_v2.jpg.
