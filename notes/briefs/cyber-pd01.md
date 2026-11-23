@@ -62,3 +62,10 @@ kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-e
   at 1080p here), finish product_minimal only. Lens pass skipped on HUD composites: the big white masthead throws streaks across
   the helmet (if used, run lensfx on the 3D plate before compositing). renders/pd01-hero-frame-v2.png + transparent plate.
   Score 8.4/10 (layout 8.5, readability 8.5, polish 8, timing n/a).
+
+## Animation v2 (user: "extreme close ups and only reveal at the very end", pink logo)
+15 s / 360 f. Blender scripts/blender/pd01_anim2.py (after pd01_v3_figure.py): six 1.5 s ECUs (seam stitching, PD-01 print,
+tubes + pink hood lining with a light glint, visor HUD power-on flicker, pink chin module, visor emblem + hex), then CAM_Reveal:
+EXPO pull-out from the visor to the approved hero frame (f217-245), slow creep to f360. Remotion PD01Anim: dark until 9 s, blue
+floods in on the reveal, HUD draws on at 10.2 s, glitch hits on every cut, end card at 12.6 s with the pink "p." logo + wordmark.
+Key frames: work/cyber3/animframes2/sheet.jpg (low-quality previews).

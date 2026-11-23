@@ -1,6 +1,6 @@
 // PD-01 HUD: every word, colour and timing in one place (copy is DRAFT, waiting for the user's approval).
 export const pd01Config = {
-  fps: 24, width: 1920, height: 1080, durationInSeconds: 13,
+  fps: 24, width: 1920, height: 1080, durationInSeconds: 15,
   colors: { page: "#1A2BFF", ink: "#F4F6FF", pink: "#FF1A8C", dark: "#0A0A14", line: "rgba(244,246,255,0.55)", glow: "rgba(110,130,255,0.55)", haze: "rgba(255,26,140,0.16)", vignette: "rgba(4,8,70,0.55)" },
   fonts: { display: "BarlowCondensed-BlackItalic.ttf", ui: "chakra-petch-latin-700-normal.woff2", uiMed: "chakra-petch-latin-500-normal.woff2", jp: "noto-sans-jp-japanese-700-normal.woff2" },
   figure: "pd01/figure_v3.png",
@@ -25,7 +25,7 @@ export const pd01Config = {
     protocol: ["// PINK PROTOCOL", "// FRAME BY FRAME", "// BUILT IN CODE"],
     ver: "2.6",
   },
-  anim: { dark: "#05060F", floodAt: 3.0, hudAt: 7.0, logoAt: 10.5, glitches: [3.0, 7.0, 8.6, 10.4], glitchFrames: 3 },
+  anim: { dark: "#05060F", floodAt: 9.0, hudAt: 10.2, logoAt: 12.6, glitches: [1.5, 3.0, 4.5, 6.0, 7.5, 9.0, 10.2, 11.4, 12.5], glitchFrames: 3 },
   // draw-on timing (seconds) for the HUD; used by the motion version later
   hud: { start: 0.0, stagger: 0.06, drawDur: 0.5 },
 };

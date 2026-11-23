@@ -53,7 +53,7 @@ export const PD01Anim: React.FC<{ seq?: string }> = ({ seq = "pd01/seq" }) => {
       {/* end card: the Phillips Digital logo */}
       {f >= endT && (
         <AbsoluteFill style={{ background: A.dark, opacity: logoIn, alignItems: "center", justifyContent: "center" }}>
-          <Img src={staticFile("pd01/logo_circle.png")} style={{ width: 300, height: 300, transform: `scale(${0.6 + 0.4 * logoIn}) rotate(${(1 - logoIn) * -40}deg)`, marginBottom: 40 }} />
+          <Img src={staticFile("pd01/logo_circle_pink.png")} style={{ width: 300, height: 300, transform: `scale(${0.6 + 0.4 * logoIn}) rotate(${(1 - logoIn) * -40}deg)`, marginBottom: 40 }} />
           <div style={{ clipPath: `inset(0 ${100 - words * 100}% 0 0)` }}><Img src={staticFile("pd01/logo_wordmark.png")} style={{ width: 620 }} /></div>
         </AbsoluteFill>
       )}
