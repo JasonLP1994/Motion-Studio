@@ -25,6 +25,7 @@ export const pd01Config = {
     protocol: ["// PINK PROTOCOL", "// FRAME BY FRAME", "// BUILT IN CODE"],
     ver: "2.6",
   },
+  visor: { on: 6.0, off: 9.0, boot: ["PD-01 // VISOR SYSTEM BOOT", "OPTICS ........ OK", "NEURAL LINK ... OK", "PHILLIPS://DIGITAL ONLINE"], jp: "視覚システム起動" },
   anim: { dark: "#05060F", floodAt: 9.0, hudAt: 10.2, logoAt: 12.6, glitches: [1.5, 3.0, 4.5, 6.0, 7.5, 9.0, 10.2, 11.4, 12.5], glitchFrames: 3 },
   // draw-on timing (seconds) for the HUD; used by the motion version later
   hud: { start: 0.0, stagger: 0.06, drawDur: 0.5 },

@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame, interpolate, Easing, random } from "remotion";
 import { pd01Config as C } from "./config";
 import { PD01HUD, HudStart } from "./PD01";
+import { VisorHUD } from "./VisorHUD";
 
 // PD-01 motion: 3D plates (public/pd01/seq/f_####.png, one per frame) + background story + HUD + glitches + logo end card.
 const A = C.anim;
@@ -50,6 +51,7 @@ export const PD01Anim: React.FC<{ seq?: string }> = ({ seq = "pd01/seq" }) => {
           <HudStart.Provider value={A.hudAt}><PD01HUD overlayOnly /></HudStart.Provider>
         </AbsoluteFill>
       </Glitch>
+      <Glitch at={A.glitches}><VisorHUD /></Glitch>
       {/* end card: the Phillips Digital logo */}
       {f >= endT && (
         <AbsoluteFill style={{ background: A.dark, opacity: logoIn, alignItems: "center", justifyContent: "center" }}>
