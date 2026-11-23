@@ -5,7 +5,7 @@ import bpy, sys, os
 from mathutils import Vector
 a = sys.argv[sys.argv.index("--") + 1:]
 S = bpy.context.scene
-PINK, LIME, BLUE = (1.0, 0.0, 0.28), (0.25, 1.0, 0.0), (0.02, 0.16, 1.0)
+PINK, LIME, BLUE = (1.0, 0.0, 0.28), (0.1, 1.0, 0.04), (0.02, 0.16, 1.0)
 E = lambda k, d: float(os.environ.get(k, d))
 
 def bsdf(m): return next(n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
@@ -59,31 +59,36 @@ H = hi.z - lo.z
 face = [c for c in co if c.z > lo.z + H * 0.86]; nose = min(face, key=lambda c: c.y)
 centre = gen(nose + Vector((E("PAINT_X", 0.045), E("PAINT_Y", 0.03), E("PAINT_Z", -0.045))))
 SZ = Vector((0.03 / (hi.x - lo.x), 0.03 / (hi.y - lo.y), 0.06 / (hi.z - lo.z)))
-# paint mask baked into a vertex attribute from the rest shape: an irregular splash on the cheek dripping toward the jaw
-import math, random
-random.seed(4)
+# face paint: a crisp stencil (work/dance/paint/face_paint_stencil.png, 22 x 26 cm, origin at the nose tip) projected from the
+# front in the undeformed "Generated" space (it follows the skin as he moves), limited to front-facing face skin by a vertex attribute
 U = 1.0 / body.matrix_world.to_scale().x   # mesh units per metre (this CC body is in centimetres)
-C = nose + Vector((E("PAINT_X", 0.05), E("PAINT_Y", 0.035), E("PAINT_Z", -0.015))) * U
-blobs = [(C + Vector((random.uniform(-0.012, 0.012), 0, -k * 0.014 + random.uniform(-0.004, 0.004))) * U, (0.034 - k * 0.003) * U) for k in range(7)]
-blobs += [(C + Vector((0.018, 0.005, 0.012)) * U, 0.012 * U), (C + Vector((-0.015, -0.004, -0.03)) * U, 0.01 * U)]
 attr = body.data.attributes.get("lime_paint") or body.data.attributes.new("lime_paint", 'FLOAT', 'POINT')
 vals = []
 for v in body.data.vertices:
-    p = v.co; m = 0.0
-    if p.y < nose.y + 0.09 * U and p.z > lo.z + H * 0.8:
-        for c_, r_ in blobs:
-            d_ = (p - c_).length / r_
-            m = max(m, 1.0 if d_ < 1.0 else 0.0)
-    vals.append(m)
+    p = v.co; f = 0.0
+    if p.z > nose.z - 0.11 * U and abs(p.x - nose.x) < 0.09 * U and p.y < nose.y + 0.08 * U:
+        f = max(0.0, min(1.0, (-v.normal.y + 0.05) / 0.35))
+    vals.append(f)
 attr.data.foreach_set("value", vals)
 at = nt.nodes.new("ShaderNodeAttribute"); at.attribute_name = "lime_paint"
+tc = nt.nodes.new("ShaderNodeTexCoord"); sx = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(tc.outputs["Generated"], sx.inputs[0])
+def lin(x, mul, add):
+    n = nt.nodes.new("ShaderNodeMath"); n.operation = 'MULTIPLY_ADD'; nt.links.new(x, n.inputs[0]); n.inputs[1].default_value = mul; n.inputs[2].default_value = add; return n.outputs[0]
+# generated g -> mesh units: lo + g * size ; stencil u = (x - (nose.x - 0.11U)) / 0.22U ; v = (z - (nose.z - 0.14U)) / 0.26U
+Wd, Ht = 0.22 * U, 0.26 * U
+u = lin(sx.outputs["X"], (hi.x - lo.x) / Wd, (lo.x - (nose.x - 0.11 * U)) / Wd)
+v = lin(sx.outputs["Z"], (hi.z - lo.z) / Ht, (lo.z - (nose.z - 0.14 * U)) / Ht)
+cm = nt.nodes.new("ShaderNodeCombineXYZ"); nt.links.new(u, cm.inputs[0]); nt.links.new(v, cm.inputs[1])
+img = nt.nodes.new("ShaderNodeTexImage"); img.image = bpy.data.images.load("/home/user/Motion-Studio/work/dance/paint/face_paint_stencil.png", check_existing=True)
+img.image.colorspace_settings.name = 'Non-Color'; img.extension = 'CLIP'; nt.links.new(cm.outputs[0], img.inputs["Vector"])
+mm = nt.nodes.new("ShaderNodeMath"); mm.operation = 'MULTIPLY'; nt.links.new(img.outputs["Color"], mm.inputs[0]); nt.links.new(at.outputs["Fac"], mm.inputs[1])
 class _M: pass
-mask = _M(); mask.outputs = [at.outputs["Fac"]]
+mask = _M(); mask.outputs = [mm.outputs[0]]
 src = b.inputs["Base Color"].links[0].from_socket
 mx = nt.nodes.new("ShaderNodeMix"); mx.data_type = 'RGBA'; nt.links.new(mask.outputs[0], mx.inputs["Factor"]); nt.links.new(src, mx.inputs[6]); mx.inputs[7].default_value = (*LIME, 1)
 nt.links.new(mx.outputs[2], b.inputs["Base Color"])
 b.inputs["Emission Color"].default_value = (*LIME, 1)
-em = nt.nodes.new("ShaderNodeMath"); em.operation = 'MULTIPLY'; nt.links.new(mask.outputs[0], em.inputs[0]); em.inputs[1].default_value = E("LIME_GLOW", 6.0)
+em = nt.nodes.new("ShaderNodeMath"); em.operation = 'MULTIPLY'; nt.links.new(mask.outputs[0], em.inputs[0]); em.inputs[1].default_value = E("LIME_GLOW", 9.0)
 for l in list(b.inputs["Emission Strength"].links): nt.links.remove(l)
 nt.links.new(em.outputs[0], b.inputs["Emission Strength"])
 # clothing
