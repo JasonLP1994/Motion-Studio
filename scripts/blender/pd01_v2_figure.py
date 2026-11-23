@@ -79,11 +79,20 @@ for k, t in enumerate(np.linspace(0, 1, 9)):
         z = (NECK - 0.05) + t * (hz0 + 0.07 + 0.09 * back - (NECK - 0.05))
         ring.append((cx + r * math.cos(a), cy + r * math.sin(a), z))
     rings.append(ring)
+NBODY = len(rings)
+# rolled lip: the top folds outward and down, showing the pink lining as a band around the helmet base
+top = rings[-1]
+for k, (dr, dz) in enumerate(((0.008, 0.012), (0.018, 0.008), (0.022, -0.006), (0.02, -0.02))):
+    ring = []
+    for (x, y, z), a in zip(top, angs):
+        ring.append((x + dr * math.cos(a), y + dr * math.sin(a), z + dz))
+    rings.append(ring)
 vs = [v for r in rings for v in r]
 fs = [(i * NA + j, i * NA + (j + 1) % NA, (i + 1) * NA + (j + 1) % NA, (i + 1) * NA + j) for i in range(len(rings) - 1) for j in range(NA)]
 cm = bpy.data.meshes.new("collar"); cm.from_pydata(vs, [], fs); cm.polygons.foreach_set("use_smooth", [True] * len(fs))
+cm.polygons.foreach_set("material_index", [1 if i // NA >= NBODY - 1 else 0 for i in range(len(fs))])
 col_ = bpy.data.objects.new("SM_Collar", cm); S.collection.objects.link(col_)
-sd = col_.modifiers.new("Thick", 'SOLIDIFY'); sd.thickness = 0.03; sd.offset = 0.0; sd.material_offset = 1; sd.use_rim = True; sd.material_offset_rim = 1
+sd = col_.modifiers.new("Thick", 'SOLIDIFY'); sd.thickness = 0.03; sd.offset = 0.0; sd.use_rim = True
 col_.modifiers.new("Sub", 'SUBSURF').levels = 2
 # hood folded down behind the neck: a fat roll, black outside / pink inside
 bpy.ops.mesh.primitive_torus_add(major_radius=0.2, minor_radius=0.07, major_segments=48, minor_segments=16, location=(NCX, NCY + 0.06, NECK + 0.02))
