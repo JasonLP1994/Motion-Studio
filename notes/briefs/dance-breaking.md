@@ -46,3 +46,10 @@ scripts/blender/dance_cams.py, all following the smoothed hips: A floor-level 20
 D worm's eye 16 mm, E 3/4 orbit, F 70 mm push to the face/eyes. Board: work/dance/camera_board_v2.jpg.
 - Floor v1 (scripts/blender/dance_floor.py): glossy deep-blue stage floor fading into the blue world, pink neon dance ring, cyc hidden; character lights light-linked to EXCLUDE the floor (no panel squares) so the vinyl keeps its highlights. Board: work/dance/camera_board_v5.jpg.
 - Lens play (scripts/blender/dance_lens_fx.py, after cams + floor): A dolly zoom 60->18 mm with distance 4.2->1.25 m; B snap zooms 35<->85 mm every beat (12 f); C 24->40 mm; D 12 mm from 0.75 m; E crash zoom 35->90 mm last 10 f; F 135 mm + focus pull hood->eyes. Board: work/dance/lens_board_v2.jpg.
+
+## Final v1 (renders/dance-break-v1.mp4 + -silent)
+18.0 s, 1920x1080, 24 fps: 368 dance frames (Cycles 32 spp + motion blur at 720p, OIDN, every frame rendered) -> 2xNomos
+upscale -> lensfx minimal -> + 64-frame logo card (scripts/dance_endcard.py) -> finish product_minimal 0.8. Audio
+scripts/dance_audio.py (GAIN_DB=-11.4): -14.2 LUFS / -1.6 dBTP after AAC 320k. Render ~20 s/frame (~2 h, one relaunch).
+Score 8.2/10 (layout 8, timing 8.5, readability 8.5, polish 8). Weakest: feet close-up motion blur is very heavy; overhead shot
+floor reads darker than the other shots. Credits: CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), character: user's own.
