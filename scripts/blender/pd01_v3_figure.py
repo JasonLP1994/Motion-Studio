@@ -329,7 +329,9 @@ cam = bpy.data.objects.new("CAM_Hero", bpy.data.cameras.new("CAM_Hero")); S.coll
 tgt = bpy.data.objects.new("CAM_T", None); S.collection.objects.link(tgt); tgt.location = HC + Vector((0, 0, -0.04))
 cam.location = HC + Vector((E("CAM_X", -1.6), E("CAM_Y", -0.85), E("CAM_Z", -0.12)))
 cam.data.lens = E("LENS", 40); cam.data.shift_x = E("SHIFT_X", -0.06); cam.data.shift_y = E("SHIFT_Y", -0.045)
-tr = cam.constraints.new('TRACK_TO'); tr.target = tgt; tr.track_axis = 'TRACK_NEGATIVE_Z'; tr.up_axis = 'UP_Y'
+from mathutils import Quaternion
+_q = (tgt.location - cam.location).to_track_quat('-Z', 'Y') @ Quaternion((0, 0, 1), math.radians(E("CAM_ROLL", 0)))   # optional Dutch tilt
+cam.rotation_euler = _q.to_euler()
 
 S.render.engine = 'CYCLES'; cy = S.cycles; cy.device = 'CPU'; cy.samples = 48; cy.use_adaptive_sampling = True; cy.adaptive_threshold = 0.03
 cy.use_denoising = False; cy.diffuse_bounces = 2; cy.glossy_bounces = 4; cy.transmission_bounces = 2; cy.sample_clamp_indirect = 3.0
