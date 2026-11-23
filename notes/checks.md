@@ -71,3 +71,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (user): logos/text on clothing = printed decals in the fabric material (follow the surface), never 3D text floating near it.
 - DO: project clothing prints along the local surface normal (sticker), not a world axis: world-axis projection stretches on curves; add a thin depth slab so prints don't ghost onto layers behind.
 - DON'T: classify visor glass by hue alone; faintly blue-grey paint turned into mirror glass (silver patches). Gate by saturation AND value.
+- DON'T: run lensfx over a HUD composite with big white type (streaks cross the hero); apply it to the 3D plate before the type.

@@ -57,3 +57,8 @@ kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-e
   black outside, pink lining on the solidify inner shell + rim (backfacing trick fails on solidified meshes).
 - Look: work/cyber3/hud_v4.png. Known: jacket chest lumps (model geometry), pink hood rim reads a bit tube-like, some worn silver
   patches on the helmet top.
+- Hero frame v2 (full quality): camera turned ~60 deg (CAM -0.86/-1.62/-0.10, 50 mm, shift -0.06/0), satin navy nylon, moody rig
+  (MOODY=1: low-key side light, pink + blue rims, blue world spill), layout glow + vignette, Cycles 64 spp + OIDN (~1.5 min/frame
+  at 1080p here), finish product_minimal only. Lens pass skipped on HUD composites: the big white masthead throws streaks across
+  the helmet (if used, run lensfx on the 3D plate before compositing). renders/pd01-hero-frame-v2.png + transparent plate.
+  Score 8.4/10 (layout 8.5, readability 8.5, polish 8, timing n/a).
