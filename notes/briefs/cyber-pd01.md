@@ -48,3 +48,12 @@ kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-e
 - HUD layout draft: Remotion comp `PD01HUD` (src/pd01/, all copy in src/pd01/config.ts, DRAFT until the user approves).
   Still: work/cyber2/hud/hud_v2.png. Figure is the 720p look render scaled up (soft); the final needs a 1920x1080 render framed
   for this layout. The helmet still shows the model's own "H254" label (could swap for a PD-01 decal).
+
+## v3 restart (user: "looks shit", start again with a puffy jacket + better helmet; then "build a hood")
+- Models picked by the user from a 16-model sheet: J3 "Puffy Jacket" (Enith2478) + H3 "Space Helmet" (bluoppVR), CC-BY.
+- Script scripts/blender/pd01_v3_figure.py (work/cyber3/pd01c.py): helmet repainted from its albedo in the shader (white -> glossy
+  black, yellow -> hot pink, dark grey -> gunmetal, teal visor -> dark glass, emission map -> pink HUD glow); puffer = black matte
+  nylon with real baffle seams pushed into the mesh and a flared funnel collar; built hood (down) = open crescent behind the neck,
+  black outside, pink lining on the solidify inner shell + rim (backfacing trick fails on solidified meshes).
+- Look: work/cyber3/hud_v4.png. Known: jacket chest lumps (model geometry), pink hood rim reads a bit tube-like, some worn silver
+  patches on the helmet top.

@@ -46,7 +46,7 @@ export const PD01HUD: React.FC = () => {
     <AbsoluteFill style={{ background: col.page }}>
       <style>{fontFace}</style>
       {/* figure: big, lower right, cropped by the frame edge like the reference */}
-      <Img src={staticFile(C.figure)} style={{ position: "absolute", height: 1500, left: C.figurePos.left, top: C.figurePos.top }} />
+      <Img src={staticFile(C.figure)} style={{ position: "absolute", height: C.figurePos.height, width: 1920, left: C.figurePos.left, top: C.figurePos.top }} />
 
       {/* masthead */}
       <Wipe i={0} style={{ left: 70, top: 10 }}><T size={300} font="PDDisplay" ls={0.0} style={{ lineHeight: 1 }}>{c.masthead}</T></Wipe>

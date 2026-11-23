@@ -19,3 +19,4 @@
   CC-BY 4.0, via Objaverse. Rendered as pixel sprites, original logo replaced with the Phillips Digital "p." badge.
   Credit line for posts: "Sneaker model: Sci-fi Sneaker by erdemdagdelen (CC-BY 4.0)". Pixel fonts: Silkscreen, Pixelify Sans (OFL).
 - Fonts: Chakra Petch (OFL) and Noto Sans JP (OFL) via @fontsource, copied to public/fonts (licences alongside).
+- PD-01 v3: "Space Helmet" by bluoppVR and "Puffy Jacket" by Enith2478 (both CC-BY 4.0, Sketchfab via Objaverse). Credit line: "Helmet: Space Helmet by bluoppVR; Jacket: Puffy Jacket by Enith2478 (CC-BY 4.0)".
