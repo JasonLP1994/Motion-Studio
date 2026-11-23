@@ -113,3 +113,6 @@ of the frame, centred, with the chain dominating.
 - src/ruby/config.ts + RubyFilm.tsx (composition RubyFilm): RUBYRED (Anton, red) slams in at 343 with an RGB-split glitch;
   379-396 hard 2-frame flicker black/white/red (end pose stencil -> logo); 397-450 white bg, red-and-white emblem shrinks up,
   RUBYRED wordmark rises under it. No extra captions (the user gave no other words).
+- v14 (user: "more saturation"): AgX Punchy was tested and rejected (greyed the white studio, darkened stones). Instead: vivid ruby
+  glass (1, 0.16, 0.2) + absorption density 18 (was 30) so rubies glow red not maroon, richer rose gold, compositor saturation 1.3.
+  Full render: ruby-v14.blend, frames renders/frames/ruby-real-frames-v14.txt -> renders/frames/ruby-full-v14, then scripts/ruby_finish.sh.

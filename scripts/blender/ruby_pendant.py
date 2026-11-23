@@ -8,9 +8,10 @@ from mathutils import Vector, Euler
 CFG = {
     "fps": 30, "frames": 378,   # 3D part 0-12.6 s; the logo ending (to 15 s) is composited in Remotion
     "res": (1280, 720),               # 720p, AI-upscaled 2x to 1080p
-    "col": {"rose": (0.88, 0.52, 0.40), "ruby": (0.80, 0.0, 0.025), "pool": (0.40, 0.62, 0.82),
+    "col": {"rose": (0.92, 0.50, 0.36), "ruby": (0.85, 0.0, 0.02), "pool": (0.40, 0.62, 0.82),
             "floor": (0.11, 0.12, 0.13), "key": (1.0, 0.96, 0.92)},
     "floor_z": -2.2,
+    "grade": {"look": "AgX - Medium High Contrast", "saturation": 1.3, "value": 1.03},   # user: more saturation (scripts/blender/ruby_sweep.py grade)
     # v10 (user): off-white studio instead of the black void; the logo ending is red and white on white
     "studio": {"on": True, "bg": (0.95, 0.94, 0.92), "bg_strength": 1.25, "floor": (0.88, 0.87, 0.85),
                "pool": (1.0, 0.97, 0.92), "pool_energy": 2.2e4, "pool_deg": 30},
@@ -87,8 +88,8 @@ def m_diamond():   # fake dispersion: three glass layers, one per colour channel
 
 def m_ruby():
     m, nt, out = mat("MAT_Ruby"); g = nt.nodes.new("ShaderNodeBsdfGlass")
-    g.inputs["Color"].default_value = (1.0, 0.3, 0.34, 1); g.inputs["IOR"].default_value = 1.77; g.inputs["Roughness"].default_value = 0.0
-    v = nt.nodes.new("ShaderNodeVolumeAbsorption"); v.inputs["Color"].default_value = (*C["ruby"], 1); v.inputs["Density"].default_value = 30.0
+    g.inputs["Color"].default_value = (1.0, 0.16, 0.2, 1); g.inputs["IOR"].default_value = 1.77   # v14: more vivid (user: more saturation); g.inputs["Roughness"].default_value = 0.0
+    v = nt.nodes.new("ShaderNodeVolumeAbsorption"); v.inputs["Color"].default_value = (*C["ruby"], 1); v.inputs["Density"].default_value = 18.0
     nt.links.new(g.outputs[0], out.inputs["Surface"]); nt.links.new(v.outputs[0], out.inputs["Volume"]); return m
 
 def m_floor():
@@ -360,6 +361,6 @@ for n in list(ct.nodes): ct.nodes.remove(n)
 rl = ct.nodes.new("CompositorNodeRLayers"); gl = ct.nodes.new("CompositorNodeGlare"); co = ct.nodes.new("CompositorNodeComposite")
 gl.glare_type = "STREAKS"; gl.streaks = 4; gl.angle_offset = math.radians(22); gl.fade = 0.88; gl.threshold = 5.0; gl.mix = -0.7; gl.quality = "HIGH"
 ct.links.new(rl.outputs["Image"], gl.inputs["Image"]); ct.links.new(gl.outputs["Image"], co.inputs["Image"])
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ruby_sweep; ruby_sweep.build(S, CFG); ruby_sweep.fix_gem_reflections(S, CFG); ruby_sweep.add_diamond_cards(S, CFG); ruby_sweep.add_slow_turns(S, CFG); ruby_sweep.white_studio(S, CFG)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ruby_sweep; ruby_sweep.build(S, CFG); ruby_sweep.fix_gem_reflections(S, CFG); ruby_sweep.add_diamond_cards(S, CFG); ruby_sweep.add_slow_turns(S, CFG); ruby_sweep.white_studio(S, CFG); ruby_sweep.grade(S, CFG)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(OUT))
 print("saved", OUT)

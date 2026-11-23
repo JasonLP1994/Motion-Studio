@@ -88,3 +88,17 @@ def white_studio(S, CFG):
     b.inputs["Base Color"].default_value = (*st["floor"], 1)
     sp = bpy.data.objects.get("LGT_Spot_Pool")
     if sp: sp.data.color = st["pool"]; sp.data.energy = st["pool_energy"]; sp.data.spot_size = math.radians(st["pool_deg"])
+
+def grade(S, CFG):
+    """User: "we could have more saturation". AgX desaturates bright colours, so: a punchier AgX look + a saturation lift in the
+    compositor (after the glare), with the off-white studio kept near neutral by a small value lift only."""
+    g = CFG.get("grade")
+    if not g: return
+    try: S.view_settings.look = g["look"]
+    except TypeError: pass
+    ct = S.node_tree
+    for n in [n for n in ct.nodes if n.name == "GRADE_SAT"]: ct.nodes.remove(n)
+    gl = next(n for n in ct.nodes if n.type == "GLARE"); co = next(n for n in ct.nodes if n.type == "COMPOSITE")
+    hs = ct.nodes.new("CompositorNodeHueSat"); hs.name = "GRADE_SAT"
+    hs.inputs["Saturation"].default_value = g["saturation"]; hs.inputs["Value"].default_value = g.get("value", 1.0)
+    ct.links.new(gl.outputs["Image"], hs.inputs["Image"]); ct.links.new(hs.outputs["Image"], co.inputs["Image"])

@@ -65,3 +65,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (gems): give step-cut / large stones something white to mirror (diamond-only light-linked cards, floor hidden from transmission rays). DON'T let a low camera show a diamond reflecting the black set (it reads dark grey).
 - DO (jewellery): add very slight, slow turns (a few degrees over seconds) so facets roll through the light. DON'T spin fast.
 - DON'T use grayscale PNGs as CSS mask images: masks read ALPHA (save RGBA with alpha = mask), and preload them with <Img> or Remotion renders before they load.
+- DO (gems): get saturation from the stones (brighter glass colour, lower absorption density) + a mild saturation lift. DON'T use AgX Punchy on a white studio (it greys the background).

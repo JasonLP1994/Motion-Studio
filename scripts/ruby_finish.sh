@@ -4,7 +4,7 @@
 # 3) compact AI upscale 1280x720 -> 1920x1080 into public/ruby/frames/f_NNNN.png, 4) Remotion RubyFilm (3D + logo ending),
 # 5) mux the -14 LUFS soundtrack. Never overwrites: pass the version, e.g. bash scripts/ruby_finish.sh v1
 set -e; cd "$(dirname "$0")/.."
-V=${1:-v1}; SRC=renders/frames/ruby-full-v12; SEQ=renders/frames/ruby-seq-v12; UP=public/ruby/frames
+V=${1:-v1}; SRC=renders/frames/ruby-full-v14; SEQ=renders/frames/ruby-seq-v14; UP=public/ruby/frames
 OUT=renders/rubyred-film-$V.mp4; [ -e "$OUT" ] && { echo "exists: $OUT"; exit 1; }
 mkdir -p "$SEQ" "$UP"
 for f in "$SRC"/d_*.png; do n=$(basename "$f" .png); [ -e "$SEQ/f_${n#d_}.png" ] || cp "$f" "$SEQ/f_${n#d_}.png"; done
