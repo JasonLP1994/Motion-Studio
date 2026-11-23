@@ -79,10 +79,10 @@ verts_, faces_ = [], []
 for t in T:
     for a_ in A:
         wb = (1 - math.cos(a_)) / 2                                   # 0 at the front opening, 1 at the back
-        ztop = E("HOOD_SIDE_Z", 1.40) + E("HOOD_RISE", 0.24) * wb ** 1.3
+        ztop = E("HOOD_SIDE_Z", 1.40) + E("HOOD_RISE", 0.24) * wb ** 1.3 + 0.014 * math.sin(a_ * 6 + 0.4) * wb   # wavy fabric edge
         z = 1.32 + (ztop - 1.32) * t
         r = 0.168 + 0.02 * wb + 0.055 * wb * math.sin(math.pi * min(t, 0.9) / 0.9 * 0.85) + 0.02 * t
-        r += 0.03 * max(0.0, (t - 0.8) / 0.2) ** 2                    # rim rolls outward so the lining shows
+        r += 0.045 * max(0.0, (t - 0.72) / 0.28) ** 1.5              # edge folds open (flat, not rolled) so the lining shows
         r += 0.008 * math.sin(a_ * 5 + 1.3) * t * wb                   # soft folds
         verts_.append((r * math.sin(a_), -r * math.cos(a_) + 0.03 * wb, z))
 for i in range(NT_ - 1):
@@ -92,7 +92,7 @@ hm_ = bpy.data.meshes.new("hood"); hm_.from_pydata(verts_, [], faces_)
 hd = bpy.data.objects.new("SM_Hood", hm_); COL.objects.link(hd)
 hv = V(hd)
 setV(hd, hv); hd.data.polygons.foreach_set("use_smooth", [True] * len(hd.data.polygons))
-sd = hd.modifiers.new("Thick", 'SOLIDIFY'); sd.thickness = 0.035; sd.offset = -1.0; sd.use_rim = True; sd.material_offset = 1; sd.material_offset_rim = 1
+sd = hd.modifiers.new("Thick", 'SOLIDIFY'); sd.thickness = 0.014; sd.offset = -1.0; sd.use_rim = True; sd.material_offset = 1; sd.material_offset_rim = 0   # thin fabric, navy edge
 hd.modifiers.new("Sub", 'SUBSURF').levels = 2
 
 # ---------------------------------------------------------------- helmet: width 0.40 m, neck ring seated inside the collar
@@ -194,9 +194,36 @@ for n in hmat.node_tree.nodes:
     if n.type == 'MATH' and n.operation == 'GREATER_THAN' and abs(n.inputs[1].default_value - 1.28) < 1e-6: n.inputs[1].default_value = -10.0
 hd.data.materials.append(hmat)
 lin = bpy.data.materials.new("MAT_PinkLining"); lin.use_nodes = True; lb = lin.node_tree.nodes["Principled BSDF"]
-lb.inputs["Base Color"].default_value = (*PINK, 1); lb.inputs["Roughness"].default_value = 0.5; lb.inputs["Sheen Weight"].default_value = 0.4
-lb.inputs["Emission Color"].default_value = (*PINK, 1); lb.inputs["Emission Strength"].default_value = 0.18
+lb.inputs["Base Color"].default_value = (*PINK, 1); lb.inputs["Roughness"].default_value = 0.65; lb.inputs["Sheen Weight"].default_value = 0.3
+lb.inputs["Emission Color"].default_value = (*PINK, 1); lb.inputs["Emission Strength"].default_value = 0.05
 hd.data.materials.append(lin)
+
+# ---------------------------------------------------------------- sleeve print: PD-01 (white) + PHILLIPS DIGITAL (pink) on the near upper arm
+from mathutils.bvhtree import BVHTree
+coat_bvh = BVHTree.FromPolygons([v.co.copy() for v in coat.data.vertices], [tuple(p.vertices) for p in coat.data.polygons])
+def flatm(name, rgb, rough, emit=0.0):
+    m = bpy.data.materials.new(name); m.use_nodes = True; b_ = m.node_tree.nodes["Principled BSDF"]
+    b_.inputs["Base Color"].default_value = (*rgb, 1); b_.inputs["Roughness"].default_value = rough
+    if emit: b_.inputs["Emission Color"].default_value = (*rgb, 1); b_.inputs["Emission Strength"].default_value = emit
+    return m
+FONT = "/home/user/Motion-Studio/public/fonts/BarlowCondensed-BlackItalic.ttf"
+def sleeve_text(body, size, z, y0, mat, font=FONT):
+    hit = coat_bvh.ray_cast(Vector((-1.0, y0, z)), Vector((1, 0, 0)))
+    if hit[0] is None: print("PRINT MISS", body); return None
+    cd = bpy.data.curves.new("txt", 'FONT'); cd.body = body; cd.size = size; cd.align_x = 'CENTER'; cd.align_y = 'CENTER'
+    cd.font = bpy.data.fonts.load(font, check_existing=True)
+    t = bpy.data.objects.new("SM_Print_" + body[:6], cd); COL.objects.link(t)
+    t.location = hit[0] + Vector((-0.03, 0, 0)); t.rotation_euler = (math.radians(90), math.radians(E("PRINT_TILT", -12)), math.radians(-90))
+    bpy.context.view_layer.objects.active = t; t.select_set(True); bpy.ops.object.convert(target='MESH'); t.select_set(False)
+    t.data.materials.append(mat)
+    sw = t.modifiers.new("Wrap", 'SHRINKWRAP'); sw.target = coat; sw.wrap_method = 'PROJECT'; sw.use_project_x = True
+    sw.use_negative_direction = True; sw.use_positive_direction = True; sw.offset = 0.003
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(t.evaluated_get(dg)); t.modifiers.clear(); t.data = me
+    return t
+PZ, PY = E("PRINT_Z", 1.25), E("PRINT_Y", -0.06)
+sleeve_text("PD-01", E("PRINT_SIZE", 0.11), PZ, PY, flatm("MAT_PrintWhite", (0.85, 0.86, 0.92), 0.55))
+sleeve_text("PHILLIPS DIGITAL", 0.033, PZ - 0.072, PY + 0.012, flatm("MAT_PrintPink", PINK, 0.5, 0.2))
 
 # ---------------------------------------------------------------- lights: product rig, linked to the figure only
 def light(name, loc, energy, sx, sy, col_=(1, 1, 1), look=None, glossy=True, diffuse=True):
