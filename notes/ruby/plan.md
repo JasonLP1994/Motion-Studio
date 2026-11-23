@@ -91,3 +91,12 @@ of the frame, centred, with the chain dominating.
 - MB / MC: 100 mm side macros on the bail swinging in and the chain threading through.
 - HERO + drop: 70 mm low (22 deg) front 3/4, closer, slow arc; follows the fall slightly; pendant + long shadow diagonal.
 - scripts/blender/ruby_recam.py rebuilds only the cameras from CFG["cams"] into the baked v3 scene -> ruby-v4.blend (no re-bake).
+
+## v5-v8 (user): more glisten, brighter diamond, slow turns
+- v5 "get the diamonds to glisten more ... move a light with them": 3 small bright point lights orbit the piece all film
+  (CFG["sweep"], scripts/blender/ruby_sweep.py), product-only light linking, glare threshold 3.5.
+- v6 dark grey diamond from low cameras: floor invisible to transmission rays only + hidden dome mirrored below the horizon (abs Z)
+  with a soft horizon band. v7: white "cards" (area lights linked to the centre diamond only, hidden from camera) -> step facets read white.
+- v8 "rotate very slightly ... slow motion ... at certain points": delta-rotation turns on PENDANT (max ~5 deg/s, back to 0 by 274,
+  so the drop bake stays valid) and an extra slow spin of the floating diamond 150-199 (CFG["turns"]).
+- Current scene: renders/farm/ruby-pendant-v1/ruby-v8.blend (built from the baked v3 with ruby_recam.py).

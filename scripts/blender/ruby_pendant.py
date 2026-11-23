@@ -18,14 +18,22 @@ CFG = {
     # glisten: small bright lights orbiting the piece all film long -> highlights crawl across the facets (scripts/blender/ruby_sweep.py)
     # each light: (orbit radius, height, revolutions over the film, start angle deg, watts)
     "sweep": {"lights": [(9.0, 8.0, 1.0, 0, 320), (8.0, 10.0, -0.75, 120, 260), (10.0, 6.0, 0.5, 240, 220)],
-              "color": (1.0, 0.98, 0.95), "size": 0.05, "glare_threshold": 3.5},
+              "color": (1.0, 0.98, 0.95), "size": 0.05, "glare_threshold": 3.5,
+              "horizon_bands": [(0.08, 0.0), (0.15, 0.7), (0.22, 0.02)],
+              # white cards the diamond mirrors: (azimuth deg, distance, height, width, height, watts)
+              "cards": [(215, 8.0, 1.2, 6.0, 2.5, 1300), (325, 8.0, 0.8, 6.0, 2.5, 1100), (90, 9.0, 2.0, 8.0, 3.0, 900)]},
+    # slow, slight turns for glisten (user: "very slightly and slow motion"): (frame, (x, y, z) degrees), smooth in between.
+    # pendant returns to 0 before the drop nudge (281); the diamond's extra spin happens while it floats and is 0 again by landing.
+    "turns": {"pendant": [(1, (0, 0, 0)), (36, (0, 0, 3)), (108, (2, 0, -5)), (144, (4, -3, -2)), (198, (0, -4, 4)),
+                          (252, (-2, 0, 2)), (274, (0, 0, 0)), (289, (0, 0, 0))],
+              "diamond": [(150, (0, 0, 0)), (175, (4, 0, 10)), (194, (2, 3, 4)), (199, (0, 0, 0))]},   # soft band near the horizon for low cameras (diamond fire)
     # the drop (rigid-body dynamics, C4D-style): pendant + chain fall onto the floor on the last bar and settle
     "drop": 289, "gravity": -14.0, "nudge": (281, 289),
     # cameras: name, first frame, (pos start, pos end), (target start, target end), lens, f-stop, interpolation
     "cams": [   # v4 "premium" pass: piece fills the frame, low grazing angles, parts crop the edges, slow arcs (notes/ruby/plan.md)
         ("MAC", 1, ((0.9, -1.1, 2.3), (-0.4, -1.3, 2.1)), ((0, -0.1, 0.18), (0, -0.1, 0.18)), 100, 2.8, "LINEAR"),
         ("TOP", 37, ((0.3, -0.15, 5.2), (0.0, 0.15, 15.0)), ((0.3, -0.1, 0.0), (0.0, 0.25, -0.4)), 85, 8, "EXPO"),
-        ("TQ", 109, ((-5.32, -7.39, 4.63), (-4.28, -15.45, 8.87)), ((0, 0.2, -0.3), (0, 0.5, 0.1)), 85, 11, "LINEAR"),
+        ("TQ", 109, ((-5.32, -7.39, 4.63), (-3.6, -12.9, 7.5)), ((0, 0.2, -0.3), (0, 0.5, 0.05)), 85, 11, "LINEAR"),
         ("MA", 199, ((5.44, -9.61, 5.07), (4.53, -7.95, 3.93)), ((0, -0.2, 0.0), (0, -0.1, -0.3)), 100, 5.6, "LINEAR"),
         ("MB", 217, ((8.08, 4.44, 2.0), (6.86, 5.36, 1.62)), ((0, 1.5, -0.3), (0, 1.4, -0.5)), 100, 5.6, "LINEAR"),
         ("MC", 235, ((3.8, 4.42, 0.95), (2.88, 4.64, 0.73)), ((0, 1.76, -0.92), (0, 1.76, -0.92)), 100, 5.6, "LINEAR"),
@@ -347,6 +355,6 @@ for n in list(ct.nodes): ct.nodes.remove(n)
 rl = ct.nodes.new("CompositorNodeRLayers"); gl = ct.nodes.new("CompositorNodeGlare"); co = ct.nodes.new("CompositorNodeComposite")
 gl.glare_type = "STREAKS"; gl.streaks = 4; gl.angle_offset = math.radians(22); gl.fade = 0.88; gl.threshold = 5.0; gl.mix = -0.7; gl.quality = "HIGH"
 ct.links.new(rl.outputs["Image"], gl.inputs["Image"]); ct.links.new(gl.outputs["Image"], co.inputs["Image"])
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ruby_sweep; ruby_sweep.build(S, CFG)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ruby_sweep; ruby_sweep.build(S, CFG); ruby_sweep.fix_gem_reflections(S, CFG); ruby_sweep.add_diamond_cards(S, CFG); ruby_sweep.add_slow_turns(S, CFG)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(OUT))
 print("saved", OUT)
