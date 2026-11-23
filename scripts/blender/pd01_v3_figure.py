@@ -216,12 +216,16 @@ PUFF = lambda k: (k + 0.5) * PITCH          # centre height of puff panel k (sea
 DECALS = [
     (DC + "decal_A.png", 'X', (E("PRINT_Y", -0.05), PUFF(14)), 0.128, side_m, True),      # sleeve PD-01 block, inside one puff panel
     (DC + "decal_C.png", 'X', (-0.10, PUFF(15)), 0.15, side_m, True),                        # micro spec text, next panel up
-    (DC + "decal_D.png", 'X', (-0.06, PUFF(13)), 0.12, side_m, True),                        # spec block, panel below
+    (DC + "decal_D.png", 'X', (-0.06, PUFF(13)), 0.10, side_m, True),                        # spec block, panel below
     # (DC + "decal_B.png", ...) pink zip tab: smeared on the curved collar, off for now
     (R + "decal_logo_pink.png", 'Y', (E("LOGO_X", -0.085), PUFF(15)), 0.04, front_m, False),     # hot-pink p. patch
 ]
+XMAX = {"decal_A.png": -0.26, "decal_D.png": -0.26, "decal_C.png": -0.12}    # print only on the outermost layer (no ghost on the torso behind the arm)
+posx = pn.nodes.new("ShaderNodeSeparateXYZ"); pn.links.new(pn.nodes.new("ShaderNodeNewGeometry").outputs["Position"], posx.inputs[0])
 cur = pb.inputs["Base Color"].links[0].from_socket; amax = None
 for img, axis, cen, wdt, msk, flp in DECALS:
+    xm = XMAX.get(os.path.basename(img))
+    if xm is not None: msk = mnode(pn, 'MULTIPLY', msk, mnode(pn, 'LESS_THAN', posx.outputs["X"], xm))
     im_ = bpy.data.images.load(img, check_existing=True); asp = im_.size[1] / im_.size[0]
     dc_, da_ = decal(pn, img, axis, cen, (wdt, wdt * asp), msk, flip_u=flp)
     cur = mix(pn, da_, cur, dc_); amax = da_ if amax is None else mnode(pn, 'MAXIMUM', amax, da_)
