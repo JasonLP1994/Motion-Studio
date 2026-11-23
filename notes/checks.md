@@ -72,3 +72,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: project clothing prints along the local surface normal (sticker), not a world axis: world-axis projection stretches on curves; add a thin depth slab so prints don't ghost onto layers behind.
 - DON'T: classify visor glass by hue alone; faintly blue-grey paint turned into mirror glass (silver patches). Gate by saturation AND value.
 - DON'T: run lensfx over a HUD composite with big white type (streaks cross the hero); apply it to the 3D plate before the type.
+- DON'T: hard-clip (tanh) a mix to raise loudness: AAC overshoots to +8 dBTP. Use the oversampled true-peak limiter in scripts/pd01_audio.py.

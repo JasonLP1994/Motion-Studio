@@ -69,3 +69,8 @@ tubes + pink hood lining with a light glint, visor HUD power-on flicker, pink ch
 EXPO pull-out from the visor to the approved hero frame (f217-245), slow creep to f360. Remotion PD01Anim: dark until 9 s, blue
 floods in on the reveal, HUD draws on at 10.2 s, glitch hits on every cut, end card at 12.6 s with the pink "p." logo + wordmark.
 Key frames: work/cyber3/animframes2/sheet.jpg (low-quality previews).
+- FINAL v2 (renders/pd01-v2.mp4 + -silent): 15 s, 1920x1080, 24 fps. 217 Cycles frames (720p, 24 spp, OIDN) -> RIFE fill to 360 ->
+  2xNomos upscale (keeps alpha) -> lensfx minimal on the plates -> Remotion PD01Anim (seq_final) -> finish product_minimal.
+  Audio: scripts/pd01_audio.py with a 4x-oversampled true-peak limiter (GAIN_DB=-11.6): -14.1 LUFS / -2.1 dBTP after AAC.
+  v1 had clipped AAC audio (tanh clipping overshoots +8 dBTP after encoding); not delivered.
+  Score 8.6/10 (layout 8.5, timing 8.5, readability 8.5, polish 9). Credits: Space Helmet (bluoppVR), Puffy Jacket (Enith2478), CC-BY 4.0.

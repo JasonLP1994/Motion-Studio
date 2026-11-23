@@ -3,9 +3,10 @@
 # crackles + hit (shot 4), HUD boot blips + key clicks (6-7.5 s), riser 7.5-9 s, reveal whoosh + sub drop + full DROP at 9 s
 # (drums, saw bass, chords), neon buzz under the outline (11.6-12.6 s), glitch ticks on every cut, logo impact at 13.17 s and a
 # final chord tail. Stereo. Usage: python3 scripts/pd01_audio.py OUT.wav   (then loudness to -14 LUFS with ffmpeg)
-import sys, wave
+import sys, wave, os
 import numpy as np
 SR, DUR = 48000, 15.0
+GAIN_DB = float(os.environ.get('GAIN_DB', '-13.5'))   # RMS target (dBFS) before limiting
 N = int(SR * DUR); t = np.arange(N) / SR
 L = np.zeros(N); R = np.zeros(N); rng = np.random.default_rng(11)
 def add(sig, at, g=1.0, pan=0.0):
@@ -92,7 +93,21 @@ for i, m in enumerate([45, 57, 64, 69, 72]):
     add(lp_fast(saw(nf(m), 1.8, 0.005), 16) * adsr(1.8, 0.05, 1.2), 316 / 24, 0.05, pan=(i - 2) * 0.3)
 # fade the last 0.4 s
 fade = np.ones(N); fade[-int(SR * 0.4):] = np.linspace(1, 0, int(SR * 0.4)); L *= fade; R *= fade
-st = np.stack([L, R], 1); st = np.tanh(st * 2.2) / np.tanh(2.2); st = st / np.abs(st).max() * 0.8
+st = np.stack([L, R], 1)
+# loudness then a true-peak limiter (4x oversampled detection, 3 ms lookahead, 60 ms release) instead of hard clipping:
+# clipped/square waves overshoot after AAC encoding. Target about -14 LUFS with true peak <= -2 dB before encoding.
+def upsample4(x):
+    n = len(x); X = np.fft.rfft(x); Y = np.zeros(n * 2 + 1, complex); Y[:len(X)] = X
+    return np.fft.irfft(Y, n * 4) * 4
+def limit(st, ceil):
+    pk = np.maximum(np.abs(upsample4(st[:, 0])), np.abs(upsample4(st[:, 1]))).reshape(-1, 4).max(1)
+    g = np.minimum(1.0, ceil / np.maximum(pk, 1e-9))
+    la = int(0.003 * SR); g = np.minimum.reduce([np.roll(g, -k) for k in range(la)])
+    rel = np.exp(-1 / (0.06 * SR)); out = np.empty_like(g); y = 1.0
+    for i, v in enumerate(g): y = v if v < y else v + (y - v) * rel; out[i] = y
+    return st * out[:, None]
+st = st / np.sqrt((st ** 2).mean()) * 10 ** (GAIN_DB / 20)
+for _ in range(2): st = limit(st, 10 ** (-2.2 / 20))
 with wave.open(sys.argv[1], "wb") as wf:
     wf.setnchannels(2); wf.setsampwidth(2); wf.setframerate(SR); wf.writeframes((st * 32767).astype(np.int16).tobytes())
 print("ok", sys.argv[1], DUR, "s")
