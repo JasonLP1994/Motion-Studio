@@ -1,6 +1,6 @@
 # Turn a transparent render into a flat two-tone logo (the "3D form becomes a stencil logo" grammar): two alpha masks,
 # DARK (shadow shapes) and LIGHT (highlight shapes), so the composite can paint them any colours (white/black/red flicker).
-# Usage: python3 scripts/logo/two_tone.py <in_rgba.png> <out_prefix> [threshold 0-1] [blur px] [width] [chunk width px] [outline px]
+# Usage: python3 scripts/logo/two_tone.py <in_rgba.png> <out_prefix> [threshold 0-1] [blur px] [width] [chunk width px] [outline px] [stone_mask.png stone outline px]
 import sys
 import numpy as np
 from PIL import Image, ImageFilter
@@ -31,6 +31,13 @@ if ring_px:
     sh = Image.fromarray((inside * 255).astype(np.uint8))
     er = np.asarray(sh.filter(ImageFilter.MinFilter(ring_px * 2 + 1))) > 127
     dark = dark | (inside & ~er); light = light & er
+# optional clean centre stone: solid light fill with a dark outline instead of noisy refraction blobs
+if len(sys.argv) > 8:
+    st = Image.open(sys.argv[8]).convert("RGBA").resize(im.size, Image.LANCZOS).getchannel("A")
+    stone = np.asarray(st.filter(ImageFilter.GaussianBlur(1.5))) > 127
+    sr = int(sys.argv[9]) if len(sys.argv) > 9 else 10
+    core = np.asarray(Image.fromarray((stone * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(sr * 2 + 1))) > 127
+    light = (light & ~stone) | core; dark = (dark & ~stone) | (stone & ~core)
 for name, m in (("dark", dark), ("light", light), ("shape", inside)):
     al = Image.fromarray((m * 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(0.7))
     out = Image.new("RGBA", al.size, (255, 255, 255, 0)); out.putalpha(al); out.save(f"{pre}-{name}.png")   # CSS masks read alpha

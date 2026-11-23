@@ -8,7 +8,7 @@ export const rubyConfig = {
   word: "RUBYRED",
   font: { file: "fonts/anton-latin-400-normal.woff2", family: "RubyAnton" },
   colors: { red: "#C8102E", white: "#FFFFFF", black: "#000000", cyan: "#00E5FF" },
-  title: { in: 343, size: 300, y: 190, tracking: 6, slam: 1.14, glitchFrames: 10, color: "red" },   // red: the set is off-white now
+  title: { in: 343, size: 260, y: 165, tracking: 6, slam: 1.14, glitchFrames: 10, color: "red" },   // red: the set is off-white now
   // 3D -> stencil -> flicker (2 frames per state): [background, light shapes, dark shapes, which art]
   flickerStart: 379, flickerStep: 2,
   flicker: [

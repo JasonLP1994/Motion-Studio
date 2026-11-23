@@ -25,7 +25,7 @@ CFG = {
               "color": (1.0, 0.98, 0.95), "size": 0.05, "glare_threshold": 3.5,
               "horizon_bands": [(0.08, 0.0), (0.15, 0.7), (0.22, 0.02)],
               # white cards the diamond mirrors: (azimuth deg, distance, height, width, height, watts)
-              "cards": [(215, 8.0, 1.2, 6.0, 2.5, 1300), (325, 8.0, 0.8, 6.0, 2.5, 1100), (90, 9.0, 2.0, 8.0, 3.0, 900)]},
+              "cards": [(215, 8.0, 1.2, 6.0, 2.5, 1300), (325, 8.0, 0.8, 6.0, 2.5, 1100), (90, 9.0, 2.0, 8.0, 3.0, 900), (250, 7.0, 0.2, 5.0, 2.0, 1200)]},   # last one: faces the END camera
     # slow, slight turns for glisten (user: "very slightly and slow motion"): (frame, (x, y, z) degrees), smooth in between.
     # pendant returns to 0 before the drop nudge (281); the diamond's extra spin happens while it floats and is 0 again by landing.
     "turns": {"pendant": [(1, (0, 0, 0)), (36, (0, 0, 3)), (108, (2, 0, -5)), (144, (4, -3, -2)), (198, (0, -4, 4)),
