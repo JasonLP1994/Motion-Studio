@@ -74,3 +74,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DON'T: run lensfx over a HUD composite with big white type (streaks cross the hero); apply it to the 3D plate before the type.
 - DON'T: hard-clip (tanh) a mix to raise loudness: AAC overshoots to +8 dBTP. Use the oversampled true-peak limiter in scripts/pd01_audio.py.
 - DO: when retargeting onto an Auto-Rig Pro rig, re-parent face aim targets (eye.L/.R) to head.x or the eyes stay behind.
+- DON'T: hide lights from glossy rays to clean up floor reflections; it kills every highlight on glossy materials. Exclude the floor with light linking instead.
