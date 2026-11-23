@@ -67,3 +67,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO keep product finishing minimal (product_minimal + lens preset minimal): no warm tint/leaks/ghosts on clean premium products; they browned the blue glass and looked hazy.
 - DO: when a long queue dies mid-way, resume from the first unfinished step (scripts/case_finish_queue.sh pattern); RIFE fill and retime are not skip-aware.
 - DO: build contact sheets with PIL from the frame folder; Remotion's bundled ffmpeg has no fps/tile filters.
+- DO (user): PD-01 jacket = dark navy nylon (linear base ~0.0035/0.0055/0.020 under Standard -0.8 exposure), not black.

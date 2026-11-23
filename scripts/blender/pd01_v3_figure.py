@@ -176,7 +176,7 @@ pm = bpy.data.materials.new("MAT_PufferNylon"); pm.use_nodes = True; pn = pm.nod
 geo = pn.nodes.new("ShaderNodeNewGeometry")
 sep = pn.nodes.new("ShaderNodeSeparateXYZ"); pn.links.new(geo.outputs["Position"], sep.inputs[0])
 lining = mnode(pn, 'MULTIPLY', geo.outputs["Backfacing"], mnode(pn, 'GREATER_THAN', sep.outputs["Z"], 1.28))
-pn.links.new(mix(pn, lining, (0.0025, 0.003, 0.006, 1), (*PINK, 1)), pb.inputs["Base Color"])
+pn.links.new(mix(pn, lining, (E("NAVY_R", 0.0035), E("NAVY_G", 0.0055), E("NAVY_B", 0.020), 1), (*PINK, 1)), pb.inputs["Base Color"])
 pn.links.new(mixf(pn, lining, 0.62, 0.55), pb.inputs["Roughness"])
 zq = mnode(pn, 'MULTIPLY', sep.outputs["Z"], 2 * math.pi / 0.085)
 sn = pn.nodes.new("ShaderNodeMath"); sn.operation = 'SINE'; pn.links.new(zq, sn.inputs[0])
