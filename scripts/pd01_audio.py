@@ -92,7 +92,7 @@ for i, m in enumerate([45, 57, 64, 69, 72]):
     add(lp_fast(saw(nf(m), 1.8, 0.005), 16) * adsr(1.8, 0.05, 1.2), 316 / 24, 0.05, pan=(i - 2) * 0.3)
 # fade the last 0.4 s
 fade = np.ones(N); fade[-int(SR * 0.4):] = np.linspace(1, 0, int(SR * 0.4)); L *= fade; R *= fade
-st = np.stack([L, R], 1); st = np.tanh(st * 1.3) / np.tanh(1.3); st = st / np.abs(st).max() * 0.89
+st = np.stack([L, R], 1); st = np.tanh(st * 2.2) / np.tanh(2.2); st = st / np.abs(st).max() * 0.8
 with wave.open(sys.argv[1], "wb") as wf:
     wf.setnchannels(2); wf.setsampwidth(2); wf.setframerate(SR); wf.writeframes((st * 32767).astype(np.int16).tobytes())
 print("ok", sys.argv[1], DUR, "s")
