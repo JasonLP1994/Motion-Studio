@@ -34,3 +34,12 @@ kinetic-typography (HUD), remotion-transitions (glitch), logo-animation, sound-e
   pink belongs at grazing angles (rim) and on emissive accents.
 - Look frames: notes/frames/pd01-look4.jpg. Next: cleaner black shell, HUD layout comp, style frames, camera plan.
 - Shell clean-up: worn-paint blotches in the source albedo/roughness -> helmet gunmetal multiplier 0.06 and an even roughness 0.2 above the collar. Look: notes/frames/pd01-look5.jpg.
+
+## v2 figure (user: "more hot pink on the material", "hoodie and helmet aren't together")
+- Models: "Scifi Helmet" by sunix + "Hoodie" by Badboy17Aiden (both CC-BY 4.0). Script: scripts/blender/pd01_v2_figure.py.
+- Paint from the helmet's own maps: work/cyber2/tex/mag.png (rear shell, from the metal map) = hot pink; seam.png (panel lines,
+  labels, rivets, from the normal map) = glowing pink on black, black on the pink shell. Pink side modules + triangle decals modelled.
+- Fit: hood deleted above the neckline; a collar is lofted from the neck opening up to the helmet's own bottom outline (helmet sits
+  inside it), plus a pink-lined hood roll behind the neck. Sleeves rotated 28 deg down from the A-pose.
+- Colour: Standard view, exposure -0.8, PINK linear (0.9, 0, 0.12): AgX turned hot pink pastel/salmon.
+- Look: notes/frames/pd01-v2-look18.jpg. Open: dark band on the jacket front, collar lining barely visible.
