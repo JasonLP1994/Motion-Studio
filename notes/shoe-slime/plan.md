@@ -55,3 +55,6 @@ solid object, then colours into a black-and-white shoe design. Backdrop like the
 - Lighting is now dark blue to light blue only (no rainbow, no orange): blue gradient softbox, blue wall glow, cool rim and strip light. A light-blue glint sweeps across the shoe at f332-352, then the OOZE logo fades in from f330.
 - Veins are excluded from the softbox (light linking) so they stay inky. No tagline: the user gave no words.
 - Farm build: renders/farm/shoe-slime-v2/shoe-slime.blend (local only, never GitHub).
+
+## v2 grade (user: "use our compositing tools to bring it more to life")
+scripts/grade/shoe_grade.py on the 1080p upscaled frames: smooth lift over the dark middle (4.5-10.5 s), opened shadows, saturation 1.22, gentle S-curve, highlight bloom, vignette, grain -> renders/shoe-slime-local-hq-v2.mp4 (same logo overlay + sound v7).

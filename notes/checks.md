@@ -66,3 +66,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (jewellery): add very slight, slow turns (a few degrees over seconds) so facets roll through the light. DON'T spin fast.
 - DON'T use grayscale PNGs as CSS mask images: masks read ALPHA (save RGBA with alpha = mask), and preload them with <Img> or Remotion renders before they load.
 - DO (gems): get saturation from the stones (brighter glass colour, lower absorption density) + a mild saturation lift. DON'T use AgX Punchy on a white studio (it greys the background).
+- DON'T grade in ffmpeg with rgb48le/gbrpf32 + blend/colorbalance (purple/teal casts). DO grade in numpy (scripts/grade/shoe_grade.py): lift, saturation, S-curve, screen bloom, vignette, grain.
