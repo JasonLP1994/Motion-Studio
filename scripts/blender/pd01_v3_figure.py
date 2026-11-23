@@ -49,9 +49,21 @@ t = np.clip((co[:, 2] - 1.34) / 0.16, 0, 1); t = t * t * (3 - 2 * t); k = 1.0 + 
 co[:, 0] *= k; co[:, 1] = co[:, 1] * k
 co[:, 2] += 0.04 * t
 setV(coat, co)
+# close the open front: slide both front panels toward the centre line by the measured gap (wider at the flared collar)
+ZG = [0.45, 0.6, 0.8, 1.0, 1.2, 1.3, 1.4, 1.48, 1.58]; GG = [0.0, 0.03, 0.068, 0.052, 0.055, 0.038, 0.033, 0.072, 0.09]
+g = (np.interp(co[:, 2], ZG, GG) + 0.006) * E("CLOSE", 1.0)
+front = np.clip((co[:, 1].mean() - 0.02 - co[:, 1]) / 0.06, 0, 1)
+ax_ = np.abs(co[:, 0]); w = np.clip((0.30 - ax_) / 0.16, 0, 1); w = w * w * (3 - 2 * w)
+co[:, 0] -= np.sign(co[:, 0]) * np.minimum(g * w * front, ax_)
+setV(coat, co)
+# smooth away the model's sculpted lumps (they read as abs) before adding clean quilting
+bm = bmesh.new(); bm.from_mesh(coat.data)
+tv = [v for v in bm.verts if v.co.z < 1.36]
+for _ in range(int(E("SMOOTH_IT", 12))): bmesh.ops.smooth_vert(bm, verts=tv, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+bm.to_mesh(coat.data); bm.free(); coat.data.update(); co = V(coat)
 # quilted baffles: push the surface in along the normals at evenly spaced horizontal seams (real geometry, not just shading)
 nrm = np.empty(len(coat.data.vertices) * 3); coat.data.vertices.foreach_get("normal", nrm); nrm = nrm.reshape(-1, 3)
-PITCH, DEPTH = E("BAFFLE", 0.085), E("BAFFLE_D", 0.012)
+PITCH, DEPTH = E("BAFFLE", 0.085), E("BAFFLE_D", 0.018)
 f = np.abs(np.sin(np.pi * co[:, 2] / PITCH)) ** 0.45 - 1.0           # 0 on the puff, -1 at the seam
 f *= (co[:, 2] < 1.40)                                               # leave the collar smooth
 setV(coat, co + nrm * (f * DEPTH)[:, None])
@@ -87,12 +99,27 @@ hd.modifiers.new("Sub", 'SUBSURF').levels = 2
 helm = import_one(HELM, "SM_Helmet")
 co = V(helm); s = E("HELM_W", 0.46) / (co[:, 0].max() - co[:, 0].min()); co *= s
 b = co[co[:, 2] < co[:, 2].min() + 0.25 * s]
-co -= [b[:, 0].mean(), b[:, 1].mean() + E("HELM_DY", 0.0), co[:, 2].min() - (1.50 - E("HELM_SINK", 0.07))]
+co -= [b[:, 0].mean(), b[:, 1].mean() + E("HELM_DY", 0.07), co[:, 2].min() - (1.50 - E("HELM_SINK", 0.07))]
 th = math.radians(E("HELM_PITCH", 12)); piv = np.array([0.0, 0.0, co[:, 2].min()])
 q = co - piv; y_, z_ = q[:, 1].copy(), q[:, 2].copy(); q[:, 1] = y_ * math.cos(th) - z_ * math.sin(th); q[:, 2] = y_ * math.sin(th) + z_ * math.cos(th)
 co = q + piv; co[:, 2] += (1.50 - E("HELM_SINK", 0.07)) - co[:, 2].min()
 setV(helm, co)
 HC = Vector(co.mean(0)); HZ0, HZ1 = co[:, 2].min(), co[:, 2].max()
+
+# ---------------------------------------------------------------- zip: pink tape down the centre front
+cz = V(coat); fr = cz[(np.abs(cz[:, 0]) < 0.012) & (cz[:, 1] < cz[:, 1].mean())]
+zpts = []
+for z in np.linspace(0.62, 1.52, 46):
+    sl = fr[np.abs(fr[:, 2] - z) < 0.012]
+    if len(sl): zpts.append((0.0, sl[:, 1].min() - 0.006, z))
+if len(zpts) > 4:
+    cu = bpy.data.curves.new("zip", 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = 0.006; cu.bevel_resolution = 2
+    sp = cu.splines.new('POLY'); sp.points.add(len(zpts) - 1)
+    for i, q in enumerate(zpts): sp.points[i].co = (*q, 1)
+    zo = bpy.data.objects.new("SM_Zip", cu); COL.objects.link(zo)
+    zm = bpy.data.materials.new("MAT_ZipPink"); zm.use_nodes = True; zb = zm.node_tree.nodes["Principled BSDF"]
+    zb.inputs["Base Color"].default_value = (*PINK, 1); zb.inputs["Roughness"].default_value = 0.35
+    zb.inputs["Emission Color"].default_value = (*PINK, 1); zb.inputs["Emission Strength"].default_value = 0.3; cu.materials.append(zm)
 
 # ---------------------------------------------------------------- materials
 def mnode(nt, op, a, b_=None):
