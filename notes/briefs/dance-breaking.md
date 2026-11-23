@@ -45,3 +45,4 @@ f105-200 -> 368 frames (15.3 s), joined by scripts/blender/dance_merge_segments.
 scripts/blender/dance_cams.py, all following the smoothed hips: A floor-level 20 mm dolly-in, B feet 50 mm, C overhead rotating,
 D worm's eye 16 mm, E 3/4 orbit, F 70 mm push to the face/eyes. Board: work/dance/camera_board_v2.jpg.
 - Floor v1 (scripts/blender/dance_floor.py): glossy deep-blue stage floor fading into the blue world, pink neon dance ring, cyc hidden; character lights light-linked to EXCLUDE the floor (no panel squares) so the vinyl keeps its highlights. Board: work/dance/camera_board_v5.jpg.
+- Lens play (scripts/blender/dance_lens_fx.py, after cams + floor): A dolly zoom 60->18 mm with distance 4.2->1.25 m; B snap zooms 35<->85 mm every beat (12 f); C 24->40 mm; D 12 mm from 0.75 m; E crash zoom 35->90 mm last 10 f; F 135 mm + focus pull hood->eyes. Board: work/dance/lens_board_v2.jpg.

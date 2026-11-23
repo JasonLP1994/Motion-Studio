@@ -42,7 +42,7 @@ def C(f, t):
     return loc, Vector((h.x, h.y, 0.6)), 0
 def D(f, t):
     h = smooth(hip, f, 8, 177, 272); ang = math.radians(-100 + 30 * t)
-    return Vector((h.x + math.cos(ang) * 1.55, h.y + math.sin(ang) * 1.55, 0.07)), Vector((h.x, h.y, 1.05)), 8
+    return Vector((h.x + math.cos(ang) * 0.75, h.y + math.sin(ang) * 0.75, 0.06)), Vector((h.x, h.y, 0.95)), 8
 def E(f, t):
     h = smooth(hip, f, 10, 273, 336); ang = math.radians(-120 + 75 * ease(t)); d = 2.4
     return Vector((h.x + math.cos(ang) * d, h.y + math.sin(ang) * d, 0.95)), Vector((h.x, h.y, max(0.35, h.z * 0.8))), 0
