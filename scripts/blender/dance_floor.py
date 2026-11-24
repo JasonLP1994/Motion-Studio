@@ -57,4 +57,16 @@ def strip(name, loc, col, e):
     o.visible_diffuse = False; return o
 strip("LGT_FloorStrip_Pink", (0, 4.5, 3.0), (1.0, 0.05, 0.45), 300)
 strip("LGT_FloorStrip_Blue", (0, -4.5, 3.0), (0.3, 0.5, 1.0), 200)
+# contact shadow: a big soft overhead light that only lights the floor (light linking INCLUDE) and is invisible in reflections,
+# so the dancer casts a soft shadow where he touches down, without the light-panel squares coming back
+cs = bpy.data.collections.new("COL_FloorOnly"); S.collection.children.link(cs); cs.objects.link(fl)
+ld = bpy.data.lights.new("LGT_ContactShadow", 'AREA'); ld.shape = 'DISK'; ld.size = E("SHADOW_SIZE", 1.4); ld.energy = E("SHADOW_E", 900); ld.color = (0.55, 0.65, 1.0)
+lo = bpy.data.objects.new("LGT_ContactShadow", ld); S.collection.objects.link(lo); lo.location = (0, 0, 4.0)
+lo.visible_glossy = False; lo.light_linking.receiver_collection = cs
+for co in cs.collection_objects: co.light_linking.link_state = 'INCLUDE'
+# follow the dancer's hips so the shadow pool stays under him
+rig = bpy.data.objects["rig"]
+for f in range(S.frame_start, S.frame_end + 1):
+    S.frame_set(f); h = rig.matrix_world @ rig.pose.bones["root.x"].head
+    lo.location = (h.x, h.y, 4.0); lo.keyframe_insert("location", frame=f)
 bpy.ops.wm.save_as_mainfile(filepath=a[0]); print("FLOOR2 SAVED")

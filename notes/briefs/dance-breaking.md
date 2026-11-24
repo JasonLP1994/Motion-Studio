@@ -53,3 +53,12 @@ upscale -> lensfx minimal -> + 64-frame logo card (scripts/dance_endcard.py) -> 
 scripts/dance_audio.py (GAIN_DB=-11.4): -14.2 LUFS / -1.6 dBTP after AAC 320k. Render ~20 s/frame (~2 h, one relaunch).
 Score 8.2/10 (layout 8, timing 8.5, readability 8.5, polish 8). Weakest: feet close-up motion blur is very heavy; overhead shot
 floor reads darker than the other shots. Credits: CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), character: user's own.
+
+## v2 fixes (user: "doesn't react with the floor, hovers"; "dancing looks too loose, not realistic")
+- Hover was real: mean 16 cm, max 59 cm on contact frames (hip scaling + an up-only floor clamp). scripts/blender/dance_groundfix.py
+  keys the rig height per frame so his lowest evaluated mesh point sits on the floor whenever the CMU performer's mesh touches it.
+- Foot slide on planted feet 1-2.5 m/s -> 0: scripts/blender/dance_footlock.py pins contact spans and re-solves the legs with
+  analytic two-bone IK (3-frame blends, never across cuts).
+- Hands: loose fists (scripts/blender/dance_hands.py, ARP finger controls curl on local X).
+- Contact shadow: floor-only overhead disk light following the hips (light linking INCLUDE, invisible to glossy).
+Pipeline: edit_v1 -> groundfix -> hands -> footlock -> uv_look -> cams -> floor -> lens_fx -> work/dance/dance_final_v2.blend.
