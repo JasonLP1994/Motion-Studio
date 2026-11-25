@@ -68,3 +68,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO (gems): get saturation from the stones (brighter glass colour, lower absorption density) + a mild saturation lift. DON'T use AgX Punchy on a white studio (it greys the background).
 - DON'T grade in ffmpeg with rgb48le/gbrpf32 + blend/colorbalance (purple/teal casts). DO grade in numpy (scripts/grade/shoe_grade.py): lift, saturation, S-curve, screen bloom, vignette, grain.
 - DO (SUNO v2 design): fill the white sliver inside the U's shadow solid black (paint and 3D), like the rest of the block. Add any other 'make it black' fixes to MAKE_BLACK in scripts/suno/trace_v2.py.
+- DON'T schedule backup check-ins (send_later / scheduled tasks) for renders: the user finds they slow the workflow. Run renders as tracked background tasks and pick up when they finish.
