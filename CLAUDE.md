@@ -46,6 +46,7 @@ Suggest these alongside the kit's 10 templates. Each has a guide, prompt.txt, wo
 
 ## Extra skills (from the user's motion-graphics pack, MIT, in .claude/skills/)
 - `motion-broll`: one-shape motion B-roll cut into a talking-head video, timed to words.
+- `image-to-3d`: free picture-to-3D-model (TripoSR, MIT, CPU, ~30 s) for props and objects, checked in Blender before use. Not for flat artwork (trace and extrude that instead).
 - `object-separation`: cut a person, product or hand out of a video with SAM 2. This is the matte the kit's text-behind-a-person templates need on non-Mac machines.
 - `explainer-high-energy` (12–20 s hype promo), `explainer-default` (45–90 s product demo), `explainer-engaging` (10–30 s one-take story).
 - `sound-effects`: a measured sound pass with a bundled CC0 library.
