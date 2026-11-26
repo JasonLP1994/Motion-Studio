@@ -8,17 +8,18 @@ import bpy, sys, math, random
 from mathutils import Vector
 
 CFG = dict(
-    frames=300, fps=30, res=(1920, 1080),
+    frames=300, fps=30, res=(1080, 1350),          # vertical 4:5 portrait like the reference
     lime=(0.62, 1.0, 0.02), strip_strength=10.0, edge_radius=0.006, edge_thresh=(0.13, 0.26),
     patch_scale=2.2, patch_cut=0.56,                       # which edges glow (noise patches): higher cut = fewer strips
     armour=(0.020, 0.022, 0.026), armour_tex=0.12, armour_rough=(0.42, 0.70), armour_metal=0.55,
-    robe_dark=0.35,
+    robe_dark=0.12,
     reveal=[(1, 0.9), (60, 0.9), (150, 2.35)], band=0.06, glow=[(1, 1.0), (158, 1.0), (160, 2.6), (166, 0.7), (170, 1.15), (300, 1.15)],
-    visor=[(1, 0.0), (158, 0.0), (160, 20.0), (166, 5.0), (300, 6.0)],
+    visor=[(1, 0.0), (158, 0.0), (160, 2.5), (166, 0.6), (300, 0.7)],
     haze_density=0.05, haze_col=(0.30, 0.44, 0.62), back_energy=110, rim_energy=(900, 650), key_energy=140,
     rim_in=[(1, 0.0), (45, 1.0)],
-    cam_lens=85, fstop=1.2,
-    cam=[(1, (0.07, 1.40), 4.8, 0.0), (170, (0.07, 1.72), 3.9, 0.0), (300, (0.07, 1.74), 3.7, 7.0)],   # (frame, (x,z) target, dist, orbit deg)
+    cam_lens=85, fstop=2.8,
+    cam=[(1, (0.0, 1.64), 1.85, 14.0), (170, (0.0, 1.70), 1.55, 12.0), (300, (0.0, 1.71), 1.48, 9.0)],   # (frame, (x,z) target, dist, orbit deg): tight close-up, helmet top cropped
+    cam_up=0.22, cam_shift_x=-0.26,                      # negative = subject sits on the right side of the frame                                          # camera a little above the target, looking slightly down
     exposure=0.0,
 )
 argv = sys.argv[sys.argv.index("--") + 1:]; SRC, OUT = argv[0], argv[1]
@@ -157,18 +158,18 @@ _, r2 = area("rim_R", (1.8, 1.5, 2.2), (65, 0, 135), 0.8, CFG["rim_energy"][1], 
 for L, e in ((bL, CFG["back_energy"]), (r1, CFG["rim_energy"][0]), (r2, CFG["rim_energy"][1])):
     keys(L, "energy", [(f, e * v) for f, v in CFG["rim_in"]]); smooth_all(L)
 vl = bpy.data.lights.new("visor", "POINT"); vl.color = CFG["lime"]; vl.shadow_soft_size = 0.05
-vo = bpy.data.objects.new("visor", vl); S.collection.objects.link(vo); vo.location = (0.07, -0.42, hi.z - 0.42)
+vo = bpy.data.objects.new("visor", vl); S.collection.objects.link(vo); vo.location = (0.0, -0.20, 1.82)
 keys(vl, "energy", CFG["visor"]); smooth_all(vl)
 
 # ---------------- camera ----------------
-cam = bpy.data.cameras.new("cam"); cam.lens = CFG["cam_lens"]; cam.dof.use_dof = True; cam.dof.aperture_fstop = CFG["fstop"]
+cam = bpy.data.cameras.new("cam"); cam.lens = CFG["cam_lens"]; cam.shift_x = CFG["cam_shift_x"]; cam.dof.use_dof = True; cam.dof.aperture_fstop = CFG["fstop"]
 co = bpy.data.objects.new("cam", cam); S.collection.objects.link(co); S.camera = co
 fe = bpy.data.objects.new("focus", None); S.collection.objects.link(fe); cam.dof.focus_object = fe
 for fr, (tx, tz), dist, orb in CFG["cam"]:
     a = math.radians(orb); t = Vector((tx, 0.05, tz))
-    co.location = t + Vector((math.sin(a) * dist, -math.cos(a) * dist, 0.08)); co.rotation_euler = (t - co.location).to_track_quat("-Z", "Y").to_euler()
+    co.location = t + Vector((math.sin(a) * dist, -math.cos(a) * dist, CFG["cam_up"])); co.rotation_euler = (t - co.location).to_track_quat("-Z", "Y").to_euler()
     co.keyframe_insert("location", frame=fr); co.keyframe_insert("rotation_euler", frame=fr)
-    fe.location = Vector((tx, -0.25, tz)); fe.keyframe_insert("location", frame=fr)
+    fe.location = Vector((0.0, -0.08, 1.84)); fe.keyframe_insert("location", frame=fr)   # focus locked on the visor
 for ob in (co, fe):
     for fc in ob.animation_data.action.fcurves:
         for k in fc.keyframe_points: k.interpolation = "BEZIER"; k.easing = "AUTO"
