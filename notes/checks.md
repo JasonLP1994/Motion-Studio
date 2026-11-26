@@ -76,3 +76,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DO: when retargeting onto an Auto-Rig Pro rig, re-parent face aim targets (eye.L/.R) to head.x or the eyes stay behind.
 - DON'T: hide lights from glossy rays to clean up floor reflections; it kills every highlight on glossy materials. Exclude the floor with light linking instead.
 - DO: after any mocap retarget, measure lowest-mesh vs floor on contact frames and foot slide on planted feet before rendering (groundfix + footlock).
+- DO (grillz, TSST.blend): use the model's own visible teeth (the "GRILLS" collection) recoloured gold, with initials sculpted onto the front teeth. DON'T float big words in front of the teeth. The "TEETH" collection sits inside the switched-off "xxx" collection and never renders.
