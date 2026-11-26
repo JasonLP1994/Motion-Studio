@@ -1,0 +1,11 @@
+# Grillz animation (PD): brief
+- Purpose: social/showreel piece from the grillz still (renders/grillz-pd-v1.png).
+- Format: 10 s, 16:9 1920x1080, 24 fps.
+- Subject: the user's Genesis 8 man (inputs/grillz/model2/TSST.blend), gold teeth with blue-enamel P and D on the front teeth.
+- Motion: head turns, nods and tilts, plus jaw and grin, built in code. The model has no rig, so I build a small rig from computed weights.
+- Camera: edgy, cool angles (worm's-eye dutch, long-lens profile, top-down canted orbit), ending on the mouth.
+- Ending: a slow grin flashing the PD, with a light sweep glinting across the letters.
+- Look: punk pop palette (electric-blue skin, hot-magenta backdrop, yellow/orange accents), Cycles + OIDN.
+- Sound: original hard beat + whooshes on cuts + metallic "ting" on the glint, -14 LUFS, plus a silent copy.
+- Deliver: renders/grillz-anim-v1.mp4 (+ -silent), sent via file download, never GitHub.
+- Checkpoints: plan, then 3 style frames, then a low-res motion check, then the final render with a score.

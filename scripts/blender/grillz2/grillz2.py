@@ -243,5 +243,7 @@ if MODE == "teeth":
             ob.data.vertices.foreach_set("co", out.ravel()); ob.data.update(); ob.data.materials.append(mat)
             ob.data.polygons.foreach_set("use_smooth", [True] * len(ob.data.polygons))
         print("LETTER", ch, "on", o.name, "tooth w %.3f h %.3f" % (tw, th))
+if os.environ.get("ANIM") == "1":
+    exec(open(R + "work/grillz2/anim.py").read())
 if a and a[0] == "save":
     bpy.ops.wm.save_as_mainfile(filepath=a[1]); print("GRILLZ2 SAVED")
