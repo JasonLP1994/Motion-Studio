@@ -15,7 +15,11 @@ CFG = dict(
     sword_glow=[(1, 0.0), (14, 0.0), (15, 1.0), (17, 0.0), (24, 1.0), (25, 0.15), (27, 1.0), (33, 0.0), (41, 1.0), (43, 0.3),
                 (44, 1.0), (52, 1.0), (54, 0.0), (60, 0.0), (61, 1.0), (360, 1.0)],          # on/off flicker, then stays on
     sword_sweep=[(1, 1.2), (60, 1.2), (61, -0.05), (132, 1.08), (360, 1.08)],                # 0 = tip, 1 = hilt
-    bangs=dict(key=136, rim_L=140, rim_R=144, back_haze=148), dark_haze=0.03, haze_scale=0.6,
+    bangs=dict(key=136, rim_L=140, rim_R=144, back_haze=148), dark_haze=0.03, haze_scale=0.28,
+    bang_flicker=[(0, 1.25), (1, 0.0), (3, 0.9), (4, 0.15), (6, 1.0), (8, 0.05), (9, 0.85), (12, 0.2), (13, 1.0), (19, 0.3), (20, 1.0)],
+    prehero_flicker=[(264, 1.0), (266, 0.15), (267, 1.0), (269, 0.0), (271, 0.7), (272, 0.0), (275, 1.0), (276, 0.1), (278, 0.0), (281, 1.15), (290, 1.0)],
+    haze_col=(0.17, 0.25, 0.37), city_emit=0.45, world=(0.002, 0.003, 0.006),
+    rim_spread=50, rim_scale=0.2,                                                      # narrow rim beams so they skim the armour, not the backdrop
     reveal=[(1, -0.4), (135, -0.4), (136, 1.05), (162, 1.45), (198, 1.63), (236, 1.76), (262, 2.4)], glow=[(1, 1.0), (360, 1.1)],   # reveal: each section lights while on screen
     eyes=[(1, 0.0), (258, 0.0), (260, 1.0), (262, 0.1), (265, 1.2), (267, 0.4), (270, 1.0), (360, 1.0)],
     visor=[(1, 0.0), (259, 0.0), (260, 0.25), (262, 0.02), (265, 0.3), (270, 0.15)],
@@ -52,10 +56,17 @@ for name, f0 in CFG["bangs"].items():
         full = max(k.co[1] for fc in L.animation_data.action.fcurves for k in fc.keyframe_points)
     clear_anim(L); base = CFG["dark_haze"] * full if name == "back_haze" else 0.0
     if name == "back_haze": full *= CFG["haze_scale"]
-    for fr, v in [(1, base), (f0 - 1, base), (f0, full * 1.25), (f0 + 1, base), (f0 + 3, full * 0.9), (f0 + 4, full * 0.3), (f0 + 6, full)]:
-        L.energy = v; L.keyframe_insert("energy", frame=fr)
+    if name.startswith("rim"): full *= CFG["rim_scale"]
+    pts = [(1, base), (f0 - 1, base)] + [(f0 + df, max(base, full * v)) for df, v in CFG["bang_flicker"]]
+    pts += [(fr, max(base, full * v)) for fr, v in CFG["prehero_flicker"]]          # all lights stutter before the hero reveal
+    for fr, v in pts: L.energy = v; L.keyframe_insert("energy", frame=fr)
     for fc in L.animation_data.action.fcurves:
         for k in fc.keyframe_points: k.interpolation = "CONSTANT"
+# moodier background: darker cooler haze, dim city windows, near-black world
+hm = bpy.data.materials["haze"]; next(n for n in hm.node_tree.nodes if n.type == "PRINCIPLED_VOLUME").inputs["Color"].default_value = (*CFG["haze_col"], 1)
+cm = bpy.data.materials["city"]; cm.node_tree.nodes["Math"].inputs[1].default_value = CFG["city_emit"]
+S.world.node_tree.nodes["Background"].inputs[0].default_value = (*CFG["world"], 1)
+for n in ("rim_L", "rim_R"): bpy.data.objects[n].data.spread = math.radians(CFG["rim_spread"]); bpy.data.objects[n].visible_camera = False
 vl = bpy.data.objects["visor"].data; clear_anim(vl)
 for fr, v in CFG["visor"]: vl.energy = v; vl.keyframe_insert("energy", frame=fr)
 
