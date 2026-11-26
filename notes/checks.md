@@ -69,3 +69,8 @@ DO / DON'T lines from corrections. Read before every render.
 - DON'T grade in ffmpeg with rgb48le/gbrpf32 + blend/colorbalance (purple/teal casts). DO grade in numpy (scripts/grade/shoe_grade.py): lift, saturation, S-curve, screen bloom, vignette, grain.
 - DO (SUNO v2 design): fill the white sliver inside the U's shadow solid black (paint and 3D), like the rest of the block. Add any other 'make it black' fixes to MAKE_BLACK in scripts/suno/trace_v2.py.
 - DON'T schedule backup check-ins (send_later / scheduled tasks) for renders: the user finds they slow the workflow. Run renders as tracked background tasks and pick up when they finish.
+
+## CultureJacked (Etsy tee shop)
+- DO: Save finished CultureJacked Etsy listing videos (and print files) to the user's Google Drive folder "CultureJacked" (id 1Hr3S9LScPslKIEirRhYNjcwg_UbKWyDz), as well as sending them in chat. The user approved this upload. Still never put them on GitHub.
+- DO: Etsy listing videos: 5-15 s, silent, MP4, 1080x1350 (4:5), slow premium camera moves, loopable ending; use the user's Printful mock-ups when supplied.
+- DON'T: Try to draw a real person's likeness in code for tees (the user found it not recognisable). The user makes the portrait art in ChatGPT; we turn it into 4500x5400 300 DPI transparent print files (dark + white shirt versions).
