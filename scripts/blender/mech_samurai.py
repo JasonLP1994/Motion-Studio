@@ -18,8 +18,8 @@ CFG = dict(
     haze_density=0.05, haze_col=(0.30, 0.44, 0.62), back_energy=110, rim_energy=(900, 650), key_energy=140,
     rim_in=[(1, 0.0), (45, 1.0)],
     cam_lens=85, fstop=2.8,
-    cam=[(1, (0.0, 1.64), 1.85, 14.0), (170, (0.0, 1.70), 1.55, 12.0), (300, (0.0, 1.71), 1.48, 9.0)],   # (frame, (x,z) target, dist, orbit deg): tight close-up, helmet top cropped
-    cam_up=0.22, cam_shift_x=-0.26,                      # negative = subject sits on the right side of the frame                                          # camera a little above the target, looking slightly down
+    cam=[(1, (0.0, 1.64), 1.85, -14.0), (170, (0.0, 1.70), 1.55, -12.0), (300, (0.0, 1.71), 1.48, -9.0)],   # (frame, (x,z) target, dist, orbit deg): tight close-up, helmet top cropped
+    cam_up=0.22, cam_shift_x=-0.10,                      # negative = subject sits on the right side of the frame                                          # camera a little above the target, looking slightly down
     exposure=0.0,
 )
 argv = sys.argv[sys.argv.index("--") + 1:]; SRC, OUT = argv[0], argv[1]
