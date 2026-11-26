@@ -24,7 +24,10 @@ lw = int(W * a.logo_w); lh = int(logo.height * lw / logo.width)
 lg = np.asarray(logo.resize((lw, lh), Image.LANCZOS)).astype(np.float32)
 card = np.ones((H, W, 3), np.float32) * bg
 y0, x0 = (H - lh) // 2, (W - lw) // 2
-card[y0:y0 + lh, x0:x0 + lw] = lg
+fe = max(2, int(min(lw, lh) * 0.12))                      # feather the logo's own border into the card so no box shows
+ry = np.clip(np.minimum(np.arange(lh), lh - 1 - np.arange(lh)) / fe, 0, 1); rx = np.clip(np.minimum(np.arange(lw), lw - 1 - np.arange(lw)) / fe, 0, 1)
+m = (np.minimum(ry[:, None], rx[None, :]) ** 1.5)[..., None]
+card[y0:y0 + lh, x0:x0 + lw] = lg * m + bg * (1 - m)
 
 
 def rgb_split(img, d):
