@@ -21,6 +21,7 @@ CFG = dict(
     cam=[(1, (0.0, 1.64), 1.85, -14.0), (170, (0.0, 1.70), 1.55, -12.0), (300, (0.0, 1.71), 1.48, -9.0)],   # (frame, (x,z) target, dist, orbit deg): tight close-up, helmet top cropped
     cam_up=0.22, cam_shift_x=-0.10,                      # negative = subject sits on the right side of the frame                                          # camera a little above the target, looking slightly down
     exposure=0.0,
+    eyes=[(1, 0.0)], eye_gain=40.0,                       # the model's own emissive details (eyes), recoloured lime
 )
 argv = sys.argv[sys.argv.index("--") + 1:]; SRC, OUT = argv[0], argv[1]
 
@@ -54,6 +55,7 @@ meshes = [o for o in S.objects if o.type == "MESH"]
 g = bpy.data.node_groups.new("LimeStrips", "ShaderNodeTree")
 g.interface.new_socket("Emission", in_out="OUTPUT", socket_type="NodeSocketColor")
 g.interface.new_socket("Strength", in_out="OUTPUT", socket_type="NodeSocketFloat")
+g.interface.new_socket("Eye", in_out="INPUT", socket_type="NodeSocketFloat")
 N = g.nodes; Lk = g.links.new
 go = N.new("NodeGroupOutput")
 bev = N.new("ShaderNodeBevel"); bev.samples = 8; bev.inputs["Radius"].default_value = CFG["edge_radius"]
@@ -78,7 +80,11 @@ m3 = N.new("ShaderNodeMath"); m3.operation = "MULTIPLY"; Lk(m2.outputs[0], m3.in
 m4 = N.new("ShaderNodeMath"); m4.operation = "MULTIPLY"; Lk(m3.outputs[0], m4.inputs[0]); Lk(gl.outputs[0], m4.inputs[1])
 m5 = N.new("ShaderNodeMath"); m5.operation = "MULTIPLY"; m5.inputs[1].default_value = CFG["strip_strength"]; Lk(m4.outputs[0], m5.inputs[0])
 col = N.new("ShaderNodeRGB"); col.outputs[0].default_value = (*CFG["lime"], 1)
-Lk(col.outputs[0], go.inputs["Emission"]); Lk(m5.outputs[0], go.inputs["Strength"])
+gi = N.new("NodeGroupInput"); ev = N.new("ShaderNodeValue"); ev.name = ev.label = "eyes"
+e1 = N.new("ShaderNodeMath"); e1.operation = "MULTIPLY"; Lk(gi.outputs["Eye"], e1.inputs[0]); Lk(ev.outputs[0], e1.inputs[1])
+e2 = N.new("ShaderNodeMath"); e2.operation = "MULTIPLY"; e2.inputs[1].default_value = CFG["eye_gain"]; Lk(e1.outputs[0], e2.inputs[0])
+tot = N.new("ShaderNodeMath"); tot.operation = "ADD"; Lk(m5.outputs[0], tot.inputs[0]); Lk(e2.outputs[0], tot.inputs[1])
+Lk(col.outputs[0], go.inputs["Emission"]); Lk(tot.outputs[0], go.inputs["Strength"]); keys(ev.outputs[0], "default_value", CFG["eyes"])
 keys(rv.outputs[0], "default_value", CFG["reveal"]); keys(gl.outputs[0], "default_value", CFG["glow"])
 
 for m in bpy.data.materials:
@@ -107,7 +113,11 @@ for m in bpy.data.materials:
     mt = P.inputs["Metallic"]
     for l in list(mt.links): nt.links.remove(l)
     mt.default_value = CFG["armour_metal"]
+    ec = P.inputs["Emission Color"]; etex = ec.links[0].from_socket if ec.links else None
+    for l in list(ec.links): nt.links.remove(l)
     gn = nt.nodes.new("ShaderNodeGroup"); gn.node_tree = g
+    if etex is not None:
+        bw = nt.nodes.new("ShaderNodeRGBToBW"); nt.links.new(etex, bw.inputs[0]); nt.links.new(bw.outputs[0], gn.inputs["Eye"])
     nt.links.new(gn.outputs["Emission"], P.inputs["Emission Color"]); nt.links.new(gn.outputs["Strength"], P.inputs["Emission Strength"])
 smooth_all(g)
 
