@@ -237,37 +237,77 @@ def tee(colour, design_path):
     return out
 
 
-TEES = None
+M = 'inputs/culturejacked/mockups/unisex-classic-tee-white-'
+MOCKS = [(M + 'front-2-6b0839f8b16b8.png', 'cover'), (M + 'front-6b0839f8b4912.png', 'cover'),
+         (M + 'front-2-6b0839f8b116c.png', 'cover'), (M + 'front-6b0839f8b1967.png', 'contain')]
+SEG = [0, 30, 60, 90]  # scene-B frame where each mock-up starts
+MIMG = None
+
+
+def studio(W2, H2):
+    yy2, xx2 = np.mgrid[0:H2, 0:W2].astype(np.float32)
+    g = (yy2 / H2)[..., None]
+    b = np.array([214, 207, 196]) * (1 - g) + np.array([178, 170, 158]) * g
+    b *= (1 - 0.22 * (((xx2 - W2 / 2) / W2) ** 2 + ((yy2 - H2 / 2) / H2) ** 2) * 2)[..., None]
+    return Image.fromarray(b.astype(np.uint8)).convert('RGBA')
+
+
+def up4(path):
+    sess = ort.InferenceSession('tools/models/esrgan/model.onnx', providers=['CPUExecutionProvider'])
+    name = sess.get_inputs()[0].name
+    im = Image.open(path).convert('RGBA')
+    rgb = np.array(im)[..., :3]
+    T, Pd = 128, 12
+    h, w, _ = rgb.shape
+    srcp = np.pad(rgb.astype(np.float32) / 255, ((Pd, Pd + T), (Pd, Pd + T), (0, 0)), mode='reflect')
+    res = np.zeros((h * 4, w * 4, 3), np.float32)
+    core = T - 2 * Pd
+    for y in range(0, h, core):
+        for x in range(0, w, core):
+            r = sess.run(None, {name: srcp[y:y + T, x:x + T].transpose(2, 0, 1)[None]})[0][0].transpose(1, 2, 0)
+            ch, cw = min(core, h - y), min(core, w - x)
+            res[y * 4:(y + ch) * 4, x * 4:(x + cw) * 4] = r[Pd * 4:(Pd + ch) * 4, Pd * 4:(Pd + cw) * 4]
+    out = Image.fromarray((np.clip(res, 0, 1) * 255 + 0.5).astype(np.uint8)).convert('RGBA')
+    out.putalpha(im.getchannel('A').resize(out.size, Image.LANCZOS))
+    return out
+
+
+def mock_plate(path, mode):
+    up = up4(path)  # 4000x4000
+    W2, H2 = OW * 2, OH * 2
+    bgp = studio(W2, H2)
+    if mode == 'cover':
+        sc = max(W2 / up.width, H2 / up.height)
+    else:
+        sc = min(W2 / up.width, H2 / up.height) * 1.02
+    r = up.resize((round(up.width * sc), round(up.height * sc)), Image.LANCZOS)
+    bgp.alpha_composite(r, ((W2 - r.width) // 2, (H2 - r.height) // 2))
+    return bgp
 
 
 def scene_b(f):
-    global TEES
-    if TEES is None:
-        TEES = [tee((20, 20, 22), ART_BLACK), tee((27, 37, 66), ART_LIGHT), tee((238, 236, 230), ART_LIGHT)]
+    global MIMG
+    if MIMG is None:
+        MIMG = [mock_plate(p_, m_) for p_, m_ in MOCKS]
     k = f - NA
-    idx = 0 if k < 44 else (1 if k < 88 else 2)
-    seg_start = [0, 44, 88][idx]
-    t = (f - NA) / (NT - NA)
-    z = 1.0 + 0.07 * ease(t) + 0.025 * ease((k - seg_start) / 44)
-    src = TEES[idx]
+    idx = max(i for i, st in enumerate(SEG) if k >= st)
+    seg_len = (SEG + [NT - NA])[idx + 1] - SEG[idx]
+    t = (k - SEG[idx]) / seg_len
+    z = 1.0 + 0.06 * ease(t)
+    src = MIMG[idx]
     W2, H2 = src.size
     cw, ch = W2 / z, H2 / z
-    x0, y0 = (W2 - cw) / 2, (H2 - ch) / 2 - 16 * S * ease(t)
+    x0, y0 = (W2 - cw) / 2, (H2 - ch) / 2
     img = src.transform((OW, OH), Image.EXTENT, (x0, y0, x0 + cw, y0 + ch), Image.BICUBIC)
-    # label
-    d = ImageDraw.Draw(img)
-    if k >= 10:
-        a_ = int(255 * ease((k - 10) / 10))
+    if k >= SEG[1] + 4:
+        a_ = int(255 * ease((k - SEG[1] - 4) / 8))
         lay = Image.new('RGBA', (OW, OH), (0, 0, 0, 0))
         ld = ImageDraw.Draw(lay)
-        txt = 'BLACK  ·  NAVY  ·  WHITE'
-        ld.rounded_rectangle([OW / 2 - 300, 1222, OW / 2 + 300, 1300], 12, fill=(17, 17, 19, a_))
-        cols = [CREAM, CREAM, CREAM]
-        ld.text((OW / 2, 1262), txt, font=fanton, fill=CREAM[:3] + (a_,), anchor='mm')
+        ld.rounded_rectangle([OW / 2 - 270, 1222, OW / 2 + 270, 1300], 12, fill=(17, 17, 19, int(a_ * 0.9)))
+        ld.text((OW / 2, 1262), 'UNISEX CLASSIC TEE', font=fanton, fill=CREAM[:3] + (a_,), anchor='mm')
         img.alpha_composite(lay)
-    # flash cut into each colour
-    for start in (0, 44, 88):
-        kk = k - start
+    for st in SEG:
+        kk = k - st
         if 0 <= kk < 5:
             img = Image.blend(img, Image.new('RGBA', (OW, OH), (255, 252, 240, 255)), [0.9, 0.55, 0.28, 0.1, 0.03][kk])
     return img
@@ -278,7 +318,7 @@ def frame(f):
 
 
 if STILLS:
-    for f in (10, 120, 166, 200, 290):
+    for f in (10, 120, 175, 205, 235, 290):
         frame(f).convert('RGB').save(f'{OUT}_still_{f:03d}.jpg', quality=88)
     sys.exit()
 
