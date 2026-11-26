@@ -6,7 +6,7 @@
 4. Centre on a 4500x5400 transparent canvas, 300 DPI
 5. Black-shirt version: knock out near-pure black so the shirt shows through
 
-usage: python3 -I scripts/tshirt/prep_print.py <in.png> <out_prefix>
+usage: python3 -I scripts/tshirt/prep_print.py <in.png> <out_prefix> [--no-flag]
 """
 import sys
 import numpy as np
@@ -85,7 +85,8 @@ s = 4
 a_big = Image.fromarray(alpha).resize(big.size, Image.LANCZOS)
 a_big = np.where(np.array(a_big) >= 128, 255, 0).astype(np.uint8)
 big.putalpha(Image.fromarray(a_big))
-big = replace_flag(big, s)
+if '--no-flag' not in sys.argv:
+    big = replace_flag(big, s)  # Content House only: covers the mic-flag logo
 big.putalpha(Image.fromarray(a_big))  # keep the hard outer alpha after drawing
 
 # fit into 4500x5400, centred, small safety margin
