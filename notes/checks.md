@@ -71,3 +71,4 @@ DO / DON'T lines from corrections. Read before every render.
 - DON'T schedule backup check-ins (send_later / scheduled tasks) for renders: the user finds they slow the workflow. Run renders as tracked background tasks and pick up when they finish.
 
 - DO (photo enhance): the user preferred the stronger, brighter v1 look (bigger global shadow lift, more vibrance) over the toned-down v2. Don't over-correct the night sky or blue tints at the cost of brightness.
+- DO (photo enhance, people): brighten the surroundings, NOT the person. Keep the subject at its own brightness and make it clearer (sharpening + local contrast) instead. Use a feathered subject mask.
