@@ -8,3 +8,7 @@
   (Sketchfab model c091efb068624f228432cbfb7b21a0ec), CC-BY 4.0, via Objaverse (allenai/objaverse on Hugging Face).
   Re-coloured (rose gold, diamond centre, ruby pave), re-posed, own chain replaced. Credit line for posts:
   "Pendant model: ChapelHills BluTourmPndt by CADtrends (CC-BY 4.0)".
+- Cyber samurai mech reveal (not stored in Git; downloaded to the ignored `work/models/mech/`): "Cyber Samurai" by duongminhkhoa231
+  (Sketchfab model 26ccafaddb2745ceb56ae5cfc65bfed5), CC-BY 4.0, via Objaverse (allenai/objaverse on Hugging Face).
+  Restyled (matte gunmetal armour, glowing lime edge strips) by `scripts/blender/mech_samurai.py`. Credit line for posts:
+  "Model: Cyber Samurai by duongminhkhoa231 (CC-BY 4.0)".
