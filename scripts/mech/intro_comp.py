@@ -1,4 +1,4 @@
-"""Samurai intro: compositing + grade pass over the finished look frames (1-360).
+"""Samurai intro (and other samurai shots via COMP_CFG=<json>): compositing + grade pass over the finished look frames (1-360).
 Lime halation, anamorphic streaks, light-bang flashes, hero impact (flash + punch + shockwave), section-cut hits,
 dust in the light, Steel Noir LUT, optional letterbox. All timings live in CFG.
   tools/ai-venv/bin/python scripts/mech/intro_comp.py <in_dir> <out_dir> <lut.cube> [frame ...]   (no frames = all 1-360)
@@ -22,6 +22,8 @@ CFG = dict(
     lut_mix=1.0,
     letterbox=None,            # e.g. 2.2 for 2.2:1 bars; None = full frame
 )
+if os.environ.get("COMP_CFG"):                 # per-shot overrides (JSON file), e.g. renders for other samurai shots
+    import json; CFG.update(json.load(open(os.environ["COMP_CFG"])))
 
 
 def env(fr, pts):
