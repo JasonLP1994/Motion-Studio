@@ -4,6 +4,7 @@ Apply (in Python):  from make_lut import load_cube, apply_cube; out = apply_cube
 The .cube files also load in CapCut, Premiere (Lumetri > Creative > Look) and DaVinci Resolve.
 Presets:
   neon-night  deep blue-teal shadows, lime/green pushed and brighter, warm lamp highlights, gentle S-curve.
+  steel-noir  cold steel greys, blue-steel shadows, lime emissives pushed clean, firm contrast (samurai intro).
 """
 import argparse, os
 import numpy as np
@@ -41,7 +42,31 @@ def neon_night(rgb):
     return np.clip(x, 0, 1)
 
 
-PRESETS = {"neon-night": neon_night}
+def steel_noir(rgb):
+    """Cold steel noir for dark armour + lime emissives: neutral-cool greys, blue-steel shadows, lime pushed clean."""
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    mx, mn = rgb.max(-1), rgb.min(-1); sat = np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0)
+    d = np.maximum(mx - mn, 1e-6)
+    h = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) / 6.0
+    h = np.where(mx - mn < 1e-6, 0, h)
+    lime = _hue_weight(h, 0.22, 0.11) * np.clip(sat * 2.5, 0, 1)
+    s_gain = 0.80 + 0.55 * lime                                          # everything but the lime goes steely
+    out = lum[..., None] + (rgb - lum[..., None]) * s_gain[..., None]
+    out = out + lime[..., None] * np.array([-0.02, 0.03, -0.03]) * np.clip(lum * 2, 0, 1)[..., None]   # lime cleaner, less yellow
+    sh = np.clip(1 - lum / 0.45, 0, 1) ** 1.4; mid = np.clip(1 - np.abs(lum - 0.4) / 0.3, 0, 1); hi = np.clip((lum - 0.7) / 0.3, 0, 1)
+    nl = 1 - lime[..., None]
+    out = out + nl * (sh[..., None] * np.array([-0.012, 0.004, 0.030]) + mid[..., None] * np.array([-0.012, -0.002, 0.014])
+                      + hi[..., None] * np.array([-0.010, 0.0, 0.012]))
+    x = np.clip(out, 0, 1)
+    x = 0.40 + (x - 0.40) * 1.16
+    x = np.where(x < 0.40, 0.40 * (np.clip(x, 0, None) / 0.40) ** 1.10, x)
+    x = np.where(x > 0.40, 1 - 0.60 * ((1 - np.clip(x, None, 1)) / 0.60) ** 1.10, x)
+    x = x * 0.988 + np.array([0.006, 0.008, 0.014])                       # blacks sit on a faint blue, not grey
+    return np.clip(x, 0, 1)
+
+
+PRESETS = {"neon-night": neon_night, "steel-noir": steel_noir}
 
 
 def write_cube(path, fn, n=33, title="LUT"):
