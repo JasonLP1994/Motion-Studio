@@ -8,7 +8,7 @@ import bpy, bmesh, sys, math
 import numpy as np
 from mathutils import Vector, Matrix, Quaternion
 
-OUT = sys.argv[sys.argv.index("--") + 1]
+ARGS = sys.argv[sys.argv.index("--") + 1:]; OUT = ARGS[0]
 S = bpy.context.scene; VL = bpy.context.view_layer
 rig = bpy.data.objects["SamuraiRig"]; P = rig.pose.bones; A = rig.data
 KAT_HILT_END = Vector((0.3315, -0.398, 1.4309)); KAT_TIP = Vector((0.1255, 0.6331, 0.5638))
@@ -233,6 +233,7 @@ arm_len = {s: (Vector(A.bones[f"{n}Arm"].head_local) - Vector(A.bones[f"{n}ForeA
            for s, n in (("R", "Right"), ("L", "Left"))}
 worst = {"R": 0, "L": 0}; log = {}
 for pb in P: pb.rotation_mode = "QUATERNION"
+if len(ARGS) > 1: CFG["frames"] = int(ARGS[1])          # longer bake = longer breathing hold
 S.frame_start, S.frame_end = 1, CFG["frames"]
 for f in range(1, CFG["frames"] + 1):
     fr = f - 1
