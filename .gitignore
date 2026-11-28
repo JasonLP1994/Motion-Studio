@@ -89,3 +89,6 @@ public/mutant/logo-mark.png
 # Pixel sneaker sprites (rendered locally)
 public/pixel/
 public/pd01/
+
+# Pop Out lyric video working assets (photos, audio): local only
+public/popout/
