@@ -17,6 +17,47 @@ const CHROME = "linear-gradient(180deg,#FFFFFF 0%,#E6ECF3 30%,#8D99AB 49%,#F7FAF
 const ICE = "linear-gradient(180deg,#F4FAFF 0%,#BFDDF8 40%,#6F9FD3 55%,#D8ECFF 75%,#8DB6E3 100%)";
 const fill = (c: keyof typeof C) => (c === "silver" ? CHROME : c === "ice" ? ICE : C[c]);
 
+// ---------- beat grid (84 BPM, downbeat at song 24.262 s) and FX helpers
+const BEATF = (60 / 84) * FPS, DOWN0 = f(24.262);
+const beatPulse = (fr: number) => { const b = (fr - DOWN0) / BEATF, ph = b - Math.floor(b); const strong = ((Math.floor(b) % 4) + 4) % 4 % 2 === 0;
+  return { p: Math.exp(-ph * BEATF / 3.2), strong, n: Math.floor(b) }; };
+// moving specular sweep over chrome: layered gradient, position runs -30%..130% from `at` over `dur` frames
+const sweep = (fr: number, at: number, dur = 16) => { const p = interpolate(fr - at, [0, dur], [-30, 130], clamp);
+  return `linear-gradient(100deg, transparent ${p - 12}%, rgba(255,255,255,0.95) ${p}%, transparent ${p + 12}%), `; };
+// drifting ice particles in world space (deterministic); near layer = big soft bokeh, far layer = tiny sparkles
+const Particles: React.FC<{ seed: string; n: number; near?: boolean; light?: boolean }> = ({ seed, n, near, light }) => {
+  const fr = useCurrentFrame();
+  return (<>{Array.from({ length: n }).map((_, i) => {
+    const r = (k: string) => random(`${seed}${k}${i}`);
+    const sz = near ? 30 + r("s") * 70 : 2 + r("s") * 5, sp = (near ? 1.6 : 0.5) + r("v") * 1.2;
+    const x = ((r("x") * W * 1.6 + fr * sp * (r("d") > 0.5 ? 1 : -0.6)) % (W * 1.6)) - W * 0.3;
+    const y = ((r("y") * H * 1.6 - fr * sp * 0.7) % (H * 1.6) + H * 1.6) % (H * 1.6) - H * 0.3;
+    const tw = near ? 0.18 + 0.12 * Math.sin(fr / 9 + i) : 0.4 + 0.6 * Math.max(0, Math.sin(fr / 5 + i * 1.7));
+    return <div key={i} style={{ position: "absolute", left: x, top: y, width: sz, height: sz, borderRadius: "50%", opacity: tw,
+      background: near ? `radial-gradient(circle, ${light ? "rgba(10,23,48,0.35)" : "rgba(214,234,255,0.55)"}, transparent 70%)` : light ? C.navy : C.white,
+      filter: near ? "blur(4px)" : undefined, boxShadow: near ? undefined : `0 0 ${sz * 2}px rgba(220,236,255,0.9)` }} />; })}</>);
+};
+const Rings: React.FC<{ x: number; y: number; r: number; light: boolean }> = ({ x, y, r, light }) => {
+  const fr = useCurrentFrame(); const c = light ? C.navy : C.ice;
+  return (<svg style={{ position: "absolute", left: x - r, top: y - r, overflow: "visible" }} width={r * 2} height={r * 2} viewBox={`${-r} ${-r} ${r * 2} ${r * 2}`}>
+    <circle r={r * 0.78} fill="none" stroke={c} strokeOpacity={0.35} strokeWidth={2} strokeDasharray="4 18" transform={`rotate(${fr * 0.8})`} />
+    <circle r={r * 0.9} fill="none" stroke={c} strokeOpacity={0.25} strokeWidth={1.5} strokeDasharray={`${r * 1.2} ${r * 4}`} transform={`rotate(${-fr * 1.4})`} />
+    {[0, 1, 2].map((k) => { const a = fr * 0.03 + (k * Math.PI * 2) / 3; return <circle key={k} cx={Math.cos(a) * r * 0.9} cy={Math.sin(a) * r * 0.9} r={5} fill={light ? C.navy : C.white} />; })}
+  </svg>);
+};
+// anamorphic flare streak + shard burst when a big word lands (world space, centred on the word)
+const LandFX: React.FC<{ x: number; y: number; at: number; w: number; light: boolean }> = ({ x, y, at, w, light }) => {
+  const fr = useCurrentFrame(); const t = fr - at; if (t < 0 || t > 16) return null;
+  const sw = interpolate(t, [0, 4], [0.2, 1], { ...clamp, easing: outExp }), so = interpolate(t, [0, 2, 14], [0, 1, 0], clamp);
+  return (<>
+    <div style={{ position: "absolute", left: x - (w + 900) * sw / 2, top: y - 3, width: (w + 900) * sw, height: 6, borderRadius: 3, opacity: so,
+      background: "linear-gradient(90deg, transparent, rgba(190,222,255,0.9) 35%, #FFFFFF 50%, rgba(190,222,255,0.9) 65%, transparent)", filter: "blur(1.5px)", boxShadow: "0 0 30px 8px rgba(169,203,238,0.45)", mixBlendMode: light ? "normal" : "screen" }} />
+    {Array.from({ length: 12 }).map((_, k) => { const a = random(`sa${at}${k}`) * Math.PI * 2, d = interpolate(t, [0, 14], [0, 160 + random(`sd${at}${k}`) * 220], { ...clamp, easing: outExp });
+      return <div key={k} style={{ position: "absolute", left: x + Math.cos(a) * d, top: y + Math.sin(a) * d * 0.6, width: 14, height: 24, opacity: 1 - t / 16,
+        background: k % 2 ? "#E9F4FF" : "#7FAEE0", clipPath: "polygon(50% 0, 100% 40%, 50% 100%, 0 40%)", transform: `rotate(${t * 25 + k * 30}deg)` }} />; })}
+  </>);
+};
+
 // ---------- shared pieces
 const Dust: React.FC<{ o?: number }> = ({ o = 0.55 }) => {
   const fr = useCurrentFrame(); const s = Math.floor(fr / 2);           // re-roll the dust every 2 frames (film feel)
@@ -39,8 +80,9 @@ const Build: React.FC<{ text: string; at: number; size: number; x: number; y: nu
   const fs = w ? Math.min(size, fitText({ text, withinWidth: w, fontFamily: "Anton" }).fontSize) : size;
   const gx = interpolate(fr - at, [0, text.length * K.letterEvery + 6], [K.ghost.dx * 4, K.ghost.dx], { ...clamp, easing: outExp });
   const style: React.CSSProperties = { position: "absolute", left: x, top: y, transform: "translate(-50%,-50%)", fontFamily: "Anton", fontSize: fs, lineHeight: 0.86, whiteSpace: "pre", letterSpacing: -fs * 0.01 };
+  const sw = sweep(fr, at + text.length * K.letterEvery + 2, 18);
   const paint = (c: keyof typeof C): React.CSSProperties => c === "silver" || c === "ice"
-    ? { backgroundImage: fill(c), WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: "drop-shadow(0 6px 0 rgba(4,7,14,0.55)) drop-shadow(0 0 24px rgba(169,203,238,0.35))" }
+    ? { backgroundImage: sw + fill(c), WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: "drop-shadow(0 6px 0 rgba(4,7,14,0.55)) drop-shadow(0 0 24px rgba(169,203,238,0.35))" }
     : { color: C[c] };
   return (<>
     {ghost && <div style={{ ...style, left: x + gx, color: C.ice, opacity: K.ghost.opacity, filter: `blur(${K.ghost.blur}px)` }}>{text.slice(0, Math.min(text.length, n + 1))}</div>}
@@ -52,8 +94,9 @@ const Person: React.FC<{ n: number; side: "left" | "right"; s: number; e: number
   const enter = interpolate(fr, [s - K.transition, s + 3], [1, 0], { ...clamp, easing: outExp });
   const push = interpolate(fr, [s, e], [1, 1.05], clamp);
   const dir = side === "left" ? -1 : 1;
+  const bp = beatPulse(fr), sway = Math.sin(fr / 17) * 0.8;
   return (<div style={{ position: "absolute", bottom: -10, [side]: side === "left" ? 40 : 30, height: h, transformOrigin: "50% 100%",
-    transform: `translateX(${dir * enter * 420}px) scale(${push})`, filter: `blur(${enter * 14}px) drop-shadow(${-dir * 18}px 10px 0 rgba(4,7,14,0.6)) drop-shadow(0 0 30px rgba(169,203,238,0.18))` } as React.CSSProperties}>
+    transform: `translateX(${dir * enter * 420}px) scale(${push * (1 + bp.p * (bp.strong ? 0.018 : 0.008))}) rotate(${sway}deg)`, filter: `blur(${enter * 14}px) drop-shadow(${-dir * 18}px 10px 0 rgba(4,7,14,0.6)) drop-shadow(0 0 30px rgba(169,203,238,0.18))` } as React.CSSProperties}>
     <Img src={staticFile(`popout/p${n}.png`)} style={{ height: "100%" }} />
   </div>);
 };
@@ -85,9 +128,10 @@ const Word: React.FC<{ b: Box; i: number; light: boolean; live: boolean }> = ({ 
   if (b.big) { // letters slam in one per frame, chrome, with an ice flash behind
     const flash = interpolate(t, [0, 2, 12], [0, 1, 0], clamp);
     return (<div style={{ ...base, fontFamily: "Anton", fontSize: b.size }}>
+      <LandFX x={b.w / 2} y={b.h * 0.5} at={b.at + 2} w={b.w} light={light} />
       {[...b.t].map((ch, k) => { const p = interpolate(t - k, [0, 4], [0, 1], { ...clamp, easing: outExp });
         return <span key={k} style={{ display: "inline-block", opacity: p, transform: `translateY(${(1 - p) * -60}px) scale(${1 + (1 - p) * 1.4})`, filter: `blur(${(1 - p) * 8}px) drop-shadow(0 0 ${6 + flash * 26}px rgba(220,236,255,${0.25 + flash * 0.6}))`,
-          backgroundImage: light ? "none" : CHROME, WebkitBackgroundClip: "text", backgroundClip: "text", color: light ? C.navy : "transparent" }}>{ch}</span>; })}
+          backgroundImage: light ? "none" : sweep(fr, b.at + b.t.length + 3, 14) + CHROME, WebkitBackgroundClip: "text", backgroundClip: "text", color: light ? C.navy : "transparent" }}>{ch}</span>; })}
     </div>);
   }
   const p = interpolate(t, [0, K.wordPop + 1], [0, 1], { ...clamp, easing: outExp });
@@ -257,16 +301,18 @@ const LineScene: React.FC<{ L: Line; i: number; s: number; e: number }> = ({ L, 
   const cam = handheld(camAt(keys, start, fr), fr), prev = handheld(camAt(keys, start, fr - 1), fr - 1);
   const speed = Math.hypot(cam.cx - prev.cx, cam.cy - prev.cy) * cam.z + Math.abs(cam.z - prev.z) * 900;
   const blur = Math.min(7, Math.max(0, speed - 80) / 18);           // blur only on real whips
-  const beat3 = s + Math.round(2 * (60 / 84) * FPS) - 7;
-  const kick = interpolate(fr, [beat3, beat3 + 2, beat3 + 6], [0, 1, 0], clamp);
+  const bp = beatPulse(fr); const kick = bp.p * (bp.strong ? 1 : 0.55);   // camera bump on every beat, harder on 1 and 3
   const bangT = f(44.13);
   const shake = L.graphic === "bang" && fr >= bangT && fr < bangT + 8 ? (random(`sh${fr}`) - 0.5) * 30 : 0;
-  const c2: Cam = { ...cam, z: cam.z * (1 + kick * 0.04), cx: cam.cx + shake, cy: cam.cy + shake * 0.4 };
+  const split = bp.strong ? bp.p * 7 : 0;                              // icy chromatic split on the downbeats
+  const c2: Cam = { ...cam, z: cam.z * (1 + kick * 0.03), cx: cam.cx + shake, cy: cam.cy + shake * 0.4 };
   const liveIdx = boxes.findIndex((b, k) => fr >= b.at && (k + 1 >= boxes.length || fr < boxes[k + 1].at));
   return (<AbsoluteFill style={{ clipPath: q < 1 ? transitionClip(i, q) : undefined, background: C[L.bg] }}>
     <AbsoluteFill style={{ filter: blur > 0.3 ? `blur(${blur}px)` : undefined }}>
       <div style={camCss(c2, 0.55)}>
-        <Halo x={heroX + (L.side === "left" ? 200 : -200)} y={H * 0.5} r={620} o={light ? 0.6 : 1} />
+        <Halo x={heroX + (L.side === "left" ? 200 : -200)} y={H * 0.5} r={620 * (1 + kick * 0.03)} o={(light ? 0.6 : 1) * (0.75 + kick * 0.5)} />
+        <Rings x={heroX + (L.side === "left" ? 200 : -200)} y={H * 0.5} r={560} light={light} />
+        <Particles seed={`far${i}`} n={40} light={light} />
         <div style={{ position: "absolute", left: L.side === "left" ? -260 : W - 700, top: 180, width: 960, height: 960, borderRadius: "50%", background: light ? "#C9DFF5" : C.deep, opacity: light ? 0.9 : 0.75 }} />
         <svg width={W} height={H} style={{ position: "absolute", opacity: 0.22 }}>
           <defs><pattern id={`hatch${i}`} width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="18" stroke={light ? C.navy : C.silver} strokeWidth="3" /></pattern></defs>
@@ -277,10 +323,11 @@ const LineScene: React.FC<{ L: Line; i: number; s: number; e: number }> = ({ L, 
       <div style={camCss(c2, 0.8)}><Build text={L.hero} at={s - 2} size={K.sizes.hero} x={heroX} y={heroY} color={L.heroColor} w={L.heroW ?? 1060} /></div>
       {!behind && <div style={camCss(c2, 0.9)}><Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} /></div>}
       <div style={camCss(c2, 0.88)}><Person n={L.photo} side={L.side} s={s} e={e} h={L.personH ?? (L.photo === 4 ? 900 : L.photo === 6 ? 980 : 1020)} /></div>
-      <div style={camCss(c2, 1)}>
+      <div style={{ ...camCss(c2, 1), filter: split > 0.4 ? `drop-shadow(${-split}px 0 0 rgba(140,200,255,0.75)) drop-shadow(${split}px 0 0 rgba(30,60,150,0.8))` : undefined }}>
         <div style={{ position: "absolute", left: x0 - 20, top: y0 - 34, width: rw + 40, height: 6, background: light ? C.navy : C.ice, transformOrigin: L.side === "left" ? "100% 50%" : "0 50%", transform: `scaleX(${interpolate(fr, [s, s + 10], [0, 1], { ...clamp, easing: outExp })})` }} />
         {boxes.map((b, k) => <Word key={k} b={b} i={k} light={light} live={k === liveIdx} />)}
       </div>
+      <div style={camCss(c2, 1.35)}><Particles seed={`near${i}`} n={10} near light={light} /></div>
     </AbsoluteFill>
     <Detail x={80} y={H - 60} t={`0${i + 1} / 08`} a={L.side === "left" ? "right" : "left"} c={light ? C.navy : C.silver} />
     <Detail x={80} y={H - 60} t={"POP OUT  ·  SIDE A"} a={L.side === "left" ? "left" : "right"} c={light ? C.navy : C.silver} />
@@ -351,6 +398,15 @@ export const Popout: React.FC = () => {
     {lines.map((L, i) => { const s = starts[i], e = i + 1 < lines.length ? starts[i + 1] : card;
       return fr >= s - K.transition && fr < e ? <LineScene key={i} L={L} i={i} s={s} e={e} /> : null; })}
     {fr >= card - K.transition && <EndCard s={card} />}
+    {starts.concat([card]).map((s0, k) => { const t = fr - s0; if (t < -6 || t > 10) return null;
+      const fl = interpolate(t, [-1, 0, 4], [0, 0.28, 0], clamp), lx = interpolate(t, [-6, 10], [-0.4, 1.3], clamp);
+      return (<AbsoluteFill key={`hit${k}`} style={{ pointerEvents: "none" }}>
+        <div style={{ position: "absolute", left: lx * W - 700, top: -200, width: 1400, height: H + 400, transform: "rotate(18deg)", mixBlendMode: "screen", opacity: interpolate(t, [-6, 0, 10], [0, 0.5, 0], clamp),
+          background: "radial-gradient(ellipse at center, rgba(200,228,255,0.85), rgba(80,140,220,0.35) 40%, transparent 70%)", filter: "blur(30px)" }} />
+        {t >= -3 && t <= 2 && Array.from({ length: 6 }).map((_, j) => <div key={j} style={{ position: "absolute", left: 0, width: W, top: random(`gy${k}${t}${j}`) * H, height: 4 + random(`gh${k}${t}${j}`) * 26,
+          background: j % 2 ? "rgba(220,236,255,0.35)" : "rgba(10,23,48,0.6)", transform: `translateX(${(random(`gx${k}${t}${j}`) - 0.5) * 120}px)` }} />)}
+        <AbsoluteFill style={{ background: C.white, opacity: fl, mixBlendMode: "screen" }} />
+      </AbsoluteFill>); })}
     <Dust o={0.5} />
     <AbsoluteFill style={{ boxShadow: "inset 0 0 260px rgba(0,0,0,0.65)", pointerEvents: "none" }} />
   </AbsoluteFill>);

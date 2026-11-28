@@ -1,0 +1,26 @@
+# Motion Studio finish: icy chrome night (navy/ice/silver palettes). Blue halation bloom off chrome highlights,
+# small CA, stronger moving grain, deeper vignette; graphics stay crisp. Pair with scripts/finish/luts/ice_chrome.cube.
+name: ice_chrome
+description: Cold chrome night look, blue bloom, filmic grain
+white_balance: { temp: -0.04, tint: 0.0 }
+exposure: { stops: 0.0 }
+highlight_rolloff: { knee: 0.8, strength: 0.35 }
+lift_gamma_gain:
+  lift:  [0.0, 0.0, 0.006]
+  gamma: [1.0, 1.0, 1.0]
+  gain:  [1.0, 1.0, 1.0]
+split_toning:
+  shadow:    [0.0, 0.003, 0.012]
+  highlight: [0.0, 0.004, 0.008]
+  strength: 0.3
+tone_curve: { strength: 0.32, pivot: 0.5 }
+vibrance: { vibrance: 0.1, saturation: 1.0, skin_protect: 0.6 }
+halation: { threshold: 0.78, radius_frac: 0.014, tint: [0.65, 0.82, 1.0], strength: 0.14 }
+distortion: { k: 0.0 }
+chromatic_aberration: { amount: 0.0012 }
+vignette: { strength: 0.24, feather: 0.6 }
+black_point: { lift: 0.0 }
+clarity: { amount: 0.18, radius_frac: 0.02 }
+grain: { luma: 0.02, chroma: 0.004, size: 0.7, floor: 0.25 }
+sharpen: { amount: 0.25, radius_frac: 0.0012, halo: 0.0 }
+jpeg: { quality: 100, cycles: 0 }

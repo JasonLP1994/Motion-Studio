@@ -64,6 +64,7 @@ DO / DON'T lines from corrections. Read before every render.
 - DO run every 3D render through the free local AI tools for the best look (notes/ai-enhance.md): Cycles + OIDN denoise where it's used, render 720p and AI-upscale (compact 2x; Real-ESRGAN for hero stills), RIFE in-betweens on smooth shots. Free tools only, never paid or cloud enhancers. RIFE never across cuts, glitch/strobe frames or beat hits.
 - DO light glossy products by their reflections (gradient key + grazing edge strips + black cards + light-linked backdrop pool); never put a light or coloured accent in front of a big glossy face; fill with visible_glossy off. Guide: .claude/skills/lighting/references/product-lighting.md
 - DO run the finishing pass (scripts/finish/finish.sh, postfx) on every finished video after compositing and before encoding.
+- DO (Pop Out v4): navy/ice palettes finish with scripts/finish/themes/ice_chrome.yaml + scripts/finish/luts/ice_chrome.cube (apply_lut.py, mix 0.85); lens pass only as a hint (--streak 0.06 --ghost 0): ghosts/leaks turned purple and streaks smeared big type.
 - DO keep product finishing minimal (product_minimal + lens preset minimal): no warm tint/leaks/ghosts on clean premium products; they browned the blue glass and looked hazy.
 - DO: when a long queue dies mid-way, resume from the first unfinished step (scripts/case_finish_queue.sh pattern); RIFE fill and retime are not skip-aware.
 - DO: build contact sheets with PIL from the frame folder; Remotion's bundled ffmpeg has no fps/tile filters.
