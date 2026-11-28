@@ -4,6 +4,7 @@ import { AbsoluteFill, Audio, Easing, Img, interpolate, staticFile, useCurrentFr
 import { loadFont } from "@remotion/fonts";
 import { fitText } from "@remotion/layout-utils";
 import { C, FPS, f, lines, popoutConfig as K, Line } from "./config";
+import ADV from "./advances.json";
 
 loadFont({ family: "Anton", url: staticFile("fonts/anton-latin-400-normal.woff2") });
 loadFont({ family: "Montserrat", url: staticFile("fonts/montserrat-latin-900-normal.woff2"), weight: "900" });
@@ -56,20 +57,67 @@ const Person: React.FC<{ n: number; side: "left" | "right"; s: number; e: number
     <Img src={staticFile(`popout/p${n}.png`)} style={{ height: "100%" }} />
   </div>);
 };
-// the sung line: words land as they are sung; the word being sung is ice blue
-const Lyric: React.FC<{ L: Line; x: number; y: number; w: number; align: "left" | "right"; dark: boolean }> = ({ L, x, y, w, align, dark }) => {
-  const fr = useCurrentFrame();
-  return (<div style={{ position: "absolute", left: x, top: y, width: w, display: "flex", flexWrap: "wrap", justifyContent: align === "left" ? "flex-start" : "flex-end", gap: "6px 18px" }}>
-    {L.words.map(([t, at], i) => {
-      const a = f(at), nx = i + 1 < L.words.length ? f(L.words[i + 1][1]) : a + 12;
-      const p = interpolate(fr, [a, a + K.wordPop], [0, 1], { ...clamp, easing: outExp });
-      const live = fr >= a && fr < Math.max(nx, a + 6);
-      return (<span key={i} style={{ fontFamily: "Montserrat", fontWeight: 900, fontSize: K.sizes.line, lineHeight: 1.04, letterSpacing: -1,
-        color: live ? (dark ? C.blue : C.ice) : dark ? C.navy : C.white, opacity: p, display: "inline-block",
-        transform: `translateY(${(1 - p) * 26}px) scale(${1 + (1 - p) * 0.25})`, textShadow: dark ? "none" : "0 4px 0 rgba(4,7,14,0.6)" }}>{t}</span>);
-    })}
-  </div>);
+// ---------- kinetic type: exact word layout (glyph advances from the font files) so the camera can follow each word
+type Box = { t: string; at: number; big: boolean; x: number; y: number; w: number; h: number; size: number; row: number };
+const textW = (t: string, font: "Anton" | "Montserrat", size: number) =>
+  [...t].reduce((a, ch) => a + ((ADV as Record<string, Record<string, number>>)[font][ch] ?? 0.55) * size, 0);
+const layoutLine = (L: Line): { boxes: Box[]; x0: number; y0: number; rw: number } => {
+  const rw = 900, x0 = L.side === "left" ? W - 90 - rw : 90, y0 = 500, maxH = 470, gap = 34;
+  for (let k = 1; k > 0.4; k -= 0.05) {
+    const boxes: Box[] = []; let x = 0, y = 0, row = 0, rowH = 0, rowStart = 0;
+    const flush = () => { const used = boxes.length ? x - gap : 0; const shift = L.side === "left" ? rw - used : 0;
+      for (let j = rowStart; j < boxes.length; j++) { boxes[j].x += x0 + shift; boxes[j].y = y0 + y + (rowH - boxes[j].h) * 0.82; } };
+    L.words.forEach(([t, at], i) => {
+      const big = L.big.includes(i), size = (big ? K.sizes.bigWord : K.sizes.word) * k;
+      const w = textW(t, big ? "Anton" : "Montserrat", size) * 1.04, h = size * (big ? 0.95 : 0.8);
+      if (x > 0 && x + w > rw) { flush(); y += rowH + 14 * k; row++; x = 0; rowH = 0; rowStart = boxes.length; }
+      boxes.push({ t, at: f(at), big, x, y: 0, w, h, size, row }); x += w + gap; rowH = Math.max(rowH, h);
+    });
+    flush();
+    if (y + rowH <= maxH) return { boxes, x0, y0, rw };
+  }
+  return layoutLine({ ...L, words: L.words.slice(0, 1) });
 };
+const Word: React.FC<{ b: Box; i: number; light: boolean; live: boolean }> = ({ b, i, light, live }) => {
+  const fr = useCurrentFrame(); const t = fr - b.at;
+  if (t < -1) return null;
+  const base: React.CSSProperties = { position: "absolute", left: b.x, top: b.y, height: b.h, whiteSpace: "pre", lineHeight: `${b.h}px` };
+  if (b.big) { // letters slam in one per frame, chrome, with an ice flash behind
+    const flash = interpolate(t, [0, 2, 12], [0, 1, 0], clamp);
+    return (<div style={{ ...base, fontFamily: "Anton", fontSize: b.size }}>
+      {[...b.t].map((ch, k) => { const p = interpolate(t - k, [0, 4], [0, 1], { ...clamp, easing: outExp });
+        return <span key={k} style={{ display: "inline-block", opacity: p, transform: `translateY(${(1 - p) * -60}px) scale(${1 + (1 - p) * 1.4})`, filter: `blur(${(1 - p) * 8}px) drop-shadow(0 0 ${6 + flash * 26}px rgba(220,236,255,${0.25 + flash * 0.6}))`,
+          backgroundImage: light ? "none" : CHROME, WebkitBackgroundClip: "text", backgroundClip: "text", color: light ? C.navy : "transparent" }}>{ch}</span>; })}
+    </div>);
+  }
+  const p = interpolate(t, [0, K.wordPop + 1], [0, 1], { ...clamp, easing: outExp });
+  const back = interpolate(t, [0, K.wordPop + 3], [0, 1], { ...clamp, easing: Easing.out(Easing.back(2.2)) });
+  const style = i % 4;
+  const tr = style === 0 ? `scale(${1 + (1 - p) * 1.6})` : style === 1 ? `translateY(${(1 - back) * -140}px)` : style === 2 ? `translateX(${(1 - p) * (i % 8 < 4 ? -170 : 170)}px)` : `perspective(600px) rotateX(${(1 - p) * 88}deg)`;
+  return (<div style={{ ...base, fontFamily: "Montserrat", fontWeight: 900, fontSize: b.size, letterSpacing: -1, opacity: p, transform: tr, transformOrigin: "50% 80%",
+    filter: style === 0 ? `blur(${(1 - p) * 9}px)` : undefined, color: live ? (light ? C.blue : C.ice) : light ? C.navy : C.white,
+    textShadow: light ? "none" : "0 5px 0 rgba(4,7,14,0.6)" }}>{b.t}</div>);
+};
+
+// ---------- virtual camera: keyframes (cx, cy = world point at frame centre, z = zoom, r = roll); layers move with depth
+type Cam = { cx: number; cy: number; z: number; r: number };
+type Key = { t: number; to: Cam; dur: number; ease?: (x: number) => number };
+const camAt = (keys: Key[], start: Cam, fr: number): Cam => {
+  let cur = start;
+  for (let j = 0; j < keys.length; j++) {
+    const k = keys[j]; if (fr < k.t) break;
+    const nextT = j + 1 < keys.length ? keys[j + 1].t : Infinity;
+    const tt = Math.min(fr, nextT);           // state when this move is cut by the next key
+    const p = (k.ease ?? outExp)(Math.max(0, Math.min(1, (tt - k.t) / k.dur)));
+    cur = { cx: cur.cx + (k.to.cx - cur.cx) * p, cy: cur.cy + (k.to.cy - cur.cy) * p, z: cur.z + (k.to.z - cur.z) * p, r: cur.r + (k.to.r - cur.r) * p };
+  }
+  return cur;
+};
+const camCss = (c: Cam, d: number): React.CSSProperties => {
+  const z = Math.pow(c.z, d), cx = W / 2 + (c.cx - W / 2) * d, cy = H / 2 + (c.cy - H / 2) * d;
+  return { position: "absolute", inset: 0, transformOrigin: "0 0", transform: `translate(${W / 2}px,${H / 2}px) rotate(${c.r * d}deg) scale(${z}) translate(${-cx}px,${-cy}px)` };
+};
+const handheld = (c: Cam, fr: number): Cam => ({ cx: c.cx + Math.sin(fr / 7) * 4 + Math.sin(fr / 13) * 3, cy: c.cy + Math.cos(fr / 9) * 3, z: c.z, r: c.r + Math.sin(fr / 23) * 0.3 });
 
 // ---------- lyric graphics (drawn in code, palette only)
 const Sparkle: React.FC<{ x: number; y: number; s: number; o: number }> = ({ x, y, s, o }) => (
@@ -157,7 +205,7 @@ const Graphic: React.FC<{ L: Line; s: number; e: number; heroX: number; heroY: n
       {[0, 1, 2, 3, 4, 5].map((i) => <Sparkle key={i} x={random(`sx${i}`) * W} y={120 + random(`sy${i}`) * 500} s={22 + random(`ss${i}`) * 26} o={Math.max(0, Math.sin((t + i * 7) / 5))} />)}
       <Detail x={80} y={70} a={L.side === "left" ? "right" : "left"} t={"TONIGHT  ·  ALL NIGHT\nTHE GANG IS OUTSIDE"} size={26} /></>);
     case "robbery": return (<><Diamond x={opp + 360} y={215 + Math.sin(t / 12) * 10} s={95 * p(0, 10)} rot={-12 + t * 0.15} />
-      <Chain y={760} prog={p(18, 30)} rot={-4} /><Band text="ROBBERY  ·  TUCK YA CHAIN" y={110} rot={3} fr={fr} /></>);
+      <Chain y={985} prog={p(18, 30)} rot={-1.5} /><Band text="ROBBERY  ·  TUCK YA CHAIN" y={110} rot={3} fr={fr} /></>);
     case "heart": return (<><Heart x={opp} y={360} s={190 * p(0, 8)} split={interpolate(t, [f(32.46) - s, f(32.46) - s + 8], [0, 1], { ...clamp, easing: outExp })} />
       <Dove x={W * 0.5 + interpolate(t, [10, len], [-700, 700])} y={180 - t * 0.6} s={90} flap={Math.sin(t / 2.2)} o={0.9} /></>);
     case "target": { const lock = p(f(35.31) - s, 6); return (<>
@@ -188,29 +236,54 @@ const LineScene: React.FC<{ L: Line; i: number; s: number; e: number }> = ({ L, 
   const q = interpolate(fr, [s - K.transition, s], [0, 1], { ...clamp, easing: io });
   const light = L.bg === "ice";
   const behind = L.graphic === "news"; // the clipping sits behind the hero word so it never hides it
-  const heroX = L.side === "left" ? W * 0.655 : W * 0.345, heroY = H * 0.42;
-  // mid-line beat punch (beat 3 of the bar): a 4-frame scale kick
+  const heroX = L.side === "left" ? W * 0.655 : W * 0.345, heroY = H * 0.27;
+  const { boxes, x0, y0, rw } = layoutLine(L);
+  const CK = K.camera, dir = L.side === "left" ? 1 : -1, sg = i % 2 ? 1 : -1;
+  // camera plan: whip in onto the hero word -> follow the sung words row by row -> punch in on the big words -> pull out wide
+  const start: Cam = { cx: heroX + dir * CK.whip, cy: heroY + 60, z: CK.heroZoom + 0.25, r: -4 * sg };
+  const keys: Key[] = [{ t: s - K.transition, to: { cx: heroX, cy: heroY + 90, z: CK.heroZoom, r: -1.5 * sg }, dur: K.transition + 6 }];
+  let last = -99;
+  boxes.forEach((b, k) => {
+    if (!b.big && b.at - last < CK.minGap) return;
+    const rowBoxes = boxes.filter((o) => o.row === b.row), rx0 = rowBoxes[0].x, rx1 = rowBoxes[rowBoxes.length - 1].x + rowBoxes[rowBoxes.length - 1].w;
+    const rowCx = (rx0 + rx1) / 2, z = b.big ? CK.bigZoom : Math.min(CK.wordZoom, (W * 0.9) / Math.max(400, rx1 - rx0));
+    const tx = rowCx + (b.x + b.w / 2 - rowCx) * (b.big ? 0.9 : 0.5);
+    keys.push({ t: b.at, to: { cx: tx + (W / 2 - tx) * 0.35, cy: b.y + b.h / 2 - 20, z, r: (b.row % 2 ? 1 : -1) * CK.tilt * (b.big ? 1.4 : 1) }, dur: b.big ? 7 : CK.move });
+    last = b.at;
+  });
+  const pullT = Math.max(e - CK.pullOut, last + 6);                 // pull out wide only after the last word has landed
+  if (pullT <= e - 6) keys.push({ t: pullT, to: { cx: W / 2, cy: H / 2, z: 1.0, r: 0 }, dur: Math.max(6, e - pullT - 2), ease: io });
+  keys.sort((a, b) => a.t - b.t);
+  const cam = handheld(camAt(keys, start, fr), fr), prev = handheld(camAt(keys, start, fr - 1), fr - 1);
+  const speed = Math.hypot(cam.cx - prev.cx, cam.cy - prev.cy) * cam.z + Math.abs(cam.z - prev.z) * 900;
+  const blur = Math.min(7, Math.max(0, speed - 80) / 18);           // blur only on real whips
   const beat3 = s + Math.round(2 * (60 / 84) * FPS) - 7;
   const kick = interpolate(fr, [beat3, beat3 + 2, beat3 + 6], [0, 1, 0], clamp);
-  const shake = L.graphic === "bang" ? (fr >= f(44.13) && fr < f(44.13) + 8 ? (random(`sh${fr}`) - 0.5) * 26 : 0) : 0;
-  const lyricW = 900, lyricX = L.side === "left" ? W - lyricW - 90 : 90;
-  return (<AbsoluteFill style={{ clipPath: q < 1 ? transitionClip(i, q) : undefined }}>
-    <AbsoluteFill style={{ background: C[L.bg], transform: `scale(${1 + kick * 0.035}) translate(${shake}px, ${shake * 0.4}px)` }}>
-      <Halo x={heroX + (L.side === "left" ? 200 : -200)} y={H * 0.5} r={620} o={light ? 0.6 : 1} />
-      <div style={{ position: "absolute", left: L.side === "left" ? -260 : W - 700, top: 180, width: 960, height: 960, borderRadius: "50%", background: light ? "#C9DFF5" : C.deep, opacity: light ? 0.9 : 0.75 }} />
-      <svg width={W} height={H} style={{ position: "absolute", opacity: 0.22 }}>
-        <defs><pattern id={`hatch${i}`} width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="18" stroke={light ? C.navy : C.silver} strokeWidth="3" /></pattern></defs>
-        <rect x={L.side === "left" ? W - 520 : 0} y={0} width={520} height={260} fill={`url(#hatch${i})`} />
-      </svg>
-      {behind && <Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} />}
-      <Build text={L.hero} at={s - 2} size={K.sizes.hero} x={heroX} y={heroY} color={L.heroColor} w={L.heroW ?? 1060} />
-      {!behind && <Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} />}
-      <Person n={L.photo} side={L.side} s={s} e={e} h={L.personH ?? (L.photo === 4 ? 900 : L.photo === 6 ? 980 : 1020)} />
-      <div style={{ position: "absolute", left: lyricX - 30, top: 730, width: lyricW + 60, height: 6, background: light ? C.navy : C.ice, transformOrigin: L.side === "left" ? "100% 50%" : "0 50%", transform: `scaleX(${interpolate(fr, [s, s + 10], [0, 1], { ...clamp, easing: outExp })})` }} />
-      <Lyric L={L} x={lyricX} y={760} w={lyricW} align={L.side === "left" ? "right" : "left"} dark={light} />
-      <Detail x={80} y={H - 60} t={`0${i + 1} / 08`} a={L.side === "left" ? "right" : "left"} c={light ? C.navy : C.silver} />
-      <Detail x={80} y={H - 60} t={"POP OUT  ·  SIDE A"} a={L.side === "left" ? "left" : "right"} c={light ? C.navy : C.silver} />
+  const bangT = f(44.13);
+  const shake = L.graphic === "bang" && fr >= bangT && fr < bangT + 8 ? (random(`sh${fr}`) - 0.5) * 30 : 0;
+  const c2: Cam = { ...cam, z: cam.z * (1 + kick * 0.04), cx: cam.cx + shake, cy: cam.cy + shake * 0.4 };
+  const liveIdx = boxes.findIndex((b, k) => fr >= b.at && (k + 1 >= boxes.length || fr < boxes[k + 1].at));
+  return (<AbsoluteFill style={{ clipPath: q < 1 ? transitionClip(i, q) : undefined, background: C[L.bg] }}>
+    <AbsoluteFill style={{ filter: blur > 0.3 ? `blur(${blur}px)` : undefined }}>
+      <div style={camCss(c2, 0.55)}>
+        <Halo x={heroX + (L.side === "left" ? 200 : -200)} y={H * 0.5} r={620} o={light ? 0.6 : 1} />
+        <div style={{ position: "absolute", left: L.side === "left" ? -260 : W - 700, top: 180, width: 960, height: 960, borderRadius: "50%", background: light ? "#C9DFF5" : C.deep, opacity: light ? 0.9 : 0.75 }} />
+        <svg width={W} height={H} style={{ position: "absolute", opacity: 0.22 }}>
+          <defs><pattern id={`hatch${i}`} width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="18" stroke={light ? C.navy : C.silver} strokeWidth="3" /></pattern></defs>
+          <rect x={L.side === "left" ? W - 520 : 0} y={0} width={520} height={260} fill={`url(#hatch${i})`} />
+        </svg>
+      </div>
+      {behind && <div style={camCss(c2, 0.75)}><Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} /></div>}
+      <div style={camCss(c2, 0.8)}><Build text={L.hero} at={s - 2} size={K.sizes.hero} x={heroX} y={heroY} color={L.heroColor} w={L.heroW ?? 1060} /></div>
+      {!behind && <div style={camCss(c2, 0.9)}><Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} /></div>}
+      <div style={camCss(c2, 0.88)}><Person n={L.photo} side={L.side} s={s} e={e} h={L.personH ?? (L.photo === 4 ? 900 : L.photo === 6 ? 980 : 1020)} /></div>
+      <div style={camCss(c2, 1)}>
+        <div style={{ position: "absolute", left: x0 - 20, top: y0 - 34, width: rw + 40, height: 6, background: light ? C.navy : C.ice, transformOrigin: L.side === "left" ? "100% 50%" : "0 50%", transform: `scaleX(${interpolate(fr, [s, s + 10], [0, 1], { ...clamp, easing: outExp })})` }} />
+        {boxes.map((b, k) => <Word key={k} b={b} i={k} light={light} live={k === liveIdx} />)}
+      </div>
     </AbsoluteFill>
+    <Detail x={80} y={H - 60} t={`0${i + 1} / 08`} a={L.side === "left" ? "right" : "left"} c={light ? C.navy : C.silver} />
+    <Detail x={80} y={H - 60} t={"POP OUT  ·  SIDE A"} a={L.side === "left" ? "left" : "right"} c={light ? C.navy : C.silver} />
   </AbsoluteFill>);
 };
 
@@ -230,13 +303,16 @@ const Intro: React.FC<{ e: number }> = ({ e }) => {
   const yeah = f(23.69);
   const flash = interpolate(fr, [yeah, yeah + 1, yeah + 6], [0, 0.5, 0], clamp);
   const rx = interpolate(fr, [0, 14], [W * 0.75, W * 0.66], { ...clamp, easing: outExp });
-  return (<AbsoluteFill style={{ background: C.night }}>
+  const punch = interpolate(fr, [yeah, yeah + 2, yeah + 8], [0, 1, 0], clamp);
+  const ic: Cam = handheld({ cx: interpolate(fr, [0, e], [W * 0.52, W * 0.4], { ...clamp, easing: io }), cy: H * 0.5, z: interpolate(fr, [0, e], [1.0, 1.32], { ...clamp, easing: io }) * (1 + punch * 0.06), r: interpolate(fr, [0, e], [2, -3], clamp) }, fr);
+  return (<AbsoluteFill style={{ background: C.night }}><div style={camCss(ic, 1)}>
     <Halo x={W * 0.6} y={H * 0.5} r={640} />
     <Record x={rx} y={H * 0.5} r={430} spin={fr * 4} />
     <Diamond x={W * 0.86} y={210} s={interpolate(fr, [24, 34], [0, 120], { ...clamp, easing: outExp })} rot={14} />
     <Dove x={interpolate(fr, [0, e], [-150, W * 0.55])} y={260 - fr * 0.8} s={110} flap={Math.sin(fr / 2.4)} />
     <Build text={K.intro.title} at={8} size={340} x={W * 0.34} y={H * 0.48} color="silver" />
     {fr > 40 && <Detail x={160} y={H * 0.48 + 190} t={K.intro.credit} size={36} c={C.ice} />}
+    </div>
     <Detail x={80} y={70} t={"LYRIC VIDEO  ·  NO. 01\nSIDE A  ·  84 BPM"} size={26} />
     <AbsoluteFill style={{ background: C.white, opacity: flash }} />
   </AbsoluteFill>);
@@ -250,7 +326,8 @@ const EndCard: React.FC<{ s: number }> = ({ s }) => {
   const mark = interpolate(lt, [2, 10], [0, 1], { ...clamp, easing: Easing.out(Easing.back(1.6)) });
   const word = interpolate(lt, [10, 20], [0, 1], { ...clamp, easing: outExp });
   const cy = H * 0.44;
-  return (<AbsoluteFill style={{ clipPath: q < 1 ? `circle(${q * 120}% at 50% 50%)` : undefined, background: C.night }}>
+  const ec: Cam = handheld({ cx: W / 2, cy: H / 2, z: interpolate(t, [-K.transition, 18], [1.45, 1.0], { ...clamp, easing: outExp }) * interpolate(lt, [0, 50], [1, 1.08], { ...clamp, easing: io }), r: interpolate(t, [-K.transition, 18], [-5, 0], { ...clamp, easing: outExp }) }, fr);
+  return (<AbsoluteFill style={{ clipPath: q < 1 ? `circle(${q * 120}% at 50% 50%)` : undefined, background: C.night }}><div style={camCss(ec, 1)}>
     <Halo x={W / 2} y={cy} r={700 * shrink} />
     <Record x={W / 2} y={cy} r={380 * shrink} spin={fr * 2.5} />
     <Diamond x={W * 0.2} y={260} s={120} rot={-14} /><Dove x={W * 0.8} y={240} s={120} flap={Math.sin(fr / 2.4)} />
@@ -260,6 +337,7 @@ const EndCard: React.FC<{ s: number }> = ({ s }) => {
     </div>
     {lt >= 0 && <Img src={staticFile(K.endCard.logoMark)} style={{ position: "absolute", left: W / 2 - 120, top: cy - 120, width: 240, height: 240, transform: `scale(${mark})`, filter: "drop-shadow(0 0 30px rgba(169,203,238,0.35))" }} />}
     {lt >= 0 && <Img src={staticFile(K.endCard.logoWord)} style={{ position: "absolute", left: W / 2 - 330, top: cy + 300, width: 660, opacity: word, transform: `translateY(${(1 - word) * 30}px)` }} />}
+    </div>
     <AbsoluteFill style={{ background: C.night, opacity: out }} />
   </AbsoluteFill>);
 };
