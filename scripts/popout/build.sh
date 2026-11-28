@@ -2,7 +2,7 @@
 # Pop Out lyric video: render frames -> finishing pass (no lens pass: big type) -> encode with the track. Never overwrites.
 # Usage: bash scripts/popout/build.sh v1
 set -e; cd "$(dirname "$0")/../.."; V=${1:-v1}; D=work/popout/$V
-mkdir -p $D/raw
+mkdir -p $D
 [ "$(ls $D/raw 2>/dev/null | wc -l)" -ge 901 ] || npx remotion render src/index.ts Popout $D/raw --sequence --image-format=png --concurrency=4 --log=error
 bash scripts/finish/finish.sh $D/raw $D/fin scripts/finish/themes/product_premium.yaml 0.5
 F=$(ls $D/fin | head -1); EXT=${F##*.}; PAT=$(echo "$F" | sed -E 's/[0-9]+\.'$EXT'$/%0'$(echo "$F" | sed -E 's/.*[^0-9]([0-9]+)\.'$EXT'$/\1/' | wc -c | awk '{print $1-1}')'d.'$EXT'/')
