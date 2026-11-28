@@ -36,10 +36,10 @@ export const showreelConfig = {
   vignette: 0.42,
   overloadText: "ARCHIVE COMPLETE // 30/30",
   logo: {
-    image: "logo/phillips-digital-logo-src.png", imgW: 992, imgH: 568, scale: 1.45, centreY: 470,
+    image: "logo/phillips-digital-logo-alpha.png", imgW: 992, imgH: 568, scale: 1.45, centreY: 470,
     circle: { x0: 40, y0: 148, x1: 258, y1: 418, at: 8 },          // frames after the logo section starts
     line1: { x0: 312, y0: 86, x1: 760, y1: 248, at: 15 },
-    line2: { x0: 312, y0: 322, x1: 690, y1: 458, at: 21 },
+    line2: { x0: 312, y0: 322, x1: 700, y1: 490, at: 21 },
     tagline: { text: "We build worlds", at: 40, size: 50, y: 860, wordGap: 2 },
     sub: { text: "SHOWREEL 2026", at: 58, size: 22, y: 940 },
   },
