@@ -51,3 +51,8 @@ Use this file to pick a template or technique fast, and to pick showreel moments
 ## To work faster next time
 - Survey first: `tools/ai-venv/bin/python scripts/showreel/survey.py notes/frames/<job> <videos...>` (about 2 min for 28 videos), then read the sheets and this table.
 - Drive videos over 10 MB: direct download `https://drive.usercontent.google.com/download?id=<id>&export=download&confirm=t` works for link-shared files; a "Sign-in" HTML page means the file is not shared by link (ask the user).
+
+## Showreels made here
+| Video | Look and technique | Lessons |
+|---|---|---|
+| phillips-digital-showreel-v2 (84 s) | "Opening the archive": terminal boot, project tag + 30-tick archive bar, cuts on the music's measured low-band hits (every 2nd hit in the build, every hit in the peak), data tears at section changes, overload flashes, real logo on cream with a keyed-alpha copy | Build pipeline: `survey.py` → `conform.sh` (1080p30, blurred fill for non-16:9) → `make_timeline.py` (music hits → timeline.json) → `src/showreel/`. Text over flashing footage needs a dark band (lime on white was unreadable in v1). Logo PNGs on a paper colour need keying to alpha before animating pieces. Pick peak in-points on the product's clearest frame, not mid-pour. Commercial tracks: warn about Content ID once |
