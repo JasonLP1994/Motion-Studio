@@ -11,6 +11,15 @@ Ask before installing anything outside this folder.
 - A few existing small `templates/*/preview.mp4` assets and intro/sample audio files pre-date this rule and remain part of the current style-kit history; **do not add any new video previews to GitHub**. Never delete existing preview assets without user approval.
 - No automatic upload to other services or paid storage. Sending or scheduling content outside this local handoff requires the user's explicit approval.
 
+## Storage rule (user): no project backlog
+- Motion Studio keeps only what improves the studio: skills, notes, checks, templates and small reusable code/scripts.
+- Once a finished video/still has been sent to the user (they save it on their computer), delete that project's local working
+  files: frames, renders, proxies, cut-outs, test .blends, copies in public/<project>/ and work/<project>/. Keep only the source
+  code that a new skill or template needs.
+- If a project taught a new technique, save it the lean way: a short guide + prompt + code in templates/<id>/ or a skill note,
+  a poster.jpg only (small, compressed), no new preview videos, no frame dumps. Smallest storage that still teaches it.
+- Projects still in progress (not yet delivered) keep their working files until delivery.
+
 ## Folders
 - `inputs/`: the user's images, layers and clips (originals: never move or edit)
 - `references/`: style images and videos the user likes

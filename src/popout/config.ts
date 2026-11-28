@@ -46,7 +46,7 @@ export const popoutConfig = {
   durationInFrames: Math.round(30.045 * FPS), // = track.wav length (song 26.045 s + 4 s card)
   intro: { title: "POP OUT", credit: "POLO G  FT. LIL TJAY", from: 0 }, // first line starts at f(24.49)
   endCard: { at: f(47.45), title: "POP OUT", sub: "POLO G  FT. LIL TJAY", logoAt: 60, // frames after the card starts
-    logoMark: "pd01/logo_circle.png", logoWord: "pd01/logo_wordmark_full.png" }, // the real Phillips Digital logo files, unchanged
+    logoMark: "logo/pd_circle.png", logoWord: "logo/pd_wordmark.png" }, // the real Phillips Digital logo files, unchanged
   fonts: { hero: "Anton", line: "Montserrat", detail: "SpecialElite", italic: "BarlowBI" },
   sizes: { hero: 520, line: 64, detail: 22 },
   letterEvery: 2, // frames per letter in the hero build
