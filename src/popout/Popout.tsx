@@ -131,7 +131,7 @@ const Ticket: React.FC<{ x: number; y: number; rot: number; p: number }> = ({ x,
     <div style={{ position: "absolute", right: 26, bottom: 16, display: "flex", gap: 3 }}>{Array.from({ length: 30 }).map((_, i) => <div key={i} style={{ width: random(`b${i}`) > 0.5 ? 4 : 2, height: 34, background: C.navy }} />)}</div>
   </div>);
 const Newspaper: React.FC<{ x: number; y: number; rot: number; p: number }> = ({ x, y, rot, p }) => (
-  <div style={{ position: "absolute", left: x, top: y, width: 600, height: 700, transform: `rotate(${rot}deg) scale(${0.9 + p * 0.1})`, opacity: p, background: "#E7ECF2", boxShadow: "0 22px 0 rgba(4,7,14,0.45)", color: C.navy, padding: 30, boxSizing: "border-box", clipPath: "polygon(0 2%,8% 0,22% 1.5%,37% 0,55% 1%,70% 0,86% 1.5%,100% 0,99% 30%,100% 62%,98.5% 100%,80% 98.5%,60% 100%,42% 98.6%,20% 100%,0 99%,1.4% 60%)" }}>
+  <div style={{ position: "absolute", left: x, top: y, width: 600, height: 700, transformOrigin: "0 0", transform: `rotate(${rot}deg) scale(${(0.9 + p * 0.1) * 0.72})`, opacity: p, background: "#E7ECF2", boxShadow: "0 22px 0 rgba(4,7,14,0.45)", color: C.navy, padding: 30, boxSizing: "border-box", clipPath: "polygon(0 2%,8% 0,22% 1.5%,37% 0,55% 1%,70% 0,86% 1.5%,100% 0,99% 30%,100% 62%,98.5% 100%,80% 98.5%,60% 100%,42% 98.6%,20% 100%,0 99%,1.4% 60%)" }}>
     <div style={{ fontFamily: "SpecialElite", fontSize: 20, borderBottom: `3px solid ${C.navy}`, paddingBottom: 6 }}>THE DAILY BLOCK  ·  VOL. 84  ·  50¢</div>
     <div style={{ fontFamily: "Anton", fontSize: 96, lineHeight: 0.95, marginTop: 12 }}>FROM<br />POVERTY</div>
     <div style={{ fontFamily: "SpecialElite", fontSize: 26, marginTop: 8 }}>"We ain't have a thing"</div>
@@ -163,7 +163,7 @@ const Graphic: React.FC<{ L: Line; s: number; e: number; heroX: number; heroY: n
     case "target": { const lock = p(f(35.31) - s, 6); return (<>
       <Crosshair x={heroX + (1 - lock) * 260} y={heroY + (1 - lock) * -140} r={240 - lock * 60} o={p(0, 6)} spin={(1 - lock) * 90} />
       <Detail x={80} y={70} a={L.side === "left" ? "right" : "left"} t={"TARGET LOCKED\nRANGE 84M  ·  WIND 0"} size={26} c={C.ice} /></>); }
-    case "news": return (<><Newspaper x={opp - 300} y={150} rot={-5} p={p(0, 8)} />
+    case "news": return (<><Newspaper x={40} y={20} rot={-7} p={p(0, 8)} />
       {Array.from({ length: 7 }).map((_, i) => t > 20 + i * 3 && <Bill key={i} x={random(`bx${i}`) * W * 0.9} y={-120 + (t - 20 - i * 3) * (14 + random(`bv${i}`) * 8)} rot={random(`br${i}`) * 60 - 30 + t * 2} />)}</>);
     case "redact": return (<>{[0, 1, 2, 3, 4].map((i) => <div key={i} style={{ position: "absolute", left: opp - 60, top: 150 + i * 18, height: 10, width: 420 * p(i * 2, 6) * (0.6 + random(`r${i}`) * 0.4), background: i % 2 ? C.night : C.silver, opacity: 0.9 }} />)}
       <Detail x={80} y={70} a={L.side === "left" ? "right" : "left"} t={"FILE NO. 0006  ·  CLASSIFIED\nNAME: ██████████"} size={26} /></>);
@@ -187,6 +187,7 @@ const LineScene: React.FC<{ L: Line; i: number; s: number; e: number }> = ({ L, 
   const fr = useCurrentFrame();
   const q = interpolate(fr, [s - K.transition, s], [0, 1], { ...clamp, easing: io });
   const light = L.bg === "ice";
+  const behind = L.graphic === "news"; // the clipping sits behind the hero word so it never hides it
   const heroX = L.side === "left" ? W * 0.655 : W * 0.345, heroY = H * 0.42;
   // mid-line beat punch (beat 3 of the bar): a 4-frame scale kick
   const beat3 = s + Math.round(2 * (60 / 84) * FPS) - 7;
@@ -201,9 +202,10 @@ const LineScene: React.FC<{ L: Line; i: number; s: number; e: number }> = ({ L, 
         <defs><pattern id={`hatch${i}`} width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="18" stroke={light ? C.navy : C.silver} strokeWidth="3" /></pattern></defs>
         <rect x={L.side === "left" ? W - 520 : 0} y={0} width={520} height={260} fill={`url(#hatch${i})`} />
       </svg>
-      <Build text={L.hero} at={s - 2} size={K.sizes.hero} x={heroX} y={heroY} color={L.heroColor} w={1060} />
-      <Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} />
-      <Person n={L.photo} side={L.side} s={s} e={e} h={L.photo === 4 ? 900 : L.photo === 6 ? 980 : 1020} />
+      {behind && <Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} />}
+      <Build text={L.hero} at={s - 2} size={K.sizes.hero} x={heroX} y={heroY} color={L.heroColor} w={L.heroW ?? 1060} />
+      {!behind && <Graphic L={L} s={s} e={e} heroX={heroX} heroY={heroY} />}
+      <Person n={L.photo} side={L.side} s={s} e={e} h={L.personH ?? (L.photo === 4 ? 900 : L.photo === 6 ? 980 : 1020)} />
       <div style={{ position: "absolute", left: lyricX - 30, top: 730, width: lyricW + 60, height: 6, background: light ? C.navy : C.ice, transformOrigin: L.side === "left" ? "100% 50%" : "0 50%", transform: `scaleX(${interpolate(fr, [s, s + 10], [0, 1], { ...clamp, easing: outExp })})` }} />
       <Lyric L={L} x={lyricX} y={760} w={lyricW} align={L.side === "left" ? "right" : "left"} dark={light} />
       <Detail x={80} y={H - 60} t={`0${i + 1} / 08`} a={L.side === "left" ? "right" : "left"} c={light ? C.navy : C.silver} />

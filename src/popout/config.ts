@@ -20,11 +20,12 @@ export type Line = {
   heroColor: keyof typeof C;
   graphic: "party" | "robbery" | "heart" | "target" | "news" | "redact" | "bang" | "plane";
   side: "left" | "right"; // where the person stands
+  heroW?: number; personH?: number; // per-line overrides (wide group photos need a narrower hero)
 };
 
 export const lines: Line[] = [
   { words: [["WE", 24.49], ["POP", 24.62], ["OUT", 24.82], ["AT", 25.02], ["YOUR", 25.15], ["PARTY,", 25.44], ["I'M", 25.96], ["WITH", 26.38], ["THE", 26.96], ["GANG", 27.1]],
-    hero: "GANG", photo: 8, bg: "navy", heroColor: "silver", graphic: "party", side: "right" },
+    hero: "GANG", photo: 8, bg: "navy", heroColor: "silver", graphic: "party", side: "right", heroW: 860, personH: 860 },
   { words: [["AND", 27.44], ["IT'S", 27.64], ["GON'", 27.96], ["BE", 28.17], ["A", 28.3], ["ROBBERY,", 28.36], ["SO", 28.97], ["TUCK", 29.1], ["YA", 29.36], ["CHAIN", 29.63]],
     hero: "ROBBERY", photo: 6, bg: "night", heroColor: "ice", graphic: "robbery", side: "left" },
   { words: [["I'M", 30.28], ["A", 30.49], ["KILLER,", 30.56], ["GIRL,", 31.0], ["I'M", 31.43], ["SORRY,", 31.64], ["BUT", 32.2], ["I", 32.4], ["CAN'T", 32.46], ["CHANGE", 32.75]],
