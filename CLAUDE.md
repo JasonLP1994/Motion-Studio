@@ -13,7 +13,8 @@ Ask before installing anything outside this folder.
 
 ## Storage rule (user): no project backlog
 - Motion Studio keeps only what improves the studio: skills, notes, checks, templates and small reusable code/scripts.
-- Once a finished video/still has been sent to the user (they save it on their computer), delete that project's local working
+- Once a finished video/still has been sent to the user (they save it on their computer), ASK the user first (list what would
+  be deleted and its size; they may want to keep something), then delete only what they approve from that project's local working
   files: frames, renders, proxies, cut-outs, test .blends, copies in public/<project>/ and work/<project>/. Keep only the source
   code that a new skill or template needs.
 - If a project taught a new technique, save it the lean way: a short guide + prompt + code in templates/<id>/ or a skill note,
