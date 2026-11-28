@@ -37,7 +37,8 @@ Use this file to pick a template or technique fast, and to pick showreel moments
 | snow-globe-full-v1 (12 s) | Blue snow-globe village turntable | any | Calm; use as a 1 s breath |
 | suno-train-v3 (21 s) | Train streaks past, graffiti appears on the wall | 4, 14–17 | Light-streak whoosh shot is a great transition |
 | phillips-english-intro (8 s) | Kinetic "SAY IT OUT LOUD EVERY DAY" → PE logo | 0–4 | Clean kinetic type (Phillips English brand, not Digital) |
-| PE_Confident_Meetings_1080p, Signal-Choir-Broadcast | not surveyed: not link-shared on Drive | | |
+| PE_Confident_Meetings_1080p (122.8 s) | Phillips English talking-head lesson in a warm shelf studio, lower-third key-phrase captions, PE bug | 30–40 | Real-person teaching footage: a human beat in a reel (one 1–2 s gesture shot). Long: find the moment, don't scrub |
+| Signal-Choir-Broadcast (22 s) | Japanese gig-poster series (SIGNAL / CHOIR / ECHO / PULSE): halftone illustration, flat brights, big condensed type, ~56 cuts, ends on a 4-up grid | 0–6, 20–22 | Poster-series grammar: one layout, swap art + word + colour per beat; grid finale |
 
 ## Patterns across the portfolio
 - **Most videos end on a Phillips Digital logo.** Always trim endings when cutting a reel, and keep the one true logo moment for the end.
