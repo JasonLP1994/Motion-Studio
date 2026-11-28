@@ -28,7 +28,7 @@ PROJECTS = [
     ("kingz", "kingz-v4", "KINGZ", "TYPE / MIXED MEDIA", 7.8, 3.4),
     ("graffiti", "graffiti-flip-v1", "GRAFFITI FLIP", "KINETIC TYPE", 5.0, 2.4),
     ("symbols", "kinetic-symbols-v2", "KINETIC SYMBOLS", "KINETIC TYPE", 0.1, 3.8),
-    ("gold", "gold-case-v2", "GOLD CASE", "3D / LIQUID", 8.8, 3.4),
+    ("gold", "gold-case-v2", "GOLD CASE", "3D / LIQUID", 8.8, 9.6),
     ("ruby", "rubyred-film-v1", "RUBYRED", "3D / JEWELLERY", 0.2, 11.8),
     ("train", "suno-train-v3", "SUNO TRAIN", "3D / GRAFFITI", 3.4, 14.2),
     ("pixel", "pixel-sneaker-loop-v1", "PIXEL SNEAKER", "PIXEL / LOOP", 6.6, 2.0),

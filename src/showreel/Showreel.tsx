@@ -180,6 +180,9 @@ export const Showreel: React.FC = () => {
       ))}
       {f < S.logo && <ArchiveBar f={f} current={cur ? cur.n : null} />}
       {overloadTxt && (
+        <div style={{ position: "absolute", top: H / 2 - 64, left: W / 2 - 620, width: 1240, height: 128, background: "rgba(5,6,6,0.82)" }} />
+      )}
+      {overloadTxt && (
         <div style={{ position: "absolute", top: H / 2 - 40, width: W, textAlign: "center", fontFamily: mono, fontSize: 64, color: K.lime,
           transform: `translateX(${(rnd(f * 3) - 0.5) * 40}px)`, textShadow: `6px 0 rgba(255,0,80,0.7), -6px 0 rgba(0,255,255,0.7)` }}>{C.overloadText}</div>
       )}

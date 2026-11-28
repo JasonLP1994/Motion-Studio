@@ -28,7 +28,7 @@ export const showreelConfig = {
     rebuild: { push: 0.04, filter: "contrast(1.15)" },
     peak: { push: 0.02, filter: "contrast(1.06)" },
     hero: { push: 0.03, filter: "contrast(1.05)" },
-    overload: { push: 0.0, filter: "contrast(1.25) saturate(1.2)" },
+    overload: { push: 0.0, filter: "contrast(1.25) saturate(1.2) brightness(0.55)" },
   } as Record<string, { push: number; filter: string }>,
   tearEvery: 4,          // every Nth build cut gets a 3-frame data tear; every peak cut on a big hit too
   tearFrames: 3,
