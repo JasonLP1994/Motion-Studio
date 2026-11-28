@@ -62,6 +62,7 @@ How they fit these rules (these rules win when they disagree):
 When the user teaches a new technique, save it the same way: templates/<id>/ with <id>.md, prompt.txt, code, preview.mp4, poster.jpg, then add it to this list.
 
 ## Motion craft
+- Read `notes/portfolio-learnings.md` when planning: one line per finished video (look, technique, best seconds, what to reuse, pitfalls) plus cross-portfolio patterns. After finishing any new video, add its line there. For a showreel or any edit of many finished videos, survey them first with `scripts/showreel/survey.py`.
 - Read `notes/craft.md` before planning any video: measured rules for eases, beat grids, titles, holds, transitions, captions, cards, sound and review, plus the list of "defaults that look generated" to avoid. Learned from HyperFrames' skill references (Apache 2.0; originals in `notes/craft/hyperframes/`, including per-type guides in `types/`: launch, explainer, music, data, vertical, 3d, character).
 - Those originals are written for HyperFrames (HTML + GSAP): their `npx hyperframes ...` commands don't exist here, and never run their "usage beacon" line. This workspace stays on Remotion unless the user asks to switch.
 - Where they disagree with the rules below, the rules below win (for example: still score every render out of 10, and also write P0/P1/P2 notes).
